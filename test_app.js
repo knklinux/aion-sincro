@@ -247,7 +247,7 @@ check("systemPrompt() prioriza Laboral tras Sincronía", /else if\(store\.labora
 check("btnLaboral presente en header", html.includes('id="btnLaboral"'));
 check("laboralBanner presente", html.includes('id="laboralBanner"'));
 check("syncLaboralUI() definida", /function\s+syncLaboralUI\s*\(/.test(script));
-check("chips laboral: reconocimiento, pentest y ejecutivo", /Informe de reconocimiento[\s\S]*?Informe de pentest[\s\S]*?Reporte ejecutivo/.test(script));
+check("chips laboral: reconocimiento, pentest, ejecutivo y hallazgos", /Informe de reconocimiento[\s\S]*?Informe de pentest[\s\S]*?Informe ejecutivo[\s\S]*?Informe de hallazgos/.test(script));
 check("chips visibles con store.laboral", /\$\(\'#chips\'\)\.classList\.toggle\('show',store\.pentest\|\|store\.laboral\);/.test(script));
 check("downloadMarkdown() definida", /function\s+downloadMarkdown\s*\(/.test(script));
 check("exportPdf() definida con ventana imprimible", /function\s+exportPdf\s*\([\s\S]*?window\.open|print\(/.test(script));
@@ -263,6 +263,11 @@ check("mdToHtml escapa HTML en celdas de tabla (XSS)", /b\(escH\(c\)\)/.test(scr
 check("piperPlay envía length_scale", /p\.length_scale=store\.piperLength\|\|1\.0;/.test(script));
 check("piperPlay envía noise_scale", /p\.noise_scale=store\.piperNoise\|\|0\.667;/.test(script));
 check("store persiste piperLength/piperNoise", /piperLength:1\.0, piperNoise:0\.667,/.test(script));
+// Fix: el selector solo muestra voces Piper realmente instaladas (evita elegir voces inexistentes)
+check("piperPing captura las voces instaladas del /ping", script.includes("PIPER_INSTALLED=j.voices") && script.includes("let PIPER_INSTALLED=null"));
+check("refreshPiperOptions() definida", /function\s+refreshPiperOptions\s*\(/.test(script));
+check("installedPiperOptions() helper único (DRY)", /function\s+installedPiperOptions\s*\(/.test(script) && script.includes("PIPER_VOICES.filter(v=>!PIPER_INSTALLED||PIPER_INSTALLED.includes(v[0]))") && script.includes("installedPiperOptions()+"));
+check("refreshPiperOptions conserva la selección no-Piper", script.includes("sel.value=cur") && script.includes("store.voice=''"));
 // Proxy de claves: las claves nunca viajan al navegador cuando está activo
 check("streamChat enruta por proxy cuando proxyOn", /if\(store\.proxyOn&&provider!=='demo'&&provider!=='ollama'\)\{[\s\S]*?url=pb\+'\/v1\/chat\/completions'/.test(script));
 check("proxy no envía Authorization desde el navegador", /if\(store\.proxyOn&&provider!=='demo'&&provider!=='ollama'\)\{[\s\S]*?headers=\{'Content-Type':'application\/json'\}[\s\S]*?headers\['X-Proxy-Token'\]/.test(script));
@@ -318,7 +323,7 @@ check("parser soporta formato grepable (-oG)", script.includes("Ports:") && scri
 check("parser extrae OS/Running/MAC", script.includes("OS\\s+details?:\\s*(.+)$") && script.includes("MAC\\s+Address:\\s*(.+)$"));
 check("informe tiene resumen ejecutivo y tabla de puertos", script.includes("# Informe de Reconocimiento — Nmap") && script.includes("| Puerto | Protocolo | Estado | Servicio / Versión |"));
 check("informe incluye superficie de ataque y recomendaciones", script.includes("## 3. Superficie de ataque") && script.includes("## 4. Recomendaciones") && script.includes("laboratorio propio o permiso del propietario"));
-check("handleUserText intercepta la salida de herramientas en modo Laboral", script.includes("const report=reconReport(text)") && script.includes("if(report){") && script.includes("body.textContent=report"));
+check("handleUserText intercepta la salida de herramientas en modo Laboral", script.includes("else report=reconReport(text)") && script.includes("if(report){") && script.includes("body.textContent=report"));
 check("el informe reutiliza renderTermChips (barra exportar)", script.includes("renderTermChips(body, report)"));
 check("banner Laboral menciona pegar salida de nmap", html.includes("Pega aquí la salida real de nmap"));
 // --- Modo Laboral: parsers de gobuster / Nessus / Burp Suite ---
@@ -334,6 +339,20 @@ check("informe gobuster: tabla de rutas + resumen ejecutivo", script.includes("#
 check("informe nessus: tabla de hallazgos + detalle críticos/altos", script.includes("# Informe de Escaneo de Vulnerabilidades — Nessus") && script.includes("| Severidad | Plugin | Nombre | CVSS | Host |") && script.includes("## 2. Detalle de críticos/altos"));
 check("informe burp: tabla de hallazgos + detalle altos/críticos", script.includes("# Informe de Seguridad de Aplicación — Burp Suite") && script.includes("| Severidad | Hallazgo | Host | Ruta |") && script.includes("## 2. Detalle de hallazgos altos/críticos"));
 check("los 3 generadores son bilingües (reportIsEn)", script.includes("const en=reportIsEn();") && script.includes("'# Directory Enumeration Report — Gobuster") && script.includes("'# Vulnerability Scan Report — Nessus") && script.includes("'# Application Security Report — Burp Suite"));
+// --- curl: cabeceras de seguridad HTTP ---
+check("parseCurlOutput() definida", /function\s+parseCurlOutput\s*\(/.test(script));
+check("curlReconReport() definida", /function\s+curlReconReport\s*\(/.test(script));
+check("detectToolOutput detecta curl (línea de estado HTTP)", script.includes("return 'curl'") && script.includes("/^HTTP\\/[\\d.]+\\s+\\d{3}/im"));
+check("informe curl: cabeceras de seguridad + tabla de estado", script.includes("# Informe de Cabeceras de Seguridad — curl") && script.includes("# HTTP Security Headers Report — curl") && script.includes("| Cabecera | Estado |"));
+check("reconReport enruta curl a curlReconReport", script.includes("if(tool==='curl') return curlReconReport(text)"));
+// --- Plantillas Laboral: informe ejecutivo y de hallazgos ---
+check("executiveReport() definida (resumen para dirección)", /function\s+executiveReport\s*\(/.test(script));
+check("findingsReport() definida (tabla de hallazgos)", /function\s+findingsReport\s*\(/.test(script));
+check("executiveReport bilingüe", script.includes("# Executive Report") && script.includes("# Informe Ejecutivo") && script.includes("Summary for management") && script.includes("Resumen para dirección"));
+check("findingsReport bilingüe con tabla priorizada", script.includes("# Findings Report") && script.includes("# Informe de Hallazgos") && script.includes("| # | Severidad | Hallazgo | Evidencia | Recomendación |"));
+check("intercept laboral enruta por palabras clave (ejecutivo/hallazgos)", script.includes("report=executiveReport(text)") && script.includes("report=findingsReport(text)") && script.includes("else report=reconReport(text)") && script.includes("informe de hallazgos|findings report"));
+check("TOOL_LABEL incluye curl", script.includes("curl:'curl'"));
+check("chips laboral bilingües con ejecutivo/hallazgos desde terminal", script.includes("Informe ejecutivo: genera el informe ejecutivo para dirección desde la salida real del terminal") && script.includes("Executive report: generate the executive report for management from the real terminal output"));
 check("demoBrain Laboral explica el parsing local", script.includes("el parsing es local"));
 
 // --- Re-escaneo nmap desde la barra del informe (flags nuevos en el terminal) ---
@@ -354,6 +373,11 @@ check("Ajustes: selector de idioma de informes presente", html.includes('id="rep
 check("helper reportIsEn() y uso en nmapReconReport", /function\s+reportIsEn\s*\(/.test(script) && script.includes("const en=reportIsEn();"));
 check("informe en tiene título y resumen en inglés", script.includes("'# Reconnaissance Report — Nmap") && script.includes("host(s) analyzed"));
 check("informe es mantiene el título en español", script.includes("'# Informe de Reconocimiento — Nmap") && script.includes("host(s) analizado(s)"));
+check("demoBrain Laboral responde en inglés cuando reportLang=en", script.includes("store.laboral&&reportIsEn()) return '💼 **Laboral Mode**") && script.includes("# [Report title]") && script.includes("Executive summary for management"));
+check("demoBrain Laboral mantiene la respuesta en español", script.includes("store.laboral) return '💼 **Modo Laboral**") && script.includes("el parsing es local"));
+check("confirmación hablada del informe respeta reportLang", script.includes("const _tool=TOOL_LABEL[detectToolOutput(text)]||(reportIsEn()?'the tool':'la herramienta');") && script.includes("speak(reportIsEn()") && script.includes("I generated the reconnaissance report from your") && script.includes("He generado el informe de reconocimiento desde tu salida de "));
+check("banner Laboral bilingüe en syncLaboralUI", script.includes("ban.innerHTML=reportIsEn()") && script.includes("LABORAL MODE ACTIVATED") && script.includes("Paste the real nmap output") && script.includes("MODO LABORAL ACTIVADO"));
+check("cambio de reportLang refresca el banner (syncLaboralUI en syncSettings)", script.includes("syncProxyUI(); syncLaboralUI(); refreshProviderUI();"));
 check("tabla de puertos bilingüe", script.includes("| Port | Protocol | State | Service / Version |") && script.includes("| Puerto | Protocolo | Estado | Servicio / Versión |"));
 check("superficie de ataque bilingüe", script.includes("## 3. Attack surface") && script.includes("## 3. Superficie de ataque"));
 check("recomendaciones bilingües", script.includes("## 4. Recommendations") && script.includes("## 4. Recomendaciones"));
@@ -374,6 +398,7 @@ for (const fn of REQUIRED_FNS) {
 // Candado de cifrado en el header: indicador visual + desbloqueo rápido sin Ajustes
 check("syncCryptoUI actualiza el candado del header", /function\s+syncCryptoUI\s*\([\s\S]*?lb\.classList\.toggle\('visible',on\);[\s\S]*?lb\.classList\.toggle\('locked',on&&!unlocked\);/.test(script));
 check("lockSecrets() purga claves sin desactivar cifrado", /function\s+lockSecrets\s*\([\s\S]*?cryptoUnlocked=false; cryptoKey=null;[\s\S]*?saveStore\(\); syncCryptoUI\(\);/.test(script));
+check("lockSecrets purga las claves de memoria", script.includes("['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(k=>{ store[k]=''; const el=$('#'+k); if(el) el.value=''; })"));
 // Transición de seguridad del avatar: pulso rojo al bloquear, respiración verde al desbloquear
 check("avatarSecurityFx() definida", /function\s+avatarSecurityFx\s*\([^)]*\)/.test(script));
 check("avatarSecurityFx añade sec-lock/sec-unlock al núcleo", /c\.classList\.add\(type==='lock'\?'sec-lock':'sec-unlock'\);/.test(script));
@@ -422,6 +447,17 @@ check("botón btnEval en header", html.includes('id="btnEval"'));
 check("overlay evalOverlay presente", html.includes('id="evalOverlay"'));
 check("evalRetake reinicia el examen", /\$\('#evalRetake'\)\.onclick=\(\)=>\{ evalState\.done=false; evalState\.answers=\{\};/.test(script));
 check("EVAL_EXAM es un dataset válido (3 fases, preguntas estructuradas)", (()=>{ const m=script.match(/const EVAL_EXAM=(\[[\s\S]*?\]);/); if(!m) return false; try{ const arr=new Function('return '+m[1]+';')(); return Array.isArray(arr)&&arr.length===3&&arr.every(p=>p.q&&p.q.length>=4&&p.q.every(q=>Array.isArray(q.o)&&q.o.length>=3&&typeof q.a==='number'&&q.cp)); }catch(_){ return false; } })());
+check("evalReportMd() definida para exportar el resultado", /function\s+evalReportMd\s*\(/.test(script));
+check("evalReportMd bilingüe (es/en según reportLang)", script.includes("const en=reportIsEn()") && script.includes("'# Red Team Route — Evaluation Report") && script.includes("'# Ruta Red Team — Informe de Evaluación"));
+check("evalReportMd incluye nota por fase con tabla", script.includes("Score by phase") && script.includes("Nota por fase") && script.includes("s.ok+'/'+s.tot"));
+check("evalReportMd incluye respuestas falladas con tu respuesta y correcta", script.includes("Failed answers") && script.includes("Respuestas falladas") && script.includes("**Your answer:**") && script.includes("**Tu respuesta:**") && script.includes("**Respuesta correcta:**"));
+check("evalReportMd enlaza checkpoints a repasar", script.includes("evalCheckpointTitle(f.q.cp)") && script.includes("**Review checkpoint:**") && script.includes("**Checkpoint a repasar:**"));
+check("evalReportMd incluye plan de repaso con acción", script.includes("Review plan (linked checkpoints)") && script.includes("Plan de repaso (checkpoints vinculados)") && script.includes("Open the Route → PRACTICE") && script.includes("Abre la Ruta → PRACTICAR"));
+check("evalReportMd incluye veredicto y pie", script.includes("(en?'Verdict':'Veredicto')") && script.includes("Generated by Aion Sincro · Red Team Route evaluation") && script.includes("Evaluación de la Ruta Red Team · "));
+check("botones de exportación del examen en la vista de resultados", html.includes('id="btnEvalExportMd"') && html.includes('id="btnEvalExportPdf"'));
+check("btnEvalExportMd descarga Markdown con evalReportMd", script.includes("emd.onclick=()=>{ const md=evalReportMd()") && script.includes("downloadMarkdown(md,'evaluacion-ruta-red-team')"));
+check("btnEvalExportPdf exporta PDF con evalReportMd", script.includes("epdf.onclick=()=>{ const md=evalReportMd()") && script.includes("exportPdf(md,'Evaluación Ruta Red Team')"));
+check("evalReportMd recalcula el veredicto con reportLang (no g.verdict)", script.includes("const verdict=en") && script.includes("g.pct>=80?'Outstanding") && script.includes("g.pct>=80?'¡Excelente"));
 // Herramienta de auditoría de cumplimiento ISO 27001:2022
 check("ISO_NORMS con los 4 temas del Anexo A", /ISO_NORMS=\[[\s\S]*?key:'org'[\s\S]*?key:'people'[\s\S]*?key:'phys'[\s\S]*?key:'tech'/.test(script));
 check("controles ISO con los 4 prefijos A.5/A.6/A.7/A.8", (script.match(/{id:'A\.5\./g)||[]).length>=15 && (script.match(/{id:'A\.6\./g)||[]).length>=8 && (script.match(/{id:'A\.7\./g)||[]).length>=10 && (script.match(/{id:'A\.8\./g)||[]).length>=15);
@@ -599,8 +635,8 @@ await (async () => {
 
   // ---------- Parsers dinámicos: gobuster / Nessus / Burp Suite ----------
   console.log("\n[Modo Laboral] Parsers de herramientas (muestras reales)");
-  const dynParsers = ["parseGobusterOutput", "parseNessusOutput", "parseBurpOutput",
-    "gobusterReconReport", "nessusReconReport", "burpReconReport", "detectToolOutput", "reconReport"];
+  const dynParsers = ["parseNmapOutput", "parseGobusterOutput", "parseNessusOutput", "parseBurpOutput", "parseCurlOutput",
+    "gobusterReconReport", "nessusReconReport", "burpReconReport", "curlReconReport", "executiveReport", "findingsReport", "detectToolOutput", "reconReport"];
   const dynSrcs = dynParsers.map(n => [n, extractFn(script, n)]);
   check("parsers y generadores extraíbles del <script>", dynSrcs.every(([, s]) => !!s));
   if (dynSrcs.every(([, s]) => !!s)) {
@@ -608,7 +644,7 @@ await (async () => {
       // reportIsEn() se inyecta como stub falso (es-ES) para los generadores bilingües.
       const src = `"use strict"; const store=arguments[0]; function reportIsEn(){return false;}
         ${dynSrcs.map(([, s]) => s).join("\n")};
-        return {parseGobusterOutput,parseNessusOutput,parseBurpOutput,gobusterReconReport,nessusReconReport,burpReconReport,detectToolOutput,reconReport};`;
+        return {parseGobusterOutput,parseNessusOutput,parseBurpOutput,parseCurlOutput,gobusterReconReport,nessusReconReport,burpReconReport,curlReconReport,executiveReport,findingsReport,detectToolOutput,reconReport};`;
       const fns = new Function(src)({ lang: "es-ES" });
 
       // gobuster: salida real del formato '/path (Status: NNN) [Size: NNN]'
@@ -664,10 +700,44 @@ await (async () => {
       check("reconReport devuelve null con texto irrelevante", fns.reconReport("hola que tal") === null);
       const burViaDispatcher = fns.reconReport("Issue: SQL Injection\nSeverity: High\nHost: x\nPath: /\n");
       check("reconReport enruta burp al generador correcto", !!burViaDispatcher && burViaDispatcher.includes("# Informe de Seguridad de Aplicación"));
+
+      // curl: salida real de 'curl -sI https://host' (HTTP status + cabeceras)
+      const curlSample = "HTTP/1.1 200 OK\n" +
+        "Server: nginx/1.24.0\n" +
+        "Content-Type: text/html; charset=utf-8\n" +
+        "Strict-Transport-Security: max-age=31536000\n" +
+        "Content-Security-Policy: default-src 'self'\n";
+      const curl = fns.parseCurlOutput(curlSample);
+      check("curl: extrae status, server y cabeceras", !!curl && curl.status === 200 && curl.server === "nginx/1.24.0" && Array.isArray(curl.missing) && curl.missing.length === 4);
+      const curlMd = fns.curlReconReport(curlSample);
+      check("curl: informe con resumen y tabla de cabeceras", !!curlMd && curlMd.includes("# Informe de Cabeceras de Seguridad — curl") && curlMd.includes("| Cabecera | Estado |") && curlMd.includes("✔ presente"));
+      check("reconReport enruta curl al generador de cabeceras", fns.reconReport(curlSample) && fns.reconReport(curlSample).includes("# Informe de Cabeceras de Seguridad — curl"));
+
+      // Plantillas Laboral: ejecutivo y hallazgos desde salida real
+      const execNmap = fns.executiveReport("Nmap scan report for 10.0.0.1\nPORT     STATE SERVICE\n80/tcp   open  http\n22/tcp   open  ssh\n");
+      check("executiveReport: resumen para dirección desde nmap", !!execNmap && execNmap.includes("# Informe Ejecutivo") && execNmap.includes("## 1. Métricas clave") && execNmap.includes("**2 puerto(s) abierto(s)**"));
+      const findGob = fns.findingsReport("/admin (Status: 200) [Size: 5123]\n/login (Status: 301) [Size: 178] [--> /login/]\n");
+      check("findingsReport: tabla de hallazgos desde gobuster", !!findGob && findGob.includes("# Informe de Hallazgos") && findGob.includes("| # | Severidad | Hallazgo | Evidencia | Recomendación |") && findGob.includes("| 1 | medium | /admin |"));
+      const execCurl = fns.executiveReport(curlSample);
+      check("executiveReport: métricas desde curl (cabeceras)", !!execCurl && execCurl.includes("# Informe Ejecutivo") && execCurl.includes("Cabeceras de seguridad ausentes") && execCurl.includes("4"));
+      check("executiveReport/findingsReport null con texto irrelevante", fns.executiveReport("hola que tal") === null && fns.findingsReport("hola que tal") === null);
+      check("detectToolOutput identifica curl como 'curl'", fns.detectToolOutput(curlSample) === "curl");
     } catch (e) {
       check("parsers dinámicos ejecutan sin error", false, (e && e.message || e).toString().slice(0, 200));
     }
   }
+
+  // ---------- Verificación de integridad (arranque) ----------
+  console.log("\n[Integridad] Verificación automática en el arranque");
+  check("panel de integridad en #boot", html.includes('id="bootInt"') && html.includes('id="biAppDot"') && html.includes('id="biSecretsDot"'));
+  check("botón 🧬 en el header", html.includes('id="btnIntegrity"'));
+  check("runIntegrityCheck definida", /function\s+runIntegrityCheck/.test(script));
+  check("localIntegrity (fallback sin puente)", /function\s+localIntegrity/.test(script));
+  check("endpoint /integrity vía puente", script.includes("BRIDGE+'/integrity'"));
+  check("arranque ejecuta runIntegrityCheck", script.includes("termPing().then(()=>runIntegrityCheck(false))"));
+  check("botón re-ejecuta la verificación", script.includes("$('#btnIntegrity').onclick=()=>runIntegrityCheck(true)"));
+  check("localIntegrity revisa claves en claro", script.includes("const fields=['mistralKey','groqKey','openrouterKey','hfToken','bridgeToken','piperToken','proxyToken']") && script.includes("fields.forEach(k=>{ if(s[k]) leaks.push(k); })"));
+  check("estados de fila (ok/err/busy)", script.includes("'bi-dot '+state") && script.includes("setBiRow('biApp','busy'") );
 
   // ---------- Resumen ----------
   console.log("\n" + "=".repeat(60));

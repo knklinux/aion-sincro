@@ -13,7 +13,7 @@ echo   AION SINCRÓ — SUITE DE PRUEBAS
 echo ============================================================
 echo.
 
-echo [1/3] test_bridge.py  (seguridad de puentes y servidores)
+echo [1/4] test_bridge.py  (seguridad de puentes y servidores)
 echo ------------------------------------------------------------
 python test_bridge.py
 if errorlevel 1 (
@@ -23,7 +23,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo [2/3] test_app.js  (sintaxis JS, secretos y funciones)
+echo [2/4] test_app.js  (sintaxis JS, secretos y funciones)
 echo ------------------------------------------------------------
 node test_app.js
 if errorlevel 1 (
@@ -33,12 +33,22 @@ if errorlevel 1 (
 )
 
 echo.
-echo [3/3] test_mutacion.py  (test de mutación: la regresión WebCrypto protege)
+echo [3/4] test_mutacion.py  (test de mutación: la regresión WebCrypto protege)
 echo ------------------------------------------------------------
 python test_mutacion.py
 if errorlevel 1 (
     echo.
     echo  *** FALLÓ el test de mutación ***
+    exit /b 1
+)
+
+echo.
+echo [4/4] test_aion_osint.py  (módulo OSINT local: funciones puras + CLI)
+echo ------------------------------------------------------------
+python test_aion_osint.py
+if errorlevel 1 (
+    echo.
+    echo  *** FALLARON las pruebas de OSINT ***
     exit /b 1
 )
 

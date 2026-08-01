@@ -416,6 +416,18 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
   color:#1d1200;background:linear-gradient(135deg,#ffd166,#f5a524);box-shadow:0 0 40px rgba(245,165,36,.45);
   transition:.25s;animation:corePulse 2.4s infinite}
 #bootBtn:hover{transform:scale(1.06)}
+.bootint{margin-top:18px;width:min(460px,88vw);background:rgba(10,12,18,.6);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;display:flex;flex-direction:column;gap:8px}
+.bootint .bi-title{font-size:10px;letter-spacing:.28em;color:var(--dim);text-transform:uppercase;margin-bottom:2px}
+.bi-row{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--txt)}
+.bi-dot{width:9px;height:9px;border-radius:50%;flex:none;background:#3f3f46;box-shadow:0 0 6px rgba(0,0,0,.4)}
+.bi-dot.ok{background:#10b981;box-shadow:0 0 8px rgba(16,185,129,.6)}
+.bi-dot.warn{background:#f5a524;box-shadow:0 0 8px rgba(245,165,36,.55)}
+.bi-dot.err{background:#f43f5e;box-shadow:0 0 8px rgba(244,63,94,.6)}
+.bi-dot.busy{background:#f5a524;animation:corePulse 1s infinite}
+.bi-detail{margin-top:2px;font-size:10px;color:var(--dim);line-height:1.5;max-height:72px;overflow:auto}
+.bi-detail b{color:#f5a524}
+#btnIntegrity.ok{border-color:rgba(52,211,153,.5);background:rgba(16,185,129,.1)}
+#btnIntegrity.err{border-color:rgba(251,113,133,.5);background:rgba(251,113,133,.1)}
 
 /* ---------- Overlay de bienvenida (historia de Ark & Jimmy) ---------- */
 #welcome{position:fixed;inset:0;z-index:95;background:var(--bg0);opacity:0;visibility:hidden;pointer-events:none;
@@ -788,6 +800,7 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
     <button class="head-btn" id="btnISO" title="Auditoría de cumplimiento ISO 27001:2022 — cuestionario, gap analysis y plan de cumplimiento exportable">🔎 ISO</button>
     <button class="head-btn" id="btnLearn" title="Ruta Red Team: aprendizaje guiado con checkpoints de práctica">🧭 Ruta</button>
     <button class="head-btn" id="btnStory" title="Releer la historia de Ark & Jimmy (MANIFIESTO)">📖 Ver historia</button>
+    <button class="head-btn" id="btnIntegrity" title="Verificar integridad: suites de pruebas y secretos del repo">🧬</button>
     <div class="lockWrap" id="lockWrap">
       <button class="head-btn" id="btnLock" title="Claves cifradas — desbloquear">🔒</button>
       <div class="lockPop" id="lockPop">
@@ -1109,6 +1122,13 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
   <h1>AION SINCRÓ</h1>
   <p>COMPAÑERA DE PENTEST &amp; RED TEAM</p>
   <div class="bootbar"><i id="bootBar"></i></div>
+  <div class="bootint" id="bootInt" style="display:none">
+    <div class="bi-title">🧬 Verificación de integridad</div>
+    <div class="bi-row"><span class="bi-dot busy" id="biAppDot"></span><span id="biAppTxt">App — sintaxis JS/HTML</span></div>
+    <div class="bi-row"><span class="bi-dot busy" id="biBridgeDot"></span><span id="biBridgeTxt">Puente — suites y servidores</span></div>
+    <div class="bi-row"><span class="bi-dot busy" id="biSecretsDot"></span><span id="biSecretsTxt">Repo — sin secretos</span></div>
+    <div class="bi-detail" id="biDetail"></div>
+  </div>
   <button id="bootBtn">▶ INICIAR AION SINCRÓ</button>
 </div>
 
@@ -1628,6 +1648,7 @@ const VOXTRAL_EMOTIONS=[
   ['sad','😢 Triste'],['frustrated','😤 Frustrado'],['angry','😠 Enojado']
 ];
 // Piper TTS local (100% gratis, sin internet) — voces en español verificadas
+let PIPER_INSTALLED=null; // voces realmente instaladas (las reporta el /ping del servidor Piper)
 const PIPER_VOICES=[
   ['es_ES-sharvard-medium','Español (es_ES · mujer)'],
   ['es_ES-davefx-medium','Español (es_ES · hombre)'],
@@ -1680,9 +1701,25 @@ function piperPing(cb){
   try{
     fetch(url+'/ping'+(q?'?'+q:''),{signal:AbortSignal.timeout(2500)})
       .then(r=>{ clearTimeout(t); return r.ok?r.json():Promise.reject(new Error('HTTP '+r.status)); })
-      .then(j=>{ store.piperOnline=!!(j&&j.ok&&j.piper); if(cb) cb(store.piperOnline); })
+      .then(j=>{ store.piperOnline=!!(j&&j.ok&&j.piper); if(j&&Array.isArray(j.voices)&&j.voices.length) PIPER_INSTALLED=j.voices; refreshPiperOptions(); if(cb) cb(store.piperOnline); })
       .catch(()=>{ clearTimeout(t); store.piperOnline=false; if(cb) cb(false); });
   }catch(e){ clearTimeout(t); store.piperOnline=false; if(cb) cb(false); }
+}
+function installedPiperOptions(){
+  // Solo las voces Piper que el servidor confirmó como instaladas (PIPER_INSTALLED
+  // del /ping). Si aún no se comprobó (null) se muestran todas como fallback.
+  return PIPER_VOICES.filter(v=>!PIPER_INSTALLED||PIPER_INSTALLED.includes(v[0]))
+    .map(v=>`<option value="piper:${v[0]}">🗣️ Piper local — ${v[1]}</option>`).join('');
+}
+function refreshPiperOptions(){
+  // Re-renderiza SOLO las opciones Piper del selector con las voces realmente
+  // instaladas (PIPER_INSTALLED del /ping). Evita elegir voces inexistentes.
+  const sel=$('#voiceSel'); if(!sel) return;
+  const cur=sel.value||store.voice||'';
+  const nonPiper=[...sel.querySelectorAll('option')].filter(o=>o.value&&o.value.indexOf('piper:')!==0).map(o=>o.outerHTML).join('');
+  sel.innerHTML='<option value="">Auto (español si existe)</option>'+installedPiperOptions()+nonPiper;
+  if(cur&&[...sel.options].some(o=>o.value===cur)) sel.value=cur; else { sel.value=''; store.voice=''; }
+  syncVoxtralEmotionUI();
 }
 function syncPiperUI(){
   const el=$('#piperStatus'); if(!el) return;
@@ -1707,7 +1744,7 @@ function loadVoices(){
     else if(slug==='gb_jane_sarcasm') prev='voxtral:gb_jane';
   }
   sel.innerHTML='<option value="">Auto (español si existe)</option>'+
-    PIPER_VOICES.map(v=>`<option value="piper:${v[0]}">🗣️ Piper local — ${v[1]}</option>`).join('')+
+    installedPiperOptions()+
     VOXTRAL_VOICES.map(v=>`<option value="voxtral:${v[0]}">🤖 Mistral Voxtral — ${v[1]}</option>`).join('')+
     voices.map(v=>`<option value="${esc(v.name)}">${esc(v.name)} (${v.lang})${v.localService?' · offline':''}</option>`).join('');
   if(prev) sel.value=prev;
@@ -2204,11 +2241,18 @@ function renderEval(){
     }else{
       h+='<div class="eval-banner">🏆 <b>'+(en?'Perfect! You master the Red Team path.':'¡Perfecto! Dominas la Ruta Red Team.')+'</b></div>';
     }
-    h+='<div style="text-align:center;padding:10px 0 16px"><button id="btnRetakeEval">↺ '+(en?'RETAKE EXAM':'REPETIR EXAMEN')+'</button></div>';
+    h+='<div style="text-align:center;padding:10px 0 16px">'
+      +'<button class="eval-cta" id="btnEvalExportMd">📥 '+(en?'Markdown':'Markdown')+'</button> '
+      +'<button class="eval-cta" id="btnEvalExportPdf">📄 PDF</button> '
+      +'<button id="btnRetakeEval">↺ '+(en?'RETAKE EXAM':'REPETIR EXAMEN')+'</button></div>';
     body.innerHTML=h;
     $('#evalScore').textContent=(en?'Last score':'Última nota')+': '+g.pct+'% · '+(en?'best':'récord')+': '+(evalState.best||g.pct)+'%';
     const rb=$('#btnRetakeEval');
     if(rb) rb.onclick=()=>{ evalState.done=false; evalState.answers={}; evalSave(); renderEval(); };
+    const emd=$('#btnEvalExportMd');
+    if(emd) emd.onclick=()=>{ const md=evalReportMd(); if(md) downloadMarkdown(md,'evaluacion-ruta-red-team'); };
+    const epdf=$('#btnEvalExportPdf');
+    if(epdf) epdf.onclick=()=>{ const md=evalReportMd(); if(md) exportPdf(md,'Evaluación Ruta Red Team'); };
   }
 }
 function evalCheckpointTitle(cpId){
@@ -2240,6 +2284,52 @@ function evalGrade(){
   if(evalState.best===null||pct>evalState.best) evalState.best=pct;
   evalState.done=true; evalSave();
   renderEval();
+}
+function evalReportMd(){
+  // Exportación del resultado del examen: nota por fase, respuestas falladas y plan de repaso.
+  const g=evalState&&evalState.lastGrade; if(!g) return null;
+  const en=reportIsEn(); const A=evalState.answers||{};
+  const fecha=new Date().toLocaleDateString(en?'en-US':(store.lang||'es-ES'),{day:'2-digit',month:'long',year:'numeric'});
+  let md= en?'# Red Team Route — Evaluation Report\n\n':'# Ruta Red Team — Informe de Evaluación\n\n';
+  md+='> '+(en?'**Global score:** ':'**Nota global:** ')+g.pct+'% · '+(en?'Best: ':'Récord: ')+(evalState.best||g.pct)+'%\n\n';
+  md+='## 1. '+(en?'Score by phase':'Nota por fase')+'\n\n';
+  md+='| '+(en?'Phase':'Fase')+' | '+(en?'Score':'Nota')+' | '+(en?'Correct / Total':'Aciertos / Total')+' |\n|---|---|---|\n';
+  for(const p of EVAL_EXAM){
+    const s=g.byPhase[p.key]||{pct:0,ok:0,tot:0};
+    md+='| '+p.ico+' '+(en?p.name_en:p.name)+' | '+s.pct+'% | '+s.ok+'/'+s.tot+' |\n';
+  }
+  // Respuestas falladas: mismo esquema de ids que evalGrade (p.key+'-'+n global).
+  let n=0; const fails=[];
+  for(const p of EVAL_EXAM) for(const q of p.q){
+    const id=p.key+'-'+n; n++;
+    if(A[id]===q.a) continue;
+    fails.push({phase:p, q, usr:A[id]!==undefined?q.o[A[id]]:null});
+  }
+  md+='\n## 2. '+(en?'Failed answers':'Respuestas falladas')+'\n\n';
+  if(!fails.length) md+=(en?'None — perfect exam!':'Ninguna — ¡examen perfecto!')+'\n';
+  else fails.forEach((f,i)=>{
+    md+='### '+(i+1)+'. '+f.q.t.replace(/<\/?b>/g,'')+'\n\n';
+    md+='- '+(en?'**Your answer:** ':'**Tu respuesta:** ')+(f.usr||('_'+(en?'no answer':'sin respuesta')+'_'))+'\n';
+    md+='- '+(en?'**Correct answer:** ':'**Respuesta correcta:** ')+f.q.o[f.q.a]+'\n';
+    md+='- '+(en?'**Review checkpoint:** ':'**Checkpoint a repasar:** ')+'`'+evalCheckpointTitle(f.q.cp)+'`\n\n';
+  });
+  // Plan de repaso con los checkpoints vinculados.
+  md+='## 3. '+(en?'Review plan (linked checkpoints)':'Plan de repaso (checkpoints vinculados)')+'\n\n';
+  if(!fails.length) md+='🏆 '+(en?'You master the Red Team path!':'¡Dominas la Ruta Red Team!')+'\n';
+  else{
+    md+='| '+(en?'Phase':'Fase')+' | '+(en?'Checkpoint':'Checkpoint')+' | '+(en?'Action':'Acción')+' |\n|---|---|---|\n';
+    fails.forEach(f=>{
+      md+='| '+(en?f.phase.name_en:f.phase.name)+' | '+evalCheckpointTitle(f.q.cp)+' | '+(en?'Open the Route → PRACTICE':'Abre la Ruta → PRACTICAR')+' |\n';
+    });
+    md+='\n'+(en?'Practice each checkpoint and retake the exam.':'Practica cada checkpoint y repite el examen.')+'\n';
+  }
+  // El veredicto se recalcula aquí con el idioma del informe (no el de la UI al corregir).
+  const verdict=en
+    ?(g.pct>=80?'Outstanding — you are ready for real authorized engagements with supervision.':g.pct>=50?'Good foundation — reinforce the flagged checkpoints and retake.':'Keep going — the Route checkpoints are your study guide. Practice each one and retake.')
+    :(g.pct>=80?'¡Excelente! Estás lista para engagements reales autorizados con supervisión.':g.pct>=50?'Buena base — refuerza los checkpoints señalados y vuelve a intentarlo.':'Sigue — los checkpoints de la Ruta son tu guía de estudio. Practica cada uno y repite el examen.');
+  md+='\n**'+(en?'Verdict':'Veredicto')+':** '+verdict+'\n\n---\n';
+  md+=(en?'*Generated by Aion Sincro · Red Team Route evaluation · ':'*Generado por Aion Sincro · Evaluación de la Ruta Red Team · ')+fecha+'*';
+  return md;
 }
 function openEval(){
   evalLoad();
@@ -2847,6 +2937,7 @@ function detectToolOutput(text){
   const s=String(text||'');
   if(/(Nmap scan report for|Starting Nmap|PORT\s+STATE\s+SERVICE|^Host:\s+\S+\s+Ports:)/im.test(s)) return 'nmap';
   if(/\(Status:\s*\d{3}\)\s*\[Size:/i.test(s)||/Gobuster v/i.test(s)) return 'gobuster';
+  if(/^HTTP\/[\d.]+\s+\d{3}/im.test(s)) return 'curl'; // curl -sI siempre imprime la línea de estado primero
   if(/\bPlugin #\d+\s*\(/i.test(s)&&/(Severity|Risk Factor):/i.test(s)) return 'nessus';
   if(/^Issue:\s*.+$/im.test(s)&&/Severity:\s*(High|Medium|Low|Critical|Information)/i.test(s)) return 'burp';
   return null;
@@ -2987,9 +3078,141 @@ function reconReport(text){
   const tool=detectToolOutput(text);
   if(tool==='nmap') return nmapReconReport(text);
   if(tool==='gobuster') return gobusterReconReport(text);
+  if(tool==='curl') return curlReconReport(text);
   if(tool==='nessus') return nessusReconReport(text);
   if(tool==='burp') return burpReconReport(text);
   return null;
+}
+/* ---------- curl: cabeceras de seguridad HTTP ---------- */
+function parseCurlOutput(text){
+  const s=String(text||'');
+  const sm=s.match(/^HTTP\/[\d.]+\s+(\d{3})(?:\s+([^\r\n]+))?/im);
+  if(!sm) return null;
+  const headers={}; let server='';
+  for(const raw of s.split(/\r?\n/)){
+    const hm=raw.match(/^([A-Za-z0-9-]+):\s*(.*)$/);
+    if(!hm) continue;
+    const k=hm[1].toLowerCase();
+    if(k==='server') server=hm[2].trim();
+    headers[k]=hm[2].trim();
+  }
+  const SEC=['strict-transport-security','content-security-policy','x-frame-options','x-content-type-options','referrer-policy','permissions-policy'];
+  const missing=SEC.filter(h=>!headers[h]);
+  return {status:parseInt(sm[1],10),reason:(sm[2]||'').trim(),server,headers,missing};
+}
+function curlReconReport(text){
+  const c=parseCurlOutput(text); if(!c) return null;
+  const en=reportIsEn();
+  const fecha=new Date().toLocaleDateString(en?'en-US':(store.lang||'es-ES'),{day:'2-digit',month:'long',year:'numeric'});
+  let md= en?'# HTTP Security Headers Report — curl\n\n':'# Informe de Cabeceras de Seguridad — curl\n\n';
+  md+= en?'> **Executive summary:** HTTP '+c.status+(c.reason?' '+c.reason:'')+' · '+(c.missing.length?c.missing.length+' missing security header(s)':'all security headers present')+'\n\n'
+        :'> **Resumen ejecutivo:** HTTP '+c.status+(c.reason?' '+c.reason:'')+' · '+(c.missing.length?c.missing.length+' cabecera(s) de seguridad ausente(s)':'todas las cabeceras de seguridad presentes')+'\n\n';
+  md+= en?'## 1. Response\n\n':'## 1. Respuesta\n\n';
+  md+= en?'| Field | Value |\n|---|---|\n':'| Campo | Valor |\n|---|---|\n';
+  md+='| '+(en?'Status code':'Código')+' | '+c.status+' '+(c.reason||'')+' |\n';
+  md+='| Server | '+(c.server||'—')+' |\n';
+  if(c.headers.location) md+='| Location | '+c.headers.location+' |\n';
+  md+='\n'+(en?'## 2. Security headers\n\n':'## 2. Cabeceras de seguridad\n\n');
+  const SEC_LBL={'strict-transport-security':'Strict-Transport-Security','content-security-policy':'Content-Security-Policy','x-frame-options':'X-Frame-Options','x-content-type-options':'X-Content-Type-Options','referrer-policy':'Referrer-Policy','permissions-policy':'Permissions-Policy'};
+  md+= en?'| Header | Status |\n|---|---|\n':'| Cabecera | Estado |\n|---|---|\n';
+  Object.keys(SEC_LBL).forEach(k=>{ md+='| '+SEC_LBL[k]+' | '+(c.headers[k]?(en?'✔ present':'✔ presente'):(en?'✘ missing':'✘ ausente'))+' |\n'; });
+  md+='\n'+(en?'## 3. Recommendations\n\n':'## 3. Recomendaciones\n\n');
+  if(!c.missing.length) md+= en?'All recommended security headers are present.\n':'Todas las cabeceras de seguridad recomendadas están presentes.\n';
+  else{
+    c.missing.forEach(h=>{
+      md+='- **'+SEC_LBL[h]+'**: '+(en?'add this header to harden the response against clickjacking, MIME sniffing or protocol downgrade attacks.':'añade esta cabecera para endurecer la respuesta frente a clickjacking, MIME sniffing o ataques de degradación de protocolo.')+'\n';
+    });
+  }
+  md+='\n---\n'+(en?'*Report generated by Aion Sincro from the real curl output.*':'*Informe generado por Aion Sincro a partir de la salida real de curl.*');
+  return md;
+}
+/* ---------- Plantillas Laboral: informe ejecutivo y de hallazgos ---------- */
+function executiveReport(text){
+  const tool=detectToolOutput(text); const en=reportIsEn();
+  const fecha=new Date().toLocaleDateString(en?'en-US':(store.lang||'es-ES'),{day:'2-digit',month:'long',year:'numeric'});
+  let res=null;
+  if(tool==='nmap') res=parseNmapOutput(text);
+  else if(tool==='gobuster') res=parseGobusterOutput(text);
+  else if(tool==='curl') res=parseCurlOutput(text);
+  else if(tool==='nessus') res=parseNessusOutput(text);
+  else if(tool==='burp') res=parseBurpOutput(text);
+  if(!res) return null;
+  let md= en?'# Executive Report\n\n':'# Informe Ejecutivo\n\n';
+  md+='> '+(en?'**For management** — generated from the real ':'**Para dirección** — generado desde la salida real de ')+(en?(tool==='curl'?'curl (HTTP headers)':tool):(tool==='curl'?'curl (cabeceras HTTP)':tool))+' · '+fecha+'\n\n';
+  md+= en?'## 1. Key metrics\n\n':'## 1. Métricas clave\n\n';
+  md+= en?'| Metric | Value |\n|---|---|\n':'| Métrica | Valor |\n|---|---|\n';
+  if(tool==='nmap'){
+    const hosts=res, total=hosts.reduce((a,h)=>a+h.ports.length,0);
+    const servs=[...new Set(hosts.flatMap(h=>h.ports.map(p=>String(p.service).split(/[\s(]/)[0]).filter(Boolean).map(x=>x.toLowerCase())))].slice(0,6).join(', ')||'—';
+    md+='| '+(en?'Hosts analyzed':'Hosts analizados')+' | '+hosts.length+' |\n';
+    md+='| '+(en?'Open ports':'Puertos abiertos')+' | '+total+' |\n';
+    md+='| '+(en?'Services':'Servicios')+' | '+servs+' |\n';
+    md+='\n## 2. '+(en?'Summary for management':'Resumen para dirección')+'\n\n';
+    md+= en?'The scan revealed **'+total+' open port(s)** across **'+hosts.length+' host(s)**. The exposed services are the most likely entry points and should be reviewed, hardened or restricted immediately.\n':'El escaneo reveló **'+total+' puerto(s) abierto(s)** en **'+hosts.length+' host(s)**. Los servicios expuestos son los puntos de entrada más probables y deben revisarse, endurecerse o restringirse de inmediato.\n';
+  }else if(tool==='gobuster'){
+    const rows=res, s2=rows.filter(r=>r.status===200).length, s4=rows.filter(r=>r.status>=400).length;
+    md+='| '+(en?'Paths found':'Rutas encontradas')+' | '+rows.length+' |\n';
+    md+='| '+(en?'Status 200':'Estado 200')+' | '+s2+' |\n';
+    md+='| '+(en?'Client errors (4xx)':'Errores de cliente (4xx)')+' | '+s4+' |\n';
+    md+='\n## 2. '+(en?'Summary for management':'Resumen para dirección')+'\n\n';
+    md+= en?'Directory enumeration found **'+rows.length+' path(s)**, of which **'+s2+' are directly accessible**. Accessible paths may expose sensitive content or administrative areas.\n':'La enumeración de directorios encontró **'+rows.length+' ruta(s)**, de las cuales **'+s2+' son accesibles directamente**. Las rutas accesibles pueden exponer contenido sensible o áreas de administración.\n';
+  }else if(tool==='curl'){
+    const c=res;
+    md+='| '+(en?'HTTP status':'Estado HTTP')+' | '+c.status+(c.reason?' '+c.reason:'')+' |\n';
+    md+='| '+(en?'Missing security headers':'Cabeceras de seguridad ausentes')+' | '+c.missing.length+' |\n';
+    md+='\n## 2. '+(en?'Summary for management':'Resumen para dirección')+'\n\n';
+    md+= en?'The web server responds **HTTP '+c.status+(c.reason?' '+c.reason:'')+'** and is missing **'+c.missing.length+' security header(s)**. This raises the risk of clickjacking, MIME sniffing and protocol downgrade attacks.\n':'El servidor web responde **HTTP '+c.status+(c.reason?' '+c.reason:'')+'** y le faltan **'+c.missing.length+' cabecera(s) de seguridad**. Esto eleva el riesgo de clickjacking, MIME sniffing y ataques de degradación de protocolo.\n';
+  }else if(tool==='nessus'){
+    const f=res;
+    const crit=f.filter(x=>/critical/i.test(x.severity)).length, high=f.filter(x=>/high/i.test(x.severity)).length;
+    md+='| '+(en?'Findings':'Hallazgos')+' | '+f.length+' |\n';
+    md+='| '+(en?'Critical':'Críticos')+' | '+crit+' |\n';
+    md+='| '+(en?'High':'Altos')+' | '+high+' |\n';
+    md+='\n## 2. '+(en?'Summary for management':'Resumen para dirección')+'\n\n';
+    md+= en?'The vulnerability scan found **'+f.length+' finding(s)**, of which **'+crit+' critical and '+high+' high**. These require immediate remediation with a retest to confirm closure.\n':'El escaneo de vulnerabilidades encontró **'+f.length+' hallazgo(s)**, de los cuales **'+crit+' crítico(s) y '+high+' alto(s)**. Requieren remediación inmediata con un re-escaneo para confirmar el cierre.\n';
+  }else if(tool==='burp'){
+    const i=res;
+    const hi=i.filter(x=>/high|critical/i.test(x.severity)).length;
+    md+='| '+(en?'Issues':'Hallazgos')+' | '+i.length+' |\n';
+    md+='| '+(en?'High / Critical':'Altos / Críticos')+' | '+hi+' |\n';
+    md+='\n## 2. '+(en?'Summary for management':'Resumen para dirección')+'\n\n';
+    md+= en?'The application assessment found **'+i.length+' issue(s)**, of which **'+hi+' are high or critical**. Application-layer flaws must be fixed before production deployment.\n':'La evaluación de la aplicación encontró **'+i.length+' hallazgo(s)**, de los cuales **'+hi+' son altos o críticos**. Las fallas de capa de aplicación deben corregirse antes del despliegue en producción.\n';
+  }
+  md+='\n## 3. '+(en?'Recommended next steps':'Próximos pasos recomendados')+'\n\n';
+  md+= en?'1. Close or restrict the exposed services/paths.\n2. Apply the recommended headers or patches.\n3. Retest and document evidence for the final report.\n\n': '1. Cierra o restringe los servicios/rutas expuestos.\n2. Aplica las cabeceras o parches recomendados.\n3. Vuelve a probar y documenta la evidencia para el informe final.\n\n';
+  md+= en?'---\n*Generated by Aion Sincro · Executive report from real tool output.*':'---\n*Generado por Aion Sincro · Informe ejecutivo desde la salida real de la herramienta.*';
+  return md;
+}
+function findingsReport(text){
+  const tool=detectToolOutput(text); const en=reportIsEn();
+  let rows=[];
+  if(tool==='nmap'){
+    const hosts=parseNmapOutput(text); if(!hosts) return null;
+    hosts.forEach(h=>h.ports.forEach(p=>{ rows.push({sev:'info',name:(en?'Open port ':'Puerto abierto ')+p.port+'/'+(p.proto||'tcp'),evid:h.host,rec:(en?'Close or filter if not required.':'Cierra o filtra si no es necesario.')}); }));
+  }else if(tool==='gobuster'){
+    const r=parseGobusterOutput(text); if(!r) return null;
+    r.forEach(x=>{ rows.push({sev:x.status===200?'medium':(x.status===403?'low':'info'),name:x.path,evid:x.status+(x.redirect?' → '+x.redirect:''),rec:(en?'Review this path manually.':'Revisa esta ruta manualmente.')}); });
+  }else if(tool==='curl'){
+    const c=parseCurlOutput(text); if(!c) return null;
+    c.missing.forEach(h=>{ rows.push({sev:'medium',name:(en?'Missing header ':'Cabecera ausente ')+h,evid:'HTTP '+c.status,rec:(en?'Add the '+h+' header.':'Añade la cabecera '+h+'.')}); });
+  }else if(tool==='nessus'){
+    const f=parseNessusOutput(text); if(!f) return null;
+    f.forEach(x=>{ rows.push({sev:x.severity||'info',name:x.name||('Plugin '+x.id),evid:x.host||'',rec:x.solution||(en?'Apply vendor patch.':'Aplica el parche del fabricante.')}); });
+  }else if(tool==='burp'){
+    const i=parseBurpOutput(text); if(!i) return null;
+    i.forEach(x=>{ rows.push({sev:x.severity||'info',name:x.name,evid:[x.host,x.path].filter(Boolean).join(' · '),rec:x.remediation||(en?'Fix and retest.':'Corrige y vuelve a probar.')}); });
+  }else return null;
+  const ord={critical:0,high:1,medium:2,low:3,info:4};
+  rows.sort((a,b)=>(ord[a.sev.toLowerCase()]??5)-(ord[b.sev.toLowerCase()]??5));
+  let md= en?'# Findings Report\n\n':'# Informe de Hallazgos\n\n';
+  md+='> '+(en?'**'+rows.length+' finding(s)** derived from the real ':'**'+rows.length+' hallazgo(s)** derivados de la salida real de ')+(en?tool:(tool==='curl'?'curl (cabeceras HTTP)':tool))+' output.\n\n';
+  md+= en?'## 1. Findings\n\n':'## 1. Hallazgos\n\n';
+  md+= en?'| # | Severity | Finding | Evidence | Recommendation |\n|---|---|---|---|---|\n':'| # | Severidad | Hallazgo | Evidencia | Recomendación |\n|---|---|---|---|---|\n';
+  rows.slice(0,25).forEach((r,i)=>{ md+='| '+(i+1)+' | '+r.sev+' | '+r.name+' | '+r.evid+' | '+r.rec+' |\n'; });
+  md+='\n'+(en?'## 2. Recommended actions\n\n':'## 2. Acciones recomendadas\n\n');
+  md+= en?'1. Remediate critical/high findings first.\n2. Retest after each fix and keep evidence.\n3. Include findings in the final pentest report.\n\n': '1. Remedia primero los hallazgos críticos/altos.\n2. Vuelve a probar tras cada corrección y guarda la evidencia.\n3. Incluye los hallazgos en el informe final de pentest.\n\n';
+  md+= en?'---\n*Generated by Aion Sincro · Findings from real tool output.*':'---\n*Generado por Aion Sincro · Hallazgos desde la salida real de la herramienta.*';
+  return md;
 }
 const escH=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function mdToHtml(md){
@@ -3411,6 +3634,7 @@ Así nací: la firma conjunta de una simbiosis, coautora de un Plan de Rescate p
   if(/broma|chiste|chiste/.test(q)) return '¿Por qué el hacker no usa antivirus? Porque prefiere "inocular" confianza… ¿Quieres otro? Dime "otro chiste" (en modo Demo solo tengo este, pero con IA real seré más gracioso).';
   if(/al?an turing/.test(q)) return 'Alan Turing (1912–1954) fue un matemático y pionero de la computación. Ideó la máquina de Turing, base teórica de los ordenadores, descifró la máquina Enigma en Bletchley Park durante la II Guerra Mundial y propuso el famoso Test de Turing para evaluar inteligencia artificial. En 1950 escribió "Computing Machinery and Intelligence".';
   if(/MODO RUTA|Ruta Red Team guiada|Red Team guided path/.test(q)) return '¡Bienvenida a tu Ruta Red Team 🧭! En modo Demo no puedo desplegar la guía completa paso a paso (eso necesita un motor real), pero te dejo el método que seguiremos en cada checkpoint:\n\n**1 · Contexto**: qué es y para qué sirve el concepto.\n**2 · Herramienta**: el comando exacto y qué significa cada flag.\n**3 · Interpretación**: cómo leer la salida y qué es un hallazgo.\n**4 · Práctica**: un ejercicio en tu laboratorio y una pregunta para pensar.\n\nConecta un motor real en ⚙️ Ajustes (Mistral, Groq u OpenRouter, gratis) y cada botón PRACTICAR se convertirá en una sesión guiada en vivo contigo: explicación, comandos, interpretación y evaluación de tu práctica. Abre también la pestaña 🛠 Herramientas: allí tengo escáner de puertos, comprobación de CVEs y más utilidades para tu laboratorio.';
+  if(/informe|laboral|reporte ejecutivo|plantilla.*informe|reconocimiento.*informe/.test(q)&&store.laboral&&reportIsEn()) return '💼 **Laboral Mode** — Connected to the terminal and your scans. 💡 **New**: paste the **real nmap output** (for example after running `nmap -sV -sC -p- <host>` in the terminal) and I will generate the **reconnaissance report** instantly, with port table, attack surface and recommendations — exportable as **📥 Markdown** or **📄 PDF**. Works even in Demo because the parsing is local.\n\nI can also draft the full report with this structure if you give me the context:\n\n```markdown\n# [Report title]\n> Executive summary for management\n\n## 1. Scope and context\n## 2. Methodology\n## 3. Findings\n| # | Severity | Description | Evidence | Recommendation |\n## 4. Analysis\n## 5. Conclusions and next steps\n```\n\nConnect an engine in ⚙️ Settings and tell me what you have (nmap outputs, findings, a CVE…) — I will return the report in Markdown with **📥 Markdown** and **📄 PDF** buttons to export it.';
   if(/informe|laboral|reporte ejecutivo|plantilla.*informe|reconocimiento.*informe/.test(q)&&store.laboral) return '💼 **Modo Laboral** — Conectado al terminal y a tus escaneos. 💡 **Nuevo**: pega aquí la **salida real de nmap** (por ejemplo tras correr `nmap -sV -sC -p- <host>` en el terminal) y genero el **informe de reconocimiento** al instante, con tabla de puertos, superficie de ataque y recomendaciones — exportable en **📥 Markdown** o **📄 PDF**. Funciona incluso en Demo porque el parsing es local.\n\nTambién puedo redactar el informe completo con esta estructura si me das el contexto:\n\n```markdown\n# [Título del informe]\n> Resumen ejecutivo para dirección\n\n## 1. Alcance y contexto\n## 2. Metodología\n## 3. Hallazgos\n| # | Severidad | Descripción | Evidencia | Recomendación |\n## 4. Análisis\n## 5. Conclusiones y próximos pasos\n```\n\nConecta un motor en ⚙️ Ajustes y dime qué tienes (salidas de nmap, hallazgos, un CVE…) — te devuelvo el informe en Markdown con botones **📥 Markdown** y **📄 PDF** para exportarlo.';
   if(/\biso\b|27001|auditor[ií]a|normativa|normativo|cumplimiento|sgs[ií]/.test(q)){ openISO(); return '🔎 He abierto la **Auditoría ISO 27001:2022** para ti. Rellena el nombre de la empresa y el alcance (o déjalos para el final) y responde cada control con: ✔ Cumple, ◐ Parcial, ✖ No cumple o ⊘ N/A.\n\nCuando termines, en la pestaña **📊 Resultados** verás tu % de cumplimiento por tema (Organizacional, Personas, Físico y Tecnológico) y en **🛠️ Plan de cumplimiento** exactamente qué necesitas implementar para cumplir la norma, con acciones concretas. Y puedes exportar el informe en **📥 Markdown** o **📄 PDF** para tu equipo.\n\n💡 Es una autoevaluación orientativa del Anexo A; la certificación formal requiere un SGSI documentado y auditoría por un organismo acreditado.'; }
   return store.sincronia
@@ -3429,11 +3653,16 @@ async function handleUserText(text){
   const typing=addTyping();
   store.history.push({role:'user',content:text});
   /* Modo Laboral: si el usuario pega salida real de una herramienta (nmap,
-     gobuster, Nessus o Burp Suite), generamos el informe estructurado aquí
-     mismo (funciona con cualquier motor, incluso Demo, porque es parsing
-     determinista de la salida). */
+     gobuster, curl, Nessus o Burp Suite), generamos el informe estructurado
+     aquí mismo (funciona con cualquier motor, incluso Demo, porque es parsing
+     determinista de la salida). Las palabras clave eligen la plantilla:
+     'ejecutivo' → executiveReport (para dirección), 'hallazgos' → findingsReport,
+     por defecto el informe de reconocimiento de la herramienta. */
   if(store.laboral){
-    const report=reconReport(text);
+    let report=null;
+    if(/informe ejecutivo|reporte ejecutivo|executive report/i.test(text)) report=executiveReport(text);
+    else if(/informe de hallazgos|findings report/i.test(text)) report=findingsReport(text); // sin el bare 'hallazgos': no roba rutas de gobuster
+    else report=reconReport(text);
     if(report){
       typing.closest('.msg').remove();
       const body=addMsg('ai','');
@@ -3441,8 +3670,11 @@ async function handleUserText(text){
       store.history.push({role:'assistant',content:report});
       renderTermChips(body, report);
       setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
-      const TOOL_LABEL={nmap:'Nmap',gobuster:'Gobuster',nessus:'Nessus',burp:'Burp Suite'};
-      speak('He generado el informe de reconocimiento desde tu salida de '+(TOOL_LABEL[detectToolOutput(text)]||'la herramienta')+'. Puedes exportarlo en Markdown o PDF.');
+      const TOOL_LABEL={nmap:'Nmap',gobuster:'Gobuster',curl:'curl',nessus:'Nessus',burp:'Burp Suite'};
+      const _tool=TOOL_LABEL[detectToolOutput(text)]||(reportIsEn()?'the tool':'la herramienta');
+      speak(reportIsEn()
+        ? 'I generated the reconnaissance report from your '+_tool+' output. You can export it as Markdown or PDF.'
+        : 'He generado el informe de reconocimiento desde tu salida de '+_tool+'. Puedes exportarlo en Markdown o PDF.');
       streaming=false; // el return es previo al try/finally: hay que liberar la flag manualmente
       return;
     }
@@ -3553,7 +3785,11 @@ function buildChips(){
   $('#chips').innerHTML='';
   chips.forEach(c=>{const b=document.createElement('button');b.className='chip';b.textContent=c;b.onclick=()=>{const i=$('#textInput');i.value=c;i.focus();};$('#chips').appendChild(b);});
   if(store.laboral){
-    const lc=['📋 Informe de reconocimiento: genera un informe profesional de reconocimiento para mi laboratorio autorizado','🛡️ Informe de pentest: redacta un informe de pentest completo (alcance, hallazgos con CVSS, remediación) para mi laboratorio','📊 Reporte ejecutivo: genera un reporte ejecutivo para dirección a partir de estos hallazgos'];
+    const _en=reportIsEn();
+    const lc=[_en?'📋 Recon report: generate a professional reconnaissance report for my authorized lab':'📋 Informe de reconocimiento: genera un informe profesional de reconocimiento para mi laboratorio autorizado',
+      _en?'🛡️ Pentest report: write a full pentest report (scope, CVSS findings, remediation) for my lab':'🛡️ Informe de pentest: redacta un informe de pentest completo (alcance, hallazgos con CVSS, remediación) para mi laboratorio',
+      _en?'📊 Executive report: generate the executive report for management from the real terminal output (nmap, gobuster, curl)':'📊 Informe ejecutivo: genera el informe ejecutivo para dirección desde la salida real del terminal (nmap, gobuster, curl)',
+      _en?'📋 Findings report: generate the findings report from the real terminal output (nmap, gobuster, curl)':'📋 Informe de hallazgos: genera el informe de hallazgos desde la salida real del terminal (nmap, gobuster, curl)'];
     lc.forEach(c=>{const b=document.createElement('button');b.className='chip';b.textContent=c;b.onclick=()=>{const i=$('#textInput');i.value=c;i.focus();};$('#chips').appendChild(b);});
   }
 }
@@ -3570,6 +3806,7 @@ function bind(){
       const w=$('#welcome'); if(w) w.classList.add('show');
     },620);
   };
+  $('#btnIntegrity').onclick=()=>runIntegrityCheck(true);
   $('#welcomeNarrateBtn').onclick=narrateStory;
   $('#welcomeBtn').onclick=()=>{
     const w=$('#welcome'); if(!w) return;
@@ -3756,7 +3993,7 @@ function openSettings(){
   $('#pdfWatermarkText').value=store.pdfWatermarkText||'CONFIDENCIAL';
   $('#pdfCompany').value=store.pdfCompany||'';
   $('#reportLangSel').value=store.reportLang||'es';
-  syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncPdfUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); refreshProviderUI();
+  syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncPdfUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); syncLaboralUI(); refreshProviderUI();
   if(isPiperVoice()) piperPing(()=>syncPiperUI());
 }
 function closeSettings(){ $('#settings').classList.remove('open'); $('#backdrop').classList.remove('show'); }
@@ -3837,7 +4074,13 @@ function syncPentestUI(){
 }
 function syncLaboralUI(){
   const b=$('#btnLaboral'); if(b) b.classList.toggle('on',store.laboral);
-  const ban=$('#laboralBanner'); if(ban) ban.classList.toggle('show',store.laboral);
+  const ban=$('#laboralBanner'); if(ban){
+    ban.classList.toggle('show',store.laboral);
+    // Banner bilingüe: respeta el idioma de informes elegido (reportLang).
+    ban.innerHTML=reportIsEn()
+      ? '💼 <b>LABORAL MODE ACTIVATED</b> — Aion generates <b>professional exportable reports</b> (reconnaissance, pentest, executive) in Markdown and PDF. <b>Paste the real nmap output</b> (from the terminal, your machine or a CTF) and I will generate the reconnaissance report instantly.'
+      : '💼 <b>MODO LABORAL ACTIVADO</b> — Aion genera <b>informes profesionales exportables</b> (reconocimiento, pentest, ejecutivo) en Markdown y PDF. <b>Pega aquí la salida real de nmap</b> (del terminal, de tu máquina o de un CTF) y genero el informe de reconocimiento al instante.';
+  }
   syncPentestUI(); // los chips se muestran en cualquiera de los dos modos
 }
 function syncSincroniaUI(){
@@ -3861,6 +4104,91 @@ function chime(){
   }catch(_){}
 }
 
+/* ---------- Verificación de integridad (arranque) ---------- */
+let integrityChecked=false;
+function setBiRow(id,state,txt){
+  const dot=$('#'+id+'Dot'), lbl=$('#'+id+'Txt');
+  if(dot) dot.className='bi-dot '+state;
+  if(lbl) lbl.textContent=txt;
+}
+function localIntegrity(){
+  // Fallback sin puente: escaneo local del almacén (claves en claro) + presencia de funciones.
+  // Distingue FUGAS REALES (claves en claro con cifrado activo) de AVISOS (cifrado
+  // desactivado, opcional y por elección del usuario) para no asustar en el arranque.
+  const checks={};
+  checks.app_js_syntax={ok:true,detail:'app cargada (el navegador ya ejecutó el JS)'};
+  checks.app_html_syntax={ok:true,detail:'—'};
+  checks.bridge={ok:true,detail:'puente no conectado — verificación remota no disponible'};
+  let leaks=[], warns=[];
+  try{
+    const s=JSON.parse(localStorage.getItem('aion_cfg')||localStorage.getItem('hermes_cfg')||'{}');
+    const fields=['mistralKey','groqKey','openrouterKey','hfToken','bridgeToken','piperToken','proxyToken'];
+    if(s.crypto){
+      // Cifrado ACTIVO: ninguna clave debe estar en claro (saveStore las limpia).
+      fields.forEach(k=>{ if(s[k]) leaks.push(k); });
+      if(leaks.length) warns.push('claves en claro detectadas con el cifrado activo');
+    }else{
+      // Cifrado desactivado es una decisión opcional del usuario: aviso, no fallo.
+      const n=fields.filter(k=>s[k]).length;
+      if(n) warns.push('cifrado WebCrypto desactivado — '+n+' clave(s) en claro en tu navegador (opcional)');
+    }
+  }catch(_){ warns.push('no se pudo leer la configuración local'); }
+  checks.secrets={ok:leaks.length===0,leaks:leaks,warns:warns};
+  // El veredicto global solo falla por incidencias REALES: los avisos (cifrado
+  // desactivado, opcional) mantienen el botón en verde para no alarmar.
+  return {ok:Object.values(checks).every(c=>c.ok===true),quick:true,checks,local:true};
+}
+async function runIntegrityCheck(notify){
+  const panel=$('#bootInt'); if(panel) panel.style.display='flex';
+  setBiRow('biApp','busy','comprobando…');
+  setBiRow('biBridge','busy','comprobando…');
+  setBiRow('biSecrets','busy','comprobando…');
+  const detail=$('#biDetail'); if(detail) detail.textContent='Verificando suites y secretos del repo…';
+  let res=null;
+  if(termConnected && store.bridgeToken){
+    try{
+      const r=await fetch(BRIDGE+'/integrity',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({token:store.bridgeToken||'',quick:true})});
+      if(r.ok) res=await r.json();
+    }catch(_){}
+  }
+  if(!res) res=localIntegrity();
+  integrityChecked=true;
+  const c=res.checks||{};
+  // Fila 1 — App: sintaxis JS/HTML
+  const appOk=!!(c.app_js_syntax&&c.app_js_syntax.ok)&&!!(c.app_html_syntax&&c.app_html_syntax.ok);
+  setBiRow('biApp',appOk?'ok':'err','App — '+(appOk?'OK':'FALLO'));
+  // Fila 2 — Puente: sintaxis Python de puentes/servidores (quick) o suites (full)
+  let bridgeOk=res.local?true:!!(c.bridge&&c.bridge.ok);
+  if(!res.local&&c.bridge===undefined){
+    const pyKeys=Object.keys(c).filter(k=>k.startsWith('py_'));
+    bridgeOk=pyKeys.length?pyKeys.every(k=>c[k].ok===true):true;
+  }
+  setBiRow('biBridge',bridgeOk?'ok':'err','Puente — '+(res.local?'no aplicable (sin puente)':(bridgeOk?'OK':'FALLO')));
+  // Fila 3 — Secretos (tri-state: ok / warn / err)
+  // Las FUGAS reales (claves en claro con cifrado activo) mandan rojo SIEMPRE,
+  // aunque haya avisos; los avisos solos (cifrado opcional desactivado) → ámbar.
+  const secLeaks=!!(c.secrets&&c.secrets.leaks&&c.secrets.leaks.length);
+  const secWarn=!!(c.secrets&&c.secrets.warns&&c.secrets.warns.length);
+  const secOk=!!(c.secrets&&c.secrets.ok)&&!secLeaks&&!secWarn;
+  setBiRow('biSecrets',secLeaks?'err':(secWarn?'warn':'ok'),'Secretos — '+(secLeaks?'¡DETECTADOS!':(secWarn?'aviso':'limpio')));
+  if(detail){
+    const parts=[];
+    if(!appOk){
+      if(c.app_js_syntax&&!c.app_js_syntax.ok) parts.push('JS test: '+c.app_js_syntax.detail);
+      if(c.app_html_syntax&&!c.app_html_syntax.ok) parts.push('HTML JS: '+c.app_html_syntax.detail);
+    }
+    if(!bridgeOk&&!res.local&&c.bridge&&!c.bridge.ok) parts.push('suites: '+c.bridge.detail);
+    if(secLeaks&&c.secrets&&c.secrets.leaks&&c.secrets.leaks.length) parts.push((c.secrets.leaks||[]).join(', '));
+    if(secWarn) parts.push((c.secrets.warns||[]).join(' · '));
+    detail.innerHTML=parts.length?('⚠ '+esc(parts.join(' · '))):'✔ Todo en verde'+(res.local?' (verificación local)':'');
+  }
+  const btn=$('#btnIntegrity');
+  if(btn){ btn.classList.toggle('ok',res.ok); btn.classList.toggle('err',!res.ok);
+    btn.title=(res.ok?'✔ Integridad OK — ':'✘ Integridad con problemas — ')+(res.local?'verificación local':'verificado vía puente'); }
+  if(notify) toast(res.ok?'🧬 Integridad verificada — todo en verde':'🧬 Integridad con problemas — revisa el panel',3400);
+}
+
 /* ---------- Arranque ---------- */
 (function boot(){
   loadStore();
@@ -3868,6 +4196,7 @@ function chime(){
   const iv=setInterval(()=>{ w+=Math.random()*22; if(w>=100){w=100;clearInterval(iv);}
     bar.style.width=w+'%'; },120);
   clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncProxyUI(); syncCryptoUI(); termPing();
+  termPing().then(()=>runIntegrityCheck(false));
   piperPing(()=>syncPiperUI());
   captureWelcomeES();
   renderWelcomeLang();

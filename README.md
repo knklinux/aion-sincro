@@ -246,6 +246,31 @@ sin romper nada.
 
 ---
 
+## 🕵️ Módulo OSINT local — `aion_osint.py`
+
+Aion Sincro incluye un **módulo OSINT local** (Python estándar, sin
+dependencias) para reconocimiento de fuentes abiertas sobre datos propios o
+con autorización:
+
+| Comando | Qué hace |
+|---|---|
+| `python aion_osint.py --user NOMBRE` | Busca en **70+ plataformas** cuentas asociadas a un nombre de usuario y muestra los enlaces |
+| `python aion_osint.py --email a@b.com` | Perfiles públicos asociados a un email (Gravatar) + buscadores manuales |
+| `python aion_osint.py --phone "+34 612 345 678" --country ES` | Normaliza a E.164 y detecta el país |
+| `python aion_osint.py --domain ejemplo.com` | **robots.txt** → rutas no enlazadas, **contenido oculto** (archivos que existen en el back pero no en el front) y **páginas borradas** vía Wayback Machine |
+| `python aion_osint.py --user NOMBRE --json` | Salida JSON para automatizar |
+
+En Windows también puedes usar el lanzador `windows/aion-osint.cmd` (mismos
+argumentos); en Linux/macOS, `chmod +x linux/aion-osint && ./linux/aion-osint`
+igual que con el resto de scripts de `linux/`. El módulo se integra en el
+Terminal de la app: pídele a Aion *"busca cuentas asociadas a este usuario"*
+y propón el comando.
+
+> ⚖️ **Uso legal:** herramienta educativa. Úsala únicamente sobre sistemas
+> propios o con permiso explícito (laboratorios, bug bounty autorizado). La
+> enumeración de contenido oculto en dominios ajenos sin autorización es
+> ilegal en España (Art. 197 C.P.) y en la mayoría de jurisdicciones.
+
 ## 🖥️ Terminal integrado
 
 > ⚠️ **El puente exige token por defecto.** Al iniciarlo genera un
@@ -338,6 +363,7 @@ O en partes:
 | Comando | Qué valida |
 |---|---|
 | `python test_bridge.py` | **Puentes (Python y Node)**: la misma matriz de seguridad se aplica a `bridge.py` **y a `bridge.mjs`** — `/ping`, **Host forjado** (`localhost.evil.com` → 403), **Origin forjado** (`http://evil.com` → 403), **403 sin token**, `/run` ejecuta y devuelve salida + `exit:0`, `/kill`, rutas desconocidas (403 Python / 404 Node), body > 1 MB (413 Node), y lo mismo para `piper_server.py` (token, slug malicioso path-traversal → 400) |
+| `python test_aion_osint.py` | **Módulo OSINT local** (`aion_osint.py`): funciones puras sin red — `parse_robots`, validadores de usuario/email, `normalize_phone`/`detect_country` (E.164), `gravatar_url`, `wayback_cdx_url`, `build_profile_urls` (70+ plataformas), integridad de `SITES`/`HIDDEN_WORDLIST` y CLI offline con entradas inválidas |
 | `node test_app.js` | **App**: sintaxis del `<script>` (`node --check`), **ausencia de secretos** en el código, funciones puras (`detectEmotion` por tono, `voxtralSlug`, `detectLang`), presencia de elementos/funciones clave y sin `eval`/`document.write` |
 | **Cifrado WebCrypto** (dentro de `test_app.js`) | **Parámetros**: PBKDF2-SHA256 con 120 000 iteraciones, AES-GCM 256, clave no-extraíble, salt 16 B e IV 12 B aleatorios. **Round-trip real**: ejecuta `encryptSecrets`/`decryptSecrets` extraídas del `<script>` con `crypto.subtle` de Node — cifra y descifra, passphrase errónea → `null` (no lanza), salts aleatorios producen blobs distintos y el blob cifrado no contiene el secreto en claro |
 

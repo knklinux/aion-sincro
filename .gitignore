@@ -11,6 +11,9 @@ __pycache__/
 # Piper TTS local (venv + modelos de voz, ~600 MB — no subir)
 .venv-piper/
 piper-voices/
+
+# Venv de herramientas OSINT (holehe para aion_osint.py)
+.venv-osint/
 # Audio de prueba generado por piper_compare.py
 salida-voces/
 
@@ -20,6 +23,9 @@ node_modules/
 # Scripts temporales de validación/pruebas
 .tmp_*
 *.tmp_*
+
+# Informe generado por python test_mutacion.py --coverage (regenerable)
+MUTACION_COBERTURA.md
 
 # Sistema
 .DS_Store

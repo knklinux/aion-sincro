@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# ============================================================
+# Aion Sincro — lanzador del módulo OSINT (Linux / macOS)
+# ============================================================
+# Uso:
+#   aion-osint --user  nombre_usuario
+#   aion-osint --email persona@ejemplo.com
+#   aion-osint --phone "+34 612 345 678" --country ES
+#   aion-osint --domain ejemplo.com
+#
+# ⚖️ Úsalo solo sobre datos propios o con autorización.
+set -euo pipefail
+
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PY="${PYTHON:-python3}"
+
+if ! command -v "$PY" >/dev/null 2>&1; then
+  echo "[ERROR] Se necesita Python 3 para ejecutar aion_osint.py" >&2
+  exit 1
+fi
+
+cd "$APP_DIR"
+exec "$PY" aion_osint.py "$@"

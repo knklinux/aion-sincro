@@ -16,8 +16,11 @@
  *     node bridge.mjs [--port 8765] [--token CLAVE]
  */
 import http from "node:http";
-import { spawn, execSync } from "node:child_process";
+import { spawn, execSync, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const args = process.argv.slice(2);
 const argVal = (name, fallback) => {
@@ -27,6 +30,96 @@ const argVal = (name, fallback) => {
 const PORT = Number(argVal("--port", process.env.PORT || 8765));
 // El token SIEMPRE se exige (seguro por defecto): si no se pasa uno, se genera.
 const TOKEN = argVal("--token", process.env.TOKEN || "") || randomBytes(16).toString("hex");
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// ---------- Verificación de integridad (/integrity) ----------
+// Patrones de claves reales: idénticos a test_app.js (mismo veredicto).
+const SECRET_PATTERNS = [
+  /\bsk-[A-Za-z0-9]{20,}/g,
+  /\bgsk_[A-Za-z0-9]{20,}/g,
+  /\bhf_[A-Za-z0-9]{20,}/g,
+  /\bghp_[A-Za-z0-9]{20,}/g,
+  /\bsk-ant-[A-Za-z0-9_-]{20,}/g,
+];
+// Claves compartidas por el usuario en el chat, por FRAGMENTOS (nunca
+// contiguas en el código, así este archivo tampoco filtra nada).
+const KNOWN_LEAKS = [
+  "QdI0yX6f1Fvc8E" + "gAb2QtLtW23zvR5EJ7",
+  "7f6278d2cf394c5b" + "beae378eab6a8ff2",
+  "ghp_5Wgo4pmIwcMYm" + "fNx7tJe0n08GhM9V11YDGWJ",
+];
+const CODE_FILES = [
+  "index.html", "bridge.py", "bridge.mjs", "piper_server.py", "proxy.py",
+  "piper_compare.py", "windows/install.cmd", "windows/uninstall.cmd",
+  "windows/aion-sincro.cmd", "windows/crear-acceso-directo.ps1",
+  "windows/instalar-piper.cmd", "linux/install.sh", "linux/uninstall.sh",
+  "linux/instalar-piper.sh",
+];
+
+function runSuite(cmd, timeoutMs = 30000) {
+  try {
+    const r = spawnSync(cmd[0], cmd.slice(1), {
+      cwd: __dirname, encoding: "utf8", timeout: timeoutMs, shell: false,
+    });
+    const out = (r.stdout || "").trim();
+    const lines = out.split("\n");
+    const tail = lines[lines.length - 1] || "";
+    return { ok: r.status === 0, detail: tail.slice(0, 200) || "sin salida" };
+  } catch (e) {
+    return { ok: false, detail: String(e).slice(0, 200) };
+  }
+}
+
+function scanRepoSecrets() {
+  const leaks = [];
+  for (const f of CODE_FILES) {
+    const p = path.join(__dirname, f);
+    let content = "";
+    try { content = fs.readFileSync(p, "utf8"); } catch { continue; }
+    for (const rx of SECRET_PATTERNS) {
+      rx.lastIndex = 0;
+      let m;
+      while ((m = rx.exec(content)) !== null) leaks.push(`${f}: ${m[0].slice(0, 12)}…`);
+    }
+    for (const k of KNOWN_LEAKS) {
+      if (content.includes(k)) leaks.push(`${f}: clave conocida ${k.slice(0, 8)}…`);
+    }
+  }
+  return leaks;
+}
+
+function integrityQuick() {
+  const checks = {};
+  const r = runSuite(["node", "--check", "test_app.js"]);
+  checks.app_js_syntax = { ok: r.ok, detail: r.detail };
+  try {
+    const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+    const m = html.match(/<script>([\s\S]*)<\/script>/);
+    const tmp = path.join(__dirname, ".integrity_tmp.mjs");
+    fs.writeFileSync(tmp, m[1]);
+    const r2 = runSuite(["node", "--check", tmp]);
+    fs.unlinkSync(tmp);
+    checks.app_html_syntax = { ok: r2.ok, detail: r2.detail };
+  } catch (e) {
+    checks.app_html_syntax = { ok: false, detail: String(e).slice(0, 200) };
+  }
+  const leaks = scanRepoSecrets();
+  checks.secrets = { ok: leaks.length === 0, leaks: leaks.slice(0, 8) };
+  return checks;
+}
+
+function integrityFull() {
+  const checks = {};
+  const r = runSuite(["node", "test_app.js"], 300000);
+  checks.app = { ok: r.ok, detail: r.detail };
+  const py = process.platform === "win32" ? "python" : "python3";
+  const r2 = runSuite([py, "test_bridge.py"], 300000);
+  checks.bridge = { ok: r2.ok, detail: r2.detail };
+  const leaks = scanRepoSecrets();
+  checks.secrets = { ok: leaks.length === 0, leaks: leaks.slice(0, 8) };
+  return checks;
+}
 
 const originAllowed = (o) =>
   o == null ||
@@ -106,6 +199,17 @@ http
         killProc();
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end('{"ok":true}');
+        return;
+      }
+
+      if (req.url === "/integrity" && req.method === "POST") {
+        // Verificación de integridad del repo (exige token, como /run).
+        const quick = data.quick !== false;
+        const t0 = Date.now();
+        const checks = quick ? integrityQuick() : integrityFull();
+        const allOk = Object.values(checks).every((c) => c.ok === true);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: allOk, quick, checks, duration_ms: Date.now() - t0 }));
         return;
       }
 

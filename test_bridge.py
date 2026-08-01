@@ -18,6 +18,7 @@ La misma matriz de seguridad se aplica a AMBOS puentes:
   7) Funciones puras origin_allowed / host_allowed
   8) piper_server.py: /ping con token, Host/Origin forjados, slug malicioso
   9) proxy.py: endpoints de claves, token, límites y sin fugas
+  10) /integrity: verificación de integridad del repo (exige token)
 
 Uso:
     python test_bridge.py
@@ -25,6 +26,7 @@ Uso:
 """
 import importlib.util
 import json
+import os
 import socket
 import subprocess
 import sys
@@ -35,6 +37,11 @@ ROOT = Path(__file__).resolve().parent
 PASS = 0
 FAIL = 0
 FAILURES = []
+
+# Soporte AION_BRIDGE (harness de mutación): permite apuntar la suite a una
+# copia alternativa de bridge.py (el mismo patrón que AION_HTML en test_app.js)
+# para probar que los checks de Host/Origin protegen de verdad.
+BRIDGE_PY = os.environ.get("AION_BRIDGE") or str(ROOT / "bridge.py")
 
 
 def check(name, cond, extra=""):
@@ -58,7 +65,8 @@ def free_port():
 
 def start_server(script, port, token=""):
     """Arranca un servidor local en un puerto libre y devuelve el subproceso."""
-    cmd = [sys.executable, str(ROOT / script), "--port", str(port)]
+    path = BRIDGE_PY if script == "bridge.py" else str(ROOT / script)
+    cmd = [sys.executable, path, "--port", str(port)]
     if token:
         cmd += ["--token", token]
     p = subprocess.Popen(
@@ -141,6 +149,11 @@ def raw_http(port, path, method="GET", host=None, origin=None, body=None, timeou
             chunk = sock.recv(65536)
         except socket.timeout:
             break
+        except OSError:
+            # El servidor cerró la conexión con RST (p. ej. proxy.py rechazando
+            # un body > 1 MB sin drenarlo). Windows lanza ConnectionAbortedError
+            # (WinError 10053): tratar como fin de respuesta, no como fallo.
+            break
         if not chunk:
             break
         data += chunk
@@ -177,7 +190,7 @@ def raw_http(port, path, method="GET", host=None, origin=None, body=None, timeou
 
 def test_pure_functions():
     print("\n[1] Funciones puras origin_allowed / host_allowed")
-    spec = importlib.util.spec_from_file_location("bridge_mod", ROOT / "bridge.py")
+    spec = importlib.util.spec_from_file_location("bridge_mod", BRIDGE_PY)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     ok_hosts = ["127.0.0.1", "127.0.0.1:8765", "localhost", "localhost:8765"]
@@ -333,6 +346,42 @@ def test_piper():
         stop(p)
 
 
+def test_integrity():
+    print("\n[6] Verificación de integridad (/integrity)")
+    port = free_port()
+    token = "integrity-token-123"
+    p = start_server("bridge.py", port, token)
+    try:
+        # 6.1 POST /integrity sin token → 403
+        st, _ = raw_http(port, "/integrity", method="POST", body=json.dumps({"quick": True}))
+        check("/integrity sin token → 403", st == 403, f"got {st}")
+        # 6.2 POST /integrity con token (quick) → 200 + ok:true + checks
+        st, body = raw_http(port, "/integrity", method="POST",
+                            body=json.dumps({"token": token, "quick": True}), timeout=90)
+        check("/integrity con token → 200", st == 200, f"got {st}")
+        txt = body.decode("utf-8", "replace")
+        check("/integrity → ok:true", '"ok": true' in txt, txt[:120])
+        check("/integrity → quick:true", '"quick": true' in txt, txt[:120])
+        check("/integrity → checks presentes", '"checks"' in txt and '"secrets"' in txt, txt[:160])
+        check("/integrity → sin secretos en el repo", '"leaks": []' in txt, txt[:200])
+        # 6.3 GET /integrity (solo POST) → 403
+        st, _ = raw_http(port, "/integrity", method="GET")
+        check("/integrity GET → 403", st == 403, f"got {st}")
+        # 6.4 Host forjado con token válido → 403
+        st, _ = raw_http(port, "/integrity", method="POST", host="localhost.evil.com",
+                         body=json.dumps({"token": token, "quick": True}))
+        check("/integrity Host forjado → 403", st == 403, f"got {st}")
+        # 6.5 Origin forjado con token válido → 403
+        st, _ = raw_http(port, "/integrity", method="POST", origin="http://evil.com",
+                         body=json.dumps({"token": token, "quick": True}))
+        check("/integrity Origin forjado → 403", st == 403, f"got {st}")
+        # 6.6 Ruta desconocida → 403
+        st, _ = raw_http(port, "/otra-cosa", method="POST", body=json.dumps({"token": token}))
+        check("ruta desconocida → 403", st == 403, f"got {st}")
+    finally:
+        stop(p)
+
+
 def test_proxy():
     print("\n[5] Proxy de claves (proxy.py — las claves nunca viajan al navegador)")
     port = free_port()
@@ -408,6 +457,7 @@ def main():
     test_pure_functions()
     test_bridge()
     test_bridge_node()
+    test_integrity()
     test_piper()
     test_proxy()
     print("\n" + "=" * 60)

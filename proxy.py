@@ -244,6 +244,18 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             length = 0
         if length <= 0 or length > MAX_BODY:
+            # Drenar TODO el body antes de responder 400: si el servidor responde
+            # sin leerlo, Windows cierra con RST (WinError 10053) y el cliente
+            # pierde la respuesta (status 0). El test 4.15 lo valida.
+            try:
+                rest = max(length, 0)
+                while rest > 0:
+                    chunk = self.rfile.read(min(rest, 65536))
+                    if not chunk:
+                        break
+                    rest -= len(chunk)
+            except Exception:
+                pass
             self._json({"ok": False, "error": "cuerpo inválido o demasiado grande"}, 400)
             return
         try:
