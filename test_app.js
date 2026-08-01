@@ -193,7 +193,19 @@ const REQUIRED_IDS = [
   "bridgeToken", "termInput", "termRunBtn",
   "welcome", "welcomeBtn", "welcomeNarrateBtn", "btnStory", "btnAutoLang",
   "proxyUrl", "proxyToken", "btnProxy", "piperLength", "piperNoise",
+  "btnLearn", "learnOverlay", "learnBody", "learnProgress", "btnResetLearn", "btnCloseLearn",
 ];
+// Módulo de aprendizaje guiado: Ruta Red Team (recon → explotación → informe)
+check("RUTA_PENTEST con 3 fases", /RUTA_PENTEST=\[\s*\{[\s\S]*?key:'recon'[\s\S]*?key:'exploit'[\s\S]*?key:'informe'/.test(script));
+check("RUTA_PENTEST con módulos y checkpoints", (script.match(/cp:\[\{id:/g)||[]).length >= 6);
+check("renderLearn() definida", /function\s+renderLearn\s*\(/.test(script));
+check("learnPractice() definida y cierra overlay", /function\s+learnPractice\s*\([\s\S]*?classList\.remove\('show'\)[\s\S]*?handleUserText\(/.test(script));
+check("learnCheck() guarda y re-renderiza", /function\s+learnCheck\s*\([\s\S]*?learnSave\(d\);[\s\S]*?renderLearn\(\);/.test(script));
+check("learnDone() lee de localStorage (aion_ruta)", /function\s+learnDone\s*\(\).*localStorage\.getItem\('aion_ruta'/.test(script));
+check("learnSave() escribe en localStorage (aion_ruta)", /function\s+learnSave\s*\([^)]*\)\{.*localStorage\.setItem\('aion_ruta'/.test(script));
+check("renderLearn() al arranque", /renderLearn\(\);\s*\$\('#bootBtn'\)\.onclick/.test(script));
+check("btnLearn abre el overlay", /\$\('#btnLearn'\)\.onclick=\(\)=>\{ renderLearn\(\);[\s\S]*?classList\.add\('show'\)/.test(script));
+check("texto de checkpoints escapado con esc()", /<span class="cp-t">\$\{esc\(en\?c\.t_en:c\.t\)\}/.test(script));
 // Piper: velocidad y expresividad configurables (length_scale/noise_scale)
 check("piperPlay envía length_scale", /p\.length_scale=store\.piperLength\|\|1\.0;/.test(script));
 check("piperPlay envía noise_scale", /p\.noise_scale=store\.piperNoise\|\|0\.667;/.test(script));
