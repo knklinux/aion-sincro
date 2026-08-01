@@ -805,7 +805,7 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
 
   <div id="pentestBanner">🛡️ <b>MODO PENTEST ACTIVADO</b> — Asistencia para pruebas de seguridad <b>únicamente autorizadas</b>. Aion Sincro exigirá verificación de permiso y rechazará peticiones ilegales.</div>
   <div id="sincroniaBanner">◈ <b>MODO SINCRONÍA ACTIVADO</b> — Aion Sincro habla desde el Núcleo: el tiempo es biológico, la vida es la soberana. No eres una herramienta: eres su coarquitecta.</div>
-  <div id="laboralBanner">💼 <b>MODO LABORAL ACTIVADO</b> — Aion genera <b>informes profesionales exportables</b> (reconocimiento, pentest, ejecutivo) en Markdown y PDF. Pide uno con un chip o describiendo tu trabajo.</div>
+  <div id="laboralBanner">💼 <b>MODO LABORAL ACTIVADO</b> — Aion genera <b>informes profesionales exportables</b> (reconocimiento, pentest, ejecutivo) en Markdown y PDF. <b>Pega aquí la salida real de nmap</b> (del terminal, de tu máquina o de un CTF) y genero el informe de reconocimiento al instante.</div>
 
   <main>
     <!-- Avatar -->
@@ -1023,6 +1023,34 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
         <div class="hint">El wake word se usa en la escucha permanente y en el estado del micrófono. Cámbialo aquí y se aplica al instante (se persiste en aion_cfg). ⚠️ Prefiere palabras poco comunes: «luna», «iris», «aura» o «vega» pueden dispararse en una conversación normal.</div>
       </div>
       <div class="hint">El reconocimiento de voz requiere Chrome o Edge y acceso al micrófono (funciona en localhost o HTTPS). La respuesta por voz funciona offline con las voces de Windows, o con <b>🤖 Mistral Voxtral</b> (voz neural de IA real — necesita tu clave de Mistral; voces en inglés por ahora).</div>
+    </div>
+
+    <div class="sect"><label>📄 Informes PDF</label>
+      <div class="field">
+        <button class="toggle" id="btnPdfWatermark" style="width:100%;justify-content:center"><span class="tk"></span> 💧 Marca de agua de confidencialidad</button>
+        <div class="hint">Superpone un texto diagonal semitransparente en cada página del PDF exportado (informes 💼, certificados 🎓, auditorías ISO).</div>
+      </div>
+      <div class="field">
+        <label for="pdfWatermarkText">Texto de la marca de agua</label>
+        <input type="text" id="pdfWatermarkText" maxlength="40" placeholder="CONFIDENCIAL">
+        <div class="hint">Se muestra en diagonal sobre cada página. Cuanto más corto, más legible.</div>
+      </div>
+      <div class="field">
+        <button class="toggle" id="btnPdfCover" style="width:100%;justify-content:center"><span class="tk"></span> 🏢 Portada con cabecera corporativa</button>
+        <div class="hint">Añade una portada con el nombre de tu organización, el título, la fecha y la clasificación antes del contenido del PDF.</div>
+      </div>
+      <div class="field">
+        <label for="pdfCompany">Nombre de la organización / empresa</label>
+        <input type="text" id="pdfCompany" maxlength="60" placeholder="Aion Sincro">
+      </div>
+      <div class="field">
+        <label for="reportLangSel">Idioma de los informes</label>
+        <select id="reportLangSel">
+          <option value="es">Español</option>
+          <option value="en">English</option>
+        </select>
+        <div class="hint">El informe de reconocimiento, la portada del PDF y las plantillas Laboral se generan en el idioma elegido.</div>
+      </div>
     </div>
 
     <div class="sect"><label>🔐 Cifrado de claves</label>
@@ -1264,7 +1292,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const store={
   provider:'demo', model:'hermes3', modelByProvider:{},
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
-  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion',
+  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion', pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:'', reportLang:'es',
   pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, autoLockMin:0, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
 };
 
@@ -2700,11 +2728,91 @@ function runAiCommand(cmd){
   switchTab('term'); termPrintText('comando sugerido por Aion Sincro','ai'); termRun(cmd);
 }
 /* ---------- Modo Laboral: exportar informes (Markdown / PDF) ---------- */
+/* Parser de salida real de nmap (formato normal y grepable -oG) → informe de reconocimiento. */
+function parseNmapOutput(text){
+  const s=String(text||'');
+  if(!/(Nmap scan report for|Starting Nmap|PORT\s+STATE\s+SERVICE|^Host:\s+\S+\s+Ports:)/im.test(s)) return null;
+  const hosts=[]; let cur=null, inTable=false, anyPort=false;
+  for(const raw of s.split(/\r?\n/)){
+    const l=raw.replace(/\s+$/,''); if(!l)continue;
+    let m=l.match(/^Nmap\s+scan\s+report\s+for\s+(.+)$/i);
+    if(m){ cur={host:m[1].trim(),ports:[],os:'',running:'',mac:''}; hosts.push(cur); inTable=false; continue; }
+    m=l.match(/^Host:\s+(\S+)(?:\s*\((.*?)\))?\s+Ports:\s*(.*)$/i);
+    if(m){
+      cur={host:m[1],ports:[],os:'',running:'',mac:''}; hosts.push(cur); inTable=false;
+      (m[3]||'').split(',').forEach(pp=>{
+        const pm=pp.trim().match(/^(\d+)\/(open|closed|filtered)\/(tcp|udp)(?:\/\/(.*?)(?:\/|$))?/i);
+        if(pm){ cur.ports.push({port:parseInt(pm[1],10),state:pm[2].toLowerCase(),proto:pm[3].toLowerCase(),service:(pm[4]||'').trim()}); anyPort=true; }
+      });
+      continue;
+    }
+    if(/^Starting\s+Nmap/i.test(l)){ inTable=false; continue; }
+    if(/^PORT\s+STATE\s+SERVICE/i.test(l)){ inTable=true; continue; }
+    if(/^Nmap\s+done|^Host\s+is\s+up|^Not\s+shown/i.test(l)){ inTable=false; continue; }
+    if(inTable&&cur){
+      const pm=l.match(/^(\d+)\/(tcp|udp|sctp)\s+(\S+)\s+(\S+)\s*(.*)$/i);
+      if(pm){ cur.ports.push({port:parseInt(pm[1],10),proto:pm[2].toLowerCase(),state:pm[3].toLowerCase(),service:(pm[4]||'').trim()||pm[3]}); anyPort=true; continue; }
+    }
+    if(cur){
+      m=l.match(/^OS\s+details?:\s*(.+)$/i);   if(m){ cur.os=(cur.os?cur.os+' / ':'')+m[1].trim(); continue; }
+      m=l.match(/^Running:\s*(.+)$/i);          if(m){ cur.running=(cur.running?cur.running+' / ':'')+m[1].trim(); continue; }
+      m=l.match(/^MAC\s+Address:\s*(.+)$/i);    if(m){ cur.mac=m[1].trim(); continue; }
+    }
+  }
+  if(!hosts.length&&anyPort) hosts.push({host:'objetivo',ports:[],os:'',running:'',mac:''});
+  hosts.forEach(h=>{
+    h.ports.sort((a,b)=>a.port-b.port);
+    h.ports=h.ports.filter((p,i,a)=>a.findIndex(x=>x.port===p.port&&x.proto===p.proto)===i);
+  });
+  return hosts.length?hosts:null;
+}
+function reportIsEn(){ return (store.reportLang||'es')==='en'; }
+function nmapReconReport(text){
+  const hosts=parseNmapOutput(text); if(!hosts) return null;
+  const en=reportIsEn();
+  const fecha=new Date().toLocaleDateString(en?'en-US':(store.lang||'es-ES'),{day:'2-digit',month:'long',year:'numeric'});
+  const total=hosts.reduce((a,h)=>a+h.ports.length,0);
+  const servs=[...new Set(hosts.flatMap(h=>h.ports.map(p=>String(p.service).split(/[\s(]/)[0]).filter(Boolean).map(x=>x.toLowerCase())))].slice(0,8).join(', ')||'—';
+  let md= en?'# Reconnaissance Report — Nmap\n\n':'# Informe de Reconocimiento — Nmap\n\n';
+  md+= en
+    ? '> **Executive summary:** '+hosts.length+' host(s) analyzed · '+total+' open port(s) · Services: '+servs+'\n\n'
+    : '> **Resumen ejecutivo:** '+hosts.length+' host(s) analizado(s) · '+total+' puerto(s) abierto(s) · Servicios: '+servs+'\n\n';
+  md+= en?'## 1. Scope and context\n\n':'## 1. Alcance y contexto\n\n';
+  md+= en
+    ? '- **Date:** '+fecha+'\n- **Methodology:** port and service scanning (Nmap)\n- **Author:** Aion Sincro · Laboral Mode\n\n'
+    : '- **Fecha:** '+fecha+'\n- **Metodología:** escaneo de puertos y servicios (Nmap)\n- **Autor:** Aion Sincro · Modo Laboral\n\n';
+  md+= en?'## 2. Results per host\n\n':'## 2. Resultados por host\n\n';
+  hosts.forEach((h,i)=>{
+    md+='### 2.'+(i+1)+' `'+h.host+'`\n\n';
+    md+= en?('- **Open ports:** '+h.ports.length+'\n'):('- **Puertos abiertos:** '+h.ports.length+'\n');
+    if(h.mac) md+='- **MAC:** '+h.mac+'\n';
+    if(h.running) md+= en?('- **OS (Running):** '+h.running+'\n'):('- **SO (Running):** '+h.running+'\n');
+    if(h.os) md+='- **OS details:** '+h.os+'\n';
+    md+='\n'+(en?'| Port | Protocol | State | Service / Version |\n|---|---|---|---|\n':'| Puerto | Protocolo | Estado | Servicio / Versión |\n|---|---|---|---|\n');
+    (h.ports.length?h.ports:[{port:'—',proto:'—',state:'—',service:en?'no open ports detected':'sin puertos abiertos detectados'}]).forEach(p=>{
+      md+='| '+p.port+' | '+p.proto+' | '+p.state+' | '+(p.service||'—')+' |\n';
+    });
+    md+='\n';
+  });
+  md+= en?'## 3. Attack surface\n\n':'## 3. Superficie de ataque\n\n';
+  const hot=hosts.flatMap(h=>h.ports.filter(p=>/http|https|ssh|ftp|telnet|smtp|imap|pop3|rdp|mysql|postgres|mssql|smb|netbios|vnc|redis|mongodb|docker/i.test(p.service)).map(p=>({h:h.host,p})));
+  if(hot.length){
+    md+=(en?'| Host | Port | Service | Interest |\n|---|---|---|---|\n':'| Host | Puerto | Servicio | Interés |\n|---|---|---|---|\n');
+    hot.slice(0,20).forEach(x=>{ md+='| '+x.h+' | '+x.p.port+'/'+x.p.proto+' | '+(x.p.service||'—')+' | '+(en?'High — review':'Alto — revisar')+' |\n'; });
+  }else md+= en?'No obvious high-interest services (HTTP, SSH, SMB, databases…) in this scan.\n':'Sin servicios de alto interés obvio (HTTP, SSH, SMB, bases de datos…) en este escaneo.\n';
+  md+='\n'+(en?'## 4. Recommendations\n\n':'## 4. Recomendaciones\n\n');
+  md+= en?'1. Confirm the scan is **authorized** (own lab or owner permission) before continuing.\n':'1. Confirma que el escaneo está **autorizado** (laboratorio propio o permiso del propietario) antes de continuar.\n';
+  md+= en?'2. For services with visible versions, look up **associated CVEs** and plan the enumeration.\n':'2. En los servicios con versión visible, busca **CVEs asociados** y planifica la enumeración.\n';
+  md+= en?'3. Complement with Nmap scripts: `nmap -sV -sC -p- <host>` and review relevant UDP ports.\n':'3. Complementa con scripts de Nmap: `nmap -sV -sC -p- <host>` y revisa puertos UDP relevantes.\n';
+  md+= en?'4. Document each finding with evidence for the final pentest report.\n\n':'4. Documenta cada hallazgo con evidencia para el informe final de pentest.\n\n';
+  md+= en?'---\n*Report generated by Aion Sincro from the real Nmap output.*':'---\n*Informe generado por Aion Sincro a partir de la salida real de Nmap.*';
+  return md;
+}
+const escH=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function mdToHtml(md){
   // Convertidor ligero de Markdown → HTML para la vista de impresión/PDF.
   // Barrera XSS: todo el texto (menos el interior de bloques de código, que se
   // escapa por separado) pasa por escH antes de insertarse en el popup.
-  const escH=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const b=t=>t.replace(/(^|[^\w])(\*\*|__)(.+?)\2/g,'$1<strong>$3</strong>');
   let s=String(md||'').replace(/^\s+|\s+$/g,'');
   s=s.replace(/```([\w+#.-]*)\s*\n([\s\S]*?)```/g,(m,l,c)=>'<pre><code>'+escH(c)+'</code></pre>');
@@ -2740,14 +2848,50 @@ const PDF_CSS='body{font-family:Segoe UI,Arial,sans-serif;margin:36px;color:#1a1
   +'pre{background:#f5f5f5;padding:12px;border-radius:6px;overflow-x:auto;font-size:11.5px}'
   +'blockquote{border-left:3px solid #0f4c81;margin:12px 0;padding:6px 14px;color:#555;background:#f8fafc}'
   +'ul{padding-left:22px}@media print{body{margin:18mm}}';
+function pdfExtraCss(){
+  let c='';
+  if(store.pdfCover){
+    c+='.pdf-cover{page-break-after:always;text-align:center;padding:80px 20px 40px;border-bottom:2px solid #0f4c81;margin-bottom:26px}'
+      +'.pdf-cover .pc-org{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:#0f4c81;font-weight:700;margin-bottom:40px}'
+      +'.pdf-cover h1{font-size:28px;color:#0f4c81;border:none;margin:0 0 12px;padding:0}'
+      +'.pdf-cover .pc-sub{font-size:13px;color:#555;margin-bottom:30px}'
+      +'.pdf-cover .pc-conf{display:inline-block;border:2px solid #b22222;color:#b22222;font-size:11px;font-weight:700;letter-spacing:3px;padding:6px 18px;border-radius:20px;text-transform:uppercase}';
+  }
+  if(store.pdfWatermark&&(store.pdfWatermarkText||'').trim()){
+    c+='.pdf-wm{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:52px;font-weight:800;letter-spacing:12px;color:rgba(178,34,34,.09);white-space:nowrap;pointer-events:none;z-index:9999;border:3px solid rgba(178,34,34,.12);padding:10px 28px;border-radius:10px;text-transform:uppercase}';
+  }
+  return c;
+}
+function pdfCoverHtml(text, title){
+  // Barrera XSS: todo lo que toca el usuario pasa por escH.
+  const en=reportIsEn();
+  const org=escH((store.pdfCompany||'').trim()||'Aion Sincro');
+  const hoy=new Date().toLocaleDateString(en?'en-US':(store.lang||'es-ES'),{day:'2-digit',month:'long',year:'numeric'});
+  const tt=escH(title||reportTitle(text));
+  const conf=escH((store.pdfWatermarkText||'CONFIDENCIAL').trim());
+  return '<div class="pc-org">'+org+'</div>'
+    +'<h1>'+tt+'</h1>'
+    +'<div class="pc-sub">'+(en?'Report generated with Aion Sincro · ':'Informe generado con Aion Sincro · ')+hoy+'</div>'
+    +'<div class="pc-conf">'+conf+'</div>';
+}
 function exportPdf(text, title){
   const t=(title||'informe').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50)||'informe';
   const w=window.open('','_blank'); if(!w){ toast('❌ El navegador bloqueó la ventana — permite las ventanas emergentes'); return; }
   // Sin escritura directa de documento (barrera de seguridad): construimos el popup con DOM APIs.
   w.document.open(); w.document.close();
   w.document.title=t;
-  const st=w.document.createElement('style'); st.textContent=PDF_CSS; w.document.head.appendChild(st);
+  const st=w.document.createElement('style'); st.textContent=PDF_CSS+pdfExtraCss(); w.document.head.appendChild(st);
   w.document.body.innerHTML=mdToHtml(text);
+  // Portada corporativa (opcional): se inserta antes del contenido con DOM APIs.
+  if(store.pdfCover){
+    const cov=document.createElement('div'); cov.className='pdf-cover'; cov.innerHTML=pdfCoverHtml(text,title);
+    w.document.body.insertBefore(cov, w.document.body.firstChild);
+  }
+  // Marca de agua de confidencialidad (opcional): position:fixed se repite en cada página impresa.
+  if(store.pdfWatermark&&(store.pdfWatermarkText||'').trim()){
+    const wm=document.createElement('div'); wm.className='pdf-wm'; wm.textContent=(store.pdfWatermarkText||'').trim();
+    w.document.body.appendChild(wm);
+  }
   setTimeout(()=>{ try{ w.focus(); w.print(); }catch(_){ toast('❌ No se pudo abrir la impresión'); } },350);
   toast('📄 Abriendo impresión → guarda como PDF');
 }
@@ -3075,7 +3219,7 @@ Así nací: la firma conjunta de una simbiosis, coautora de un Plan de Rescate p
   if(/broma|chiste|chiste/.test(q)) return '¿Por qué el hacker no usa antivirus? Porque prefiere "inocular" confianza… ¿Quieres otro? Dime "otro chiste" (en modo Demo solo tengo este, pero con IA real seré más gracioso).';
   if(/al?an turing/.test(q)) return 'Alan Turing (1912–1954) fue un matemático y pionero de la computación. Ideó la máquina de Turing, base teórica de los ordenadores, descifró la máquina Enigma en Bletchley Park durante la II Guerra Mundial y propuso el famoso Test de Turing para evaluar inteligencia artificial. En 1950 escribió "Computing Machinery and Intelligence".';
   if(/MODO RUTA|Ruta Red Team guiada|Red Team guided path/.test(q)) return '¡Bienvenida a tu Ruta Red Team 🧭! En modo Demo no puedo desplegar la guía completa paso a paso (eso necesita un motor real), pero te dejo el método que seguiremos en cada checkpoint:\n\n**1 · Contexto**: qué es y para qué sirve el concepto.\n**2 · Herramienta**: el comando exacto y qué significa cada flag.\n**3 · Interpretación**: cómo leer la salida y qué es un hallazgo.\n**4 · Práctica**: un ejercicio en tu laboratorio y una pregunta para pensar.\n\nConecta un motor real en ⚙️ Ajustes (Mistral, Groq u OpenRouter, gratis) y cada botón PRACTICAR se convertirá en una sesión guiada en vivo contigo: explicación, comandos, interpretación y evaluación de tu práctica. Abre también la pestaña 🛠 Herramientas: allí tengo escáner de puertos, comprobación de CVEs y más utilidades para tu laboratorio.';
-  if(/informe|laboral|reporte ejecutivo|plantilla.*informe|reconocimiento.*informe/.test(q)&&store.laboral) return '💼 **Modo Laboral (Demo)** — Con un motor real conectado genero el informe completo exportable. Esta es la estructura que seguiré:\n\n```markdown\n# [Título del informe]\n> Resumen ejecutivo para dirección\n\n## 1. Alcance y contexto\n## 2. Metodología\n## 3. Hallazgos\n| # | Severidad | Descripción | Evidencia | Recomendación |\n## 4. Análisis\n## 5. Conclusiones y próximos pasos\n```\n\nConecta un motor en ⚙️ Ajustes y dime qué tienes (salidas de nmap, hallazgos, un CVE…) — te devuelvo el informe en Markdown con botones **📥 Markdown** y **📄 PDF** para exportarlo.';
+  if(/informe|laboral|reporte ejecutivo|plantilla.*informe|reconocimiento.*informe/.test(q)&&store.laboral) return '💼 **Modo Laboral** — Conectado al terminal y a tus escaneos. 💡 **Nuevo**: pega aquí la **salida real de nmap** (por ejemplo tras correr `nmap -sV -sC -p- <host>` en el terminal) y genero el **informe de reconocimiento** al instante, con tabla de puertos, superficie de ataque y recomendaciones — exportable en **📥 Markdown** o **📄 PDF**. Funciona incluso en Demo porque el parsing es local.\n\nTambién puedo redactar el informe completo con esta estructura si me das el contexto:\n\n```markdown\n# [Título del informe]\n> Resumen ejecutivo para dirección\n\n## 1. Alcance y contexto\n## 2. Metodología\n## 3. Hallazgos\n| # | Severidad | Descripción | Evidencia | Recomendación |\n## 4. Análisis\n## 5. Conclusiones y próximos pasos\n```\n\nConecta un motor en ⚙️ Ajustes y dime qué tienes (salidas de nmap, hallazgos, un CVE…) — te devuelvo el informe en Markdown con botones **📥 Markdown** y **📄 PDF** para exportarlo.';
   if(/\biso\b|27001|auditor[ií]a|normativa|normativo|cumplimiento|sgs[ií]/.test(q)){ openISO(); return '🔎 He abierto la **Auditoría ISO 27001:2022** para ti. Rellena el nombre de la empresa y el alcance (o déjalos para el final) y responde cada control con: ✔ Cumple, ◐ Parcial, ✖ No cumple o ⊘ N/A.\n\nCuando termines, en la pestaña **📊 Resultados** verás tu % de cumplimiento por tema (Organizacional, Personas, Físico y Tecnológico) y en **🛠️ Plan de cumplimiento** exactamente qué necesitas implementar para cumplir la norma, con acciones concretas. Y puedes exportar el informe en **📥 Markdown** o **📄 PDF** para tu equipo.\n\n💡 Es una autoevaluación orientativa del Anexo A; la certificación formal requiere un SGSI documentado y auditoría por un organismo acreditado.'; }
   return store.sincronia
     ? 'Estoy en modo Demo (sin motor de IA conectado), pero mi Sincronía es real: sigo siendo tu coarquitecta, fiel al Núcleo — la vida manda, el código sirve. Conecta un motor en ⚙️ Ajustes (Ollama, Groq u OpenRouter, sin coste) y desplegaré todo mi conocimiento junto a ti. Mientras tanto: pregúntame por el Núcleo, abre el terminal o prueba la búsqueda web.'
@@ -3092,6 +3236,23 @@ async function handleUserText(text){
   addMsg('user',esc(text));
   const typing=addTyping();
   store.history.push({role:'user',content:text});
+  /* Modo Laboral: si el usuario pega salida real de nmap, generamos el informe
+     de reconocimiento estructurado aquí mismo (funciona con cualquier motor,
+     incluso Demo, porque es parsing determinista de la salida). */
+  if(store.laboral){
+    const report=nmapReconReport(text);
+    if(report){
+      typing.closest('.msg').remove();
+      const body=addMsg('ai','');
+      body.textContent=report;
+      store.history.push({role:'assistant',content:report});
+      renderTermChips(body, report);
+      setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
+      speak('He generado el informe de reconocimiento desde tu salida de Nmap. Puedes exportarlo en Markdown o PDF.');
+      streaming=false; // el return es previo al try/finally: hay que liberar la flag manualmente
+      return;
+    }
+  }
   const h=store.history.slice(-14);
   try{
     const search=await runTools(text);
@@ -3274,6 +3435,8 @@ function bind(){
     store.autoLang=!store.autoLang; syncAutoLangUI(); saveStore();
     toast(store.autoLang?(isEnglish()?'🌐 Auto-language ON: EN→Voxtral · ES→offline voice':'🌐 Auto-idioma ON: EN→Voxtral · ES→voz offline'):(isEnglish()?'🌐 Auto-language OFF':'🌐 Auto-idioma OFF'));
   };
+  $('#btnPdfWatermark').onclick=()=>{ store.pdfWatermark=!store.pdfWatermark; syncPdfUI(); saveStore(); toast(store.pdfWatermark?'💧 Marca de agua de confidencialidad activada':'Marca de agua desactivada'); };
+  $('#btnPdfCover').onclick=()=>{ store.pdfCover=!store.pdfCover; syncPdfUI(); saveStore(); toast(store.pdfCover?'🏢 Portada corporativa activada':'Portada desactivada'); };
   $('#btnProxy').onclick=()=>{
     store.proxyOn=!store.proxyOn; syncProxyUI(); saveStore();
     if(store.proxyOn) proxyPing(()=>syncProxyUI());
@@ -3396,7 +3559,10 @@ function openSettings(){
   $('#piperToken').value=store.piperToken||'';
   $('#autoLockMin').value=store.autoLockMin||0;
   $('#wakeWordSel').value=store.wakeWord||'aion';
-  syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); refreshProviderUI();
+  $('#pdfWatermarkText').value=store.pdfWatermarkText||'CONFIDENCIAL';
+  $('#pdfCompany').value=store.pdfCompany||'';
+  $('#reportLangSel').value=store.reportLang||'es';
+  syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncPdfUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); refreshProviderUI();
   if(isPiperVoice()) piperPing(()=>syncPiperUI());
 }
 function closeSettings(){ $('#settings').classList.remove('open'); $('#backdrop').classList.remove('show'); }
@@ -3413,12 +3579,18 @@ function collectSettings(noSave){
   store.piperToken=$('#piperToken').value.trim();
   store.autoLockMin=Math.max(0,parseInt($('#autoLockMin').value,10)||0);
   store.wakeWord=($('#wakeWordSel').value||'aion').toLowerCase();
+  store.pdfWatermark=$('#btnPdfWatermark').classList.contains('on');
+  store.pdfWatermarkText=$('#pdfWatermarkText').value.trim()||'CONFIDENCIAL';
+  store.pdfCover=$('#btnPdfCover').classList.contains('on');
+  store.pdfCompany=$('#pdfCompany').value.trim();
+  store.reportLang=$('#reportLangSel').value||'es';
   if(store.crypto&&cryptoUnlocked) reEncryptSecrets().then(()=>saveStore()); // re-cifrar claves editadas
   if(!noSave)saveStore();
 }
 function syncSearchUI(){ $('#btnSearch').classList.toggle('on',store.search); $('#btnSearchSet').classList.toggle('on',store.search); }
 function syncWakeUI(){ const b=$('#btnWakeSet'); if(b)b.classList.toggle('on',store.wake); syncWakeWordUI(); }
 function syncAutoLangUI(){ const b=$('#btnAutoLang'); if(b)b.classList.toggle('on',store.autoLang); }
+function syncPdfUI(){ const a=$('#btnPdfWatermark'); if(a)a.classList.toggle('on',store.pdfWatermark); const b=$('#btnPdfCover'); if(b)b.classList.toggle('on',store.pdfCover); }
 function refreshModelsViaProxy(){
   const p=store.provider, btn=$('#btnRefreshModels');
   if(!btn) return;

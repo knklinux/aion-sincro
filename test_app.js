@@ -292,6 +292,49 @@ check("frase completa: no ejecuta con resultado provisional", /if\(!final\) retu
 check("frase completa: ejecuta handleUserText con la petición", script.includes("handleUserText(resto)"));
 check("frase completa: limpia separadores de la petición", script.includes("(m[3]||'').replace(/^[\\s,.;:!¿?]+/,'')"));
 check("frase completa: wake word solo sigue esperando petición", script.includes("Te escucho. ¿Qué necesitas?"));
+
+// --- Informes PDF: marca de agua y portada corporativa ---
+check("store default pdfWatermark/pdfCover/pdfCompany", script.includes("pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:''"));
+check("Ajustes: toggle de marca de agua presente", html.includes('id="btnPdfWatermark"'));
+check("Ajustes: texto de marca de agua editable", html.includes('id="pdfWatermarkText"'));
+check("Ajustes: toggle de portada corporativa presente", html.includes('id="btnPdfCover"'));
+check("Ajustes: nombre de organización editable", html.includes('id="pdfCompany"'));
+check("pdfExtraCss() definida", /function\s+pdfExtraCss\s*\(/.test(script));
+check("marca de agua fija en cada página (position:fixed)", script.includes(".pdf-wm{position:fixed") && script.includes("rotate(-30deg)"));
+check("portada con page-break-after", script.includes(".pdf-cover{page-break-after:always"));
+check("pdfCoverHtml escapa datos del usuario (XSS)", script.includes("const org=escH((store.pdfCompany||'').trim()") && script.includes("const conf=escH((store.pdfWatermarkText||'CONFIDENCIAL').trim())") && script.includes("const tt=escH(title||reportTitle(text))"));
+check("exportPdf inserta portada antes del contenido", script.includes("className='pdf-cover'") && script.includes("insertBefore(cov, w.document.body.firstChild)"));
+check("exportPdf añade marca de agua al final", script.includes("className='pdf-wm'") && script.includes("appendChild(wm)"));
+check("openSettings rellena pdfWatermarkText/pdfCompany", script.includes("$('#pdfWatermarkText').value=store.pdfWatermarkText") && script.includes("$('#pdfCompany').value=store.pdfCompany"));
+check("collectSettings persiste pdfWatermark/pdfCover", script.includes("store.pdfWatermark=$('#btnPdfWatermark').classList.contains('on')") && script.includes("store.pdfCover=$('#btnPdfCover').classList.contains('on')"));
+check("syncPdfUI() sincroniza ambos toggles", /function\s+syncPdfUI\s*\([\s\S]*?btnPdfWatermark[\s\S]*?btnPdfCover/.test(script));
+check("exportPdf mantiene barrera XSS (sin document.write)", !/w\.document\.write/.test(script) && script.includes("cov.innerHTML=pdfCoverHtml(text,title)"));
+
+// --- Modo Laboral: informe de reconocimiento desde salida real de nmap ---
+check("parseNmapOutput() definida", /function\s+parseNmapOutput\s*\(/.test(script));
+check("nmapReconReport() definida", /function\s+nmapReconReport\s*\(/.test(script));
+check("parser detecta formato normal de nmap", script.includes("Nmap scan report for") && script.includes("PORT") && script.includes("(tcp|udp|sctp)"));
+check("parser soporta formato grepable (-oG)", script.includes("Ports:") && script.includes("open|closed|filtered") && script.includes("(tcp|udp)"));
+check("parser extrae OS/Running/MAC", script.includes("OS\\s+details?:\\s*(.+)$") && script.includes("MAC\\s+Address:\\s*(.+)$"));
+check("informe tiene resumen ejecutivo y tabla de puertos", script.includes("# Informe de Reconocimiento — Nmap") && script.includes("| Puerto | Protocolo | Estado | Servicio / Versión |"));
+check("informe incluye superficie de ataque y recomendaciones", script.includes("## 3. Superficie de ataque") && script.includes("## 4. Recomendaciones") && script.includes("laboratorio propio o permiso del propietario"));
+check("handleUserText intercepta nmap en modo Laboral", script.includes("const report=nmapReconReport(text)") && script.includes("if(report){") && script.includes("body.textContent=report"));
+check("el informe reutiliza renderTermChips (barra exportar)", script.includes("renderTermChips(body, report)"));
+check("banner Laboral menciona pegar salida de nmap", html.includes("Pega aquí la salida real de nmap"));
+check("demoBrain Laboral explica el parsing local", script.includes("el parsing es local"));
+
+// --- Modo Laboral: idioma de los informes (es/en) ---
+check("store default reportLang:'es'", script.includes("reportLang:'es'"));
+check("Ajustes: selector de idioma de informes presente", html.includes('id="reportLangSel"') && html.includes('value="en"'));
+check("helper reportIsEn() y uso en nmapReconReport", /function\s+reportIsEn\s*\(/.test(script) && script.includes("const en=reportIsEn();"));
+check("informe en tiene título y resumen en inglés", script.includes("'# Reconnaissance Report — Nmap") && script.includes("host(s) analyzed"));
+check("informe es mantiene el título en español", script.includes("'# Informe de Reconocimiento — Nmap") && script.includes("host(s) analizado(s)"));
+check("tabla de puertos bilingüe", script.includes("| Port | Protocol | State | Service / Version |") && script.includes("| Puerto | Protocolo | Estado | Servicio / Versión |"));
+check("superficie de ataque bilingüe", script.includes("## 3. Attack surface") && script.includes("## 3. Superficie de ataque"));
+check("recomendaciones bilingües", script.includes("## 4. Recommendations") && script.includes("## 4. Recomendaciones"));
+check("pdfCoverHtml usa reportIsEn() y subtítulo en inglés", script.includes("const en=reportIsEn();") && script.includes("Report generated with Aion Sincro"));
+check("openSettings rellena reportLangSel", script.includes("$('#reportLangSel').value=store.reportLang||'es'"));
+check("collectSettings persiste reportLang", script.includes("store.reportLang=$('#reportLangSel').value||'es'"));
 for (const id of REQUIRED_IDS) {
   check(`#${id} presente`, html.includes(`id="${id}"`));
 }
