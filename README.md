@@ -112,13 +112,76 @@ El lanzador:
 > 💡 En Linux, Ollama suele permitir orígenes locales sin configurar. Si sirves
 > la app desde otro origen, usa `OLLAMA_ORIGINS=*` igual que en Windows.
 
+### 🪟 Instalación en Windows
+
+El repo incluye la carpeta [`windows/`](windows/) con instalador, lanzador,
+creador de acceso directo y desinstalador. Requisitos: **Python 3** o
+**Node.js** (con uno de los dos basta).
+
+**Instalar (recomendado)** — copia la app a una carpeta estable
+(`%LOCALAPPDATA%\AionSincro`), genera el token del puente, crea el acceso
+directo del Escritorio y deja todo listo:
+
+```bat
+cd aion-sincro\windows
+install.cmd
+```
+
+**Arrancar con doble clic** — después de instalar (o si ya tienes el acceso
+directo), haz doble clic en **`Aion Sincro.lnk`** del Escritorio. El
+lanzador:
+
+1. Sirve la app en `http://127.0.0.1:8080` (necesario para el micrófono —
+   Web Speech solo funciona en `localhost`/HTTPS).
+2. Arranca el puente de terminal (`bridge.py`, o `bridge.mjs` si no hay
+   Python) en `127.0.0.1:8765` — usando el **token persistente** de
+   instalación si existe.
+3. Abre el navegador automáticamente y deja ambas ventanas minimizadas.
+
+> 🔑 **Primera vez**: el instalador guarda el token en
+> `%LOCALAPPDATA%\AionSincro\token` y lo imprime al terminar. Pégalo en
+> **Ajustes → Terminal local → Token del puente** (sin él, el puente
+> rechaza todo con 403). Si arrancas el puente a mano, él genera y
+> muestra su propio `TOKEN DE CONEXIÓN` en la ventana *"Aion Sincro
+> Bridge"*.
+
+**Puertos configurables** — usa variables de entorno antes de arrancar:
+
+```bat
+set AION_APP_PORT=9090       rem web (por defecto 8080)
+set AION_BRIDGE_PORT=8766    rem puente (por defecto 8765)
+```
+
+**Desinstalar** — detiene el servidor y el puente, borra la carpeta
+instalada, el token y el acceso directo:
+
+```bat
+cd aion-sincro\windows
+uninstall.cmd
+```
+
+**Crear el acceso directo sin reinstalar** (genera el icono `aion-sincro.ico`
+y el `.lnk` en tu Escritorio):
+
+```powershell
+cd aion-sincro\windows
+powershell -ExecutionPolicy Bypass -File crear-acceso-directo.ps1
+```
+
+Si prefieres lanzarla manualmente sin acceso directo:
+
+```bat
+cd aion-sincro\windows
+start aion-sincro.cmd
+```
+
 ### Conectar un cerebro de IA
 
 | Motor | Cómo | Modelo por defecto |
 |---|---|---|
 | **Ollama** (recomendado) | `ollama pull hermes3` + `set OLLAMA_ORIGINS=*` | `hermes3` |
 | **Groq** | clave gratis en console.groq.com | `NousResearch/Hermes-3-Llama-3.1-70B-Flash` |
-| **OpenRouter** | clave gratis en openrouter.ai/keys | `nousresearch/hermes-3-llama-3.1-70b:free` |
+| **OpenRouter** | clave gratis en openrouter.ai/keys | `google/gemma-4-31b-it:free` |
 | **HuggingFace** | token gratis en huggingface.co/settings/tokens | `NousResearch/Hermes-3-Llama-3.1-70B` |
 
 > 💡 Las claves se guardan **solo en tu navegador**. Cualquier modelo compatible
@@ -256,6 +319,11 @@ aion-sincro/
 │   ├── aion-sincro  #   lanzador (web localhost + puente + navegador)
 │   ├── uninstall.sh #   desinstalador
 │   └── aion-sincro.svg
+├── windows/         # Versión para Windows
+│   ├── install.cmd  #   instalador (%LOCALAPPDATA%\AionSincro + acceso directo)
+│   ├── uninstall.cmd#   desinstalador (detiene, borra y limpia)
+│   ├── aion-sincro.cmd          #   lanzador (web localhost + puente + navegador)
+│   └── crear-acceso-directo.ps1 #   genera icono y .lnk del Escritorio
 ├── README.md        # Esta guía
 ├── SECURITY.md      # Revisión, medidas, pruebas y roadmap de seguridad
 ├── COMPARATIVA.md   # Análisis frente al ecosistema + plan de mejoras

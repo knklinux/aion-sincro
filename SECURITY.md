@@ -28,11 +28,16 @@ máquina). Sus componentes y superficie de ataque:
 
 ### En el puente de terminal (bridge.py / bridge.mjs)
 - **Bind exclusivo a `127.0.0.1`**: nunca escucha en interfaces de red.
-- **Validación de `Host`**: solo se aceptan peticiones con `Host: 127.0.0.1` o
-  `localhost`.
-- **Validación de `Origin`**: solo `file://` (null), `localhost` o `127.0.0.1`.
-  Ninguna web externa puede invocar el puente (protege frente a DNS rebinding
-  y cross-site request forgery).
+- **Validación EXACTA de `Host` y `Origin`** (defensa en profundidad): ambos se
+  comprueban con regex exactas — `^((localhost|127\.0\.0\.1)(:\d+)?)$` para
+  el `Host` y `^https?://(localhost|127\.0\.0\.1)(:\d+)?$` para el `Origin`
+  (más `null`/vacío para uso local `file://`). Esto bloquea falsificaciones
+  tipo `localhost.evil.com` que el antiguo `startsWith` dejaba pasar, frente a
+  DNS rebinding y cross-site request forgery.
+- **Token OBLIGATORIO por defecto**: al iniciar, el puente genera un token
+  aleatorio (`secrets`/`crypto`) y lo imprime en consola; cada petición `/run`
+  y `/kill` debe incluirlo. También puedes fijar el tuyo con `--token CLAVE`.
+  La app guarda el token solo en tu navegador.
 - **Token OBLIGATORIO por defecto**: al iniciar, el puente genera un token
   aleatorio (`secrets`/`crypto`) y lo imprime en consola; cada petición `/run`
   y `/kill` debe incluirlo. También puedes fijar el tuyo con `--token CLAVE`.
@@ -73,6 +78,34 @@ máquina). Sus componentes y superficie de ataque:
   `desktop-v2.db*`; el token de GitHub jamás se commit a.
 - **XSS**: todo el contenido del usuario y del streaming se inserta con
   `textContent`/nodos de texto; el rostro cibergirl es SVG estático.
+
+## Pruebas realizadas (segunda revisión — endurecimiento de puentes)
+
+- **`origin_allowed`/`host_allowed` endurecidos con regex exactas** en ambos
+  puentes (Python y Node): antes `startswith("http://localhost")` aceptaba
+  orígenes falsificados tipo `http://localhost.evil.com` (riesgo de DNS
+  rebinding / CSRF). Ahora solo pasan origenes y hosts exactos
+  `localhost`/`127.0.0.1` (+ puerto).
+- **Pruebas en vivo contra el puente real** (puerto de prueba, token propio):
+  - `Host: localhost.evil.com` → **403 bloqueado** ✅
+  - `Host: 127.0.0.1:8798` → **200 OK** ✅
+  - `Origin: http://localhost.evil.com` → **403 bloqueado** ✅
+  - `Origin: http://127.0.0.1:8080` + token → comando ejecutado y devuelto ✅
+  - `/run` sin token → **403 bloqueado** ✅
+  - `/ping` sin token → 200 (detección del puente, no filtra datos) ✅
+- **Sintaxis**: `node --check bridge.mjs` ✅, `python -m py_compile bridge.py` ✅.
+- **XSS (revisado en profundidad)**: todo el contenido no confiable — mensajes
+  del usuario (`esc()`), streaming de IA (nodos de texto `createTextNode`),
+  salida de terminal (`textContent`) y chips de código (`textContent`) — se
+  inserta sin `innerHTML`. Los únicos `innerHTML` son HTML estático propio
+  (hero, herramientas con datos fijos de `TOOLS`).
+- **APIs gratuitas verificadas**: Mistral con la clave del usuario → HTTP 200
+  en `/models` y `/chat/completions` ✅; Ollama local responde en
+  `localhost:11434` ✅; Groq y OpenRouter alcanzables (401/200 — necesitan
+  clave gratuita propia); HuggingFace no resuelve DNS en esta máquina.
+- **Sin secretos en el repo** (grep de `sk-`, `ghp_`, `gsk_`, `hf_`, claves de
+  Mistral): solo una mención documental de `ghp_` en este archivo como
+ejemplo, no una clave real.
 
 ## Mejoras recomendadas (roadmap a futuro)
 

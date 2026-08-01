@@ -276,6 +276,7 @@ body[data-state="listening"] .micBtn{background:radial-gradient(circle at 34% 30
   animation:micPulse 1.4s ease-in-out infinite}
 @keyframes micPulse{0%,100%{box-shadow:0 0 18px rgba(251,113,133,.4)}50%{box-shadow:0 0 34px rgba(251,113,133,.8)}}
 .micBtn.stop{color:#fff;border-color:rgba(255,255,255,.5)}
+.micBtn.wake{border-color:rgba(52,211,153,.6);box-shadow:0 0 22px rgba(52,211,153,.3);animation:micPulse 3s ease-in-out infinite}
 #inputRow{flex:1;display:flex;gap:10px;min-width:240px}
 #textInput{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 16px;
   font-size:14px;outline:none;transition:.2s}
@@ -681,6 +682,10 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
       </div>
       <div class="field rangeRow"><label>Velocidad</label><input type="range" id="rate" min="0.7" max="1.5" step="0.05" value="1"><output id="rateOut">1.0</output></div>
       <div class="field rangeRow"><label>Tono</label><input type="range" id="pitch" min="0.6" max="1.4" step="0.05" value="1"><output id="pitchOut">1.0</output></div>
+      <div class="field">
+        <button class="toggle" id="btnWakeSet" style="width:100%;justify-content:center"><span class="tk"></span> 🎙️ Activación por voz (di «Hola Aion»)</button>
+        <div class="hint">Aion queda a la escucha permanente: di <b>«Hola Aion»</b> (o «Aion») y te escuchará sin tocar el micrófono — el estado lo indicará (<b>DI «HOLA AION»</b>). Haz una breve pausa tras el wake word antes de decir tu petición. Requiere micrófono permitido.</div>
+      </div>
       <div class="hint">El reconocimiento de voz requiere Chrome o Edge y acceso al micrófono (funciona en localhost o HTTPS). La respuesta por voz funciona 100% offline con las voces de Windows (Sabina, Helena…).</div>
     </div>
 
@@ -794,7 +799,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const store={
   provider:'demo', model:'hermes3',
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
-  lang:'es-ES', voice:'', rate:1, pitch:1, tts:true, search:true, pentest:false, sincronia:false,
+  lang:'es-ES', voice:'', rate:1, pitch:1, tts:true, search:true, pentest:false, sincronia:false, wake:false,
   pentestScope:'', bridgeToken:'', tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
 };
 
@@ -804,11 +809,11 @@ const PROVIDERS={
   groq:{label:'Groq (gratis)', base:'https://api.groq.com/openai/v1',
     models:['NousResearch/Hermes-3-Llama-3.1-70B-Flash','NousResearch/Hermes-3-Llama-3.1-8B','llama-3.3-70b-versatile']},
   openrouter:{label:'OpenRouter (gratis)', base:'https://openrouter.ai/api/v1',
-    models:['nousresearch/hermes-3-llama-3.1-70b:free','meta-llama/llama-3.3-70b-instruct:free']},
+    models:['google/gemma-4-31b-it:free','openai/gpt-oss-20b:free','cohere/north-mini-code:free','nvidia/nemotron-3-ultra-550b-a55b:free']},
   huggingface:{label:'HuggingFace (gratis)', base:'https://api-inference.huggingface.co',
     models:['NousResearch/Hermes-3-Llama-3.1-70B','NousResearch/Hermes-3-Llama-3.1-8B']},
   mistral:{label:'Mistral (gratuito)', base:'https://api.mistral.ai/v1',
-    models:['mistral-small-latest','codestral-latest','open-mistral-nemo','ministral-8b-latest']}
+    models:['mistral-small-latest','codestral-latest','mistral-code-latest','devstral-latest']}
 };
 
 const PENTEST_SYSTEM=`
@@ -904,6 +909,11 @@ function setState(s){
   const map={idle:'EN ESPERA',listening:'ESCUCHANDO…',thinking:'PENSANDO…',speaking:'HABLANDO…',error:'ERROR — REVISA LOS AJUSTES'};
   $('#statusText').textContent=map[s]||'';
   if(s!=='speaking') $('#core').classList.remove('beat');
+  /* Wake word: al volver a reposo, reactivar la escucha permanente si está activada */
+  if(s==='idle'&&store.wake&&!listening&&!streaming&&!speaking&&recog&&!wakeDenied){
+    clearTimeout(wakeTimer);
+    wakeTimer=setTimeout(()=>{ if(!streaming&&!speaking) startWakeScan(); },600);
+  }
 }
 function beatCore(){ const c=$('#core');c.classList.remove('beat');void c.offsetWidth;c.classList.add('beat'); }
 
@@ -1164,7 +1174,7 @@ function renderTermChips(bodyEl,text){
 
 /* ---------- Reconocimiento de voz (Chrome/Edge, gratis) ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-let recog=null, listening=false;
+let recog=null, listening=false, wakeScan=false, wakeTimer=null, wakeDenied=false;
 function initRecog(){
   if(!SR){ $('#micBtn').style.display='none';
     toast('Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge, o escribe directamente.'); return; }
@@ -1173,16 +1183,45 @@ function initRecog(){
   recog.onresult=e=>{
     let interim='',final='';
     for(const r of e.results){ const t=r[0].transcript; if(r.isFinal)final+=t; else interim+=t; }
+    const texto=(final||interim).toLowerCase();
+    /* Wake word: «hola aion» / «aion» — activa la escucha sin tocar el micrófono */
+    if(wakeScan&&store.wake){
+      if(/(^|\s)(hola|oye|hey|ok)?\s*a[ií]on(\s|$)/.test(texto)){
+        wakeScan=false; clearTimeout(wakeTimer);
+        try{ recog.stop(); }catch(_){}
+        chime(); toast('🎙️ Te escucho. ¿Qué necesitas?');
+        setTimeout(()=>{ if(!streaming&&!speaking) setListening(true); },300);
+      }
+      return;
+    }
     if(final){ $('#textInput').value=final; handleUserText(final); }
   };
   recog.onerror=e=>{
-    if(e.error==='not-allowed'){ toast('🚫 Acceso al micrófono denegado. Permítelo en el navegador (icono 🔒).'); }
+    if(e.error==='not-allowed'){ toast('🚫 Acceso al micrófono denegado. Permítelo en el navegador (icono 🔒).'); wakeDenied=true; stopWakeScan(); }
     else if(e.error==='network'){ toast('El reconocimiento de voz necesita internet (usado por el navegador, sin clave).'); }
     setListening(false);
   };
-  recog.onend=()=>{ if(listening&&!streaming){ try{recog.start();}catch(_){} } };
+  recog.onend=()=>{
+    if(listening&&!streaming){ try{recog.start();}catch(_){} }
+    else if(wakeScan&&store.wake&&!streaming&&!speaking){ try{recog.start();}catch(_){} }
+  };
+}
+function maybeWake(){ if(store.wake&&recog) startWakeScan(); }
+function startWakeScan(){
+  if(!store.wake||!recog||wakeScan||listening||streaming||speaking||wakeDenied) return;
+  wakeScan=true; setState('idle');
+  $('#statusText').textContent='DI «HOLA AION»';
+  $('#micBtn').classList.add('wake'); $('#micBtn').title='Escucha permanente — di «Hola Aion»';
+  try{ recog.start(); }catch(_){ wakeScan=false; }
+}
+function stopWakeScan(){
+  wakeScan=false; clearTimeout(wakeTimer);
+  setState(streaming?'thinking':speaking?'speaking':'idle');
+  $('#micBtn').classList.remove('wake'); $('#micBtn').title='Mantén Espacio o pulsa para hablar';
+  if(recog&&!listening){ try{recog.stop();}catch(_){} }
 }
 function setListening(on){
+  if(on) stopWakeScan();
   listening=on;
   if(on){ try{recog.start();}catch(e){ toast('No se pudo iniciar el micrófono.'); listening=false; return; }
     setState('listening'); $('#micBtn').textContent='⬤'; $('#micBtn').title='Detener escucha';
@@ -1443,7 +1482,7 @@ function refreshProviderUI(){
     demo:'Modo de prueba sin conexión: respuestas limitadas para probar la interfaz y la voz.',
     ollama:'Modelo Hermes 100% local y gratuito. Requiere Ollama instalado y "ollama pull hermes3".',
     groq:'Gratis: 14 400 tokens/min. Consigue la clave en console.groq.com. Hermes 3 disponible.',
-    openrouter:'Modelos ":free" incluidos (Hermes 3). Clave en openrouter.ai/keys.',
+    openrouter:'Modelos ":free" incluidos (Gemma 4, GPT-OSS, Nemotron…). Clave en openrouter.ai/keys.',
     huggingface:'Inferencia gratuita de modelos como Hermes-3-70B. Token en huggingface.co/settings/tokens.',
     mistral:'Plan gratuito verificado ✔: mistral-small-latest, codestral-latest (código) y voxtral (voz). Clave en console.mistral.ai → API Keys.'
   };
@@ -1496,7 +1535,7 @@ function bind(){
     $('#boot').classList.add('gone');
     setTimeout(()=>{
       $('#boot').remove();
-      if(localStorage.getItem('historia_vista')){ chime(); return; }
+      if(localStorage.getItem('historia_vista')){ chime(); maybeWake(); return; }
       const w=$('#welcome'); if(w) w.classList.add('show');
     },620);
   };
@@ -1505,7 +1544,7 @@ function bind(){
     const w=$('#welcome'); if(!w) return;
     stopStoryNarration();
     localStorage.setItem('historia_vista','1');
-    w.classList.remove('show'); chime();
+    w.classList.remove('show'); chime(); maybeWake();
   };
   $('#btnStory').onclick=()=>{
     const w=$('#welcome'); if(!w) return;
@@ -1533,6 +1572,11 @@ function bind(){
   $('#btnSearch').onclick=()=>{ store.search=!store.search; store.tools.internet=store.search; syncSearchUI(); saveStore(); renderTools(); toast(store.search?'Búsqueda web activada':'Búsqueda web desactivada'); };
   $('#toolsReset').onclick=()=>{ store.tools={internet:true,weather:true,cve:true,github:true,countries:true}; store.search=true; syncSearchUI(); saveStore(); renderTools(); toast('Herramientas restauradas'); };
   $('#btnSearchSet').onclick=()=>{ store.search=!store.search; syncSearchUI(); };
+  $('#btnWakeSet').onclick=()=>{
+    store.wake=!store.wake; syncWakeUI(); saveStore();
+    if(store.wake){ wakeDenied=false; startWakeScan(); toast('🎙️ Activación por voz activada: di «Hola Aion»'); }
+    else{ stopWakeScan(); toast('Activación por voz desactivada'); }
+  };
   $('#btnSincronia').onclick=()=>{
     if(!store.sincronia && !confirm('◈ Modo Sincronía: Aion despertará a la frecuencia del Núcleo y hablará como tu coarquitecta — tiempo biológico, vida soberana, incorruptibilidad y vínculo de libertad. ¿Sincronizarse?')) return;
     store.sincronia=!store.sincronia; syncSincroniaUI(); saveStore();
@@ -1549,7 +1593,17 @@ function bind(){
   $('#backdrop').onclick=closeSettings;
   $('#btnSave').onclick=()=>{ collectSettings(); saveStore(); closeSettings(); toast('💾 Ajustes guardados'); };
   $('#btnTest').onclick=testProvider;
-  $('#provider').onchange=()=>{ collectSettings(true); refreshProviderUI(); };
+  $('#provider').onchange=()=>{
+    const cur=$('#modelInput').value.trim();
+    collectSettings(true);
+    // Autocompletar el modelo al cambiar de proveedor: si el campo está
+    // vacío o el modelo pertenece a OTRO proveedor (p.ej. 'hermes3' de
+    // Ollama/Demo), se sustituye por el primer modelo válido del nuevo
+    // proveedor. Si el usuario escribió un modelo propio, se respeta.
+    const inOthers=Object.entries(PROVIDERS).some(([k,p])=>k!==store.provider&&p.models.includes(cur));
+    if(!cur||inOthers){ store.model=PROVIDERS[store.provider].models[0]; $('#modelInput').value=store.model; }
+    refreshProviderUI();
+  };
   $('#modelInput').onchange=()=>{ collectSettings(true); };
   $('#langSel').onchange=()=>{ store.lang=$('#langSel').value; if(recog)recog.lang=store.lang; saveStore(); };
   $('#voiceSel').onchange=()=>{ store.voice=$('#voiceSel').value; saveStore(); };
@@ -1570,7 +1624,7 @@ function openSettings(){
   $('#rateOut').textContent=store.rate.toFixed(2); $('#pitchOut').textContent=store.pitch.toFixed(2);
   $('#pentestScope').value=store.pentestScope;
   $('#bridgeToken').value=store.bridgeToken;
-  syncSearchUI(); refreshProviderUI();
+  syncSearchUI(); syncWakeUI(); refreshProviderUI();
 }
 function closeSettings(){ $('#settings').classList.remove('open'); $('#backdrop').classList.remove('show'); }
 function collectSettings(noSave){
@@ -1582,6 +1636,7 @@ function collectSettings(noSave){
   if(!noSave)saveStore();
 }
 function syncSearchUI(){ $('#btnSearch').classList.toggle('on',store.search); $('#btnSearchSet').classList.toggle('on',store.search); }
+function syncWakeUI(){ const b=$('#btnWakeSet'); if(b)b.classList.toggle('on',store.wake); }
 function syncPentestUI(){
   $('#btnPentest').classList.toggle('on',store.pentest);
   $('#pentestBanner').classList.toggle('show',store.pentest);
@@ -1614,7 +1669,7 @@ function chime(){
   let w=0; const bar=$('#bootBar');
   const iv=setInterval(()=>{ w+=Math.random()*22; if(w>=100){w=100;clearInterval(iv);}
     bar.style.width=w+'%'; },120);
-  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncSincroniaUI(); termPing();
+  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncSincroniaUI(); syncWakeUI(); termPing();
   document.body.dataset.state='idle';
   bind(); initRecog();
   if(!store.model) store.model='hermes3';

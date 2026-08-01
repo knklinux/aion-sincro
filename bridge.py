@@ -19,6 +19,7 @@ Uso:
 import argparse
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -42,15 +43,23 @@ NAME = "aion-sincro-bridge"
 VERSION = "1.0"
 
 
+ORIGIN_RE = re.compile(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$")
+
+
 def origin_allowed(origin: str) -> bool:
-    if origin in (None, "", "null"):  # null => abierto como archivo local (file://)
+    # null => abierto como archivo local (file://)
+    if origin in (None, "", "null"):
         return True
-    return origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1")
+    # Solo origenes EXACTOS localhost/127.0.0.1 (+ puerto). Bloquea
+    # falsificaciones tipo http://localhost.evil.com (startswith era demasiado laxo).
+    return bool(ORIGIN_RE.match(origin))
 
 
 def host_allowed(host: str) -> bool:
     h = (host or "").lower()
-    return h.startswith("127.0.0.1") or h.startswith("localhost")
+    # Mismo criterio exacto que el Origin: solo 127.0.0.1/localhost (+ puerto).
+    # Rechaza Host falsificados tipo localhost.evil.com (DNS rebinding).
+    return bool(re.match(r"^((localhost|127\.0\.0\.1)(:\d+)?)$", h))
 
 
 def kill_current():

@@ -32,12 +32,15 @@ const originAllowed = (o) =>
   o == null ||
   o === "" ||
   o === "null" ||
-  o.startsWith("http://localhost") ||
-  o.startsWith("http://127.0.0.1");
+  // Solo origenes EXACTOS localhost/127.0.0.1 (+ puerto). Bloquea
+  // falsificaciones tipo http://localhost.evil.com (startswith era demasiado laxo).
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
 
 const hostAllowed = (h) => {
   const s = (h || "").toLowerCase();
-  return s.startsWith("127.0.0.1") || s.startsWith("localhost");
+  // Mismo criterio exacto que el Origin: solo 127.0.0.1/localhost (+ puerto).
+  // Rechaza Host falsificados tipo localhost.evil.com (DNS rebinding).
+  return /^((localhost|127\.0\.0\.1)(:\d+)?)$/.test(s);
 };
 
 let proc = null;
