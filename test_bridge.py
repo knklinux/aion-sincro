@@ -3,7 +3,12 @@
 """
 Aion Sincro — Suite de pruebas del puente y servidores locales
 ==============================================================
-Valida que cada cambio en los puentes no rompa la seguridad:
+Valida que cada cambio en los puentes no rompa la seguridad.
+La misma matriz de seguridad se aplica a AMBOS puentes:
+  - bridge.py  (Python)  → sección [2]
+  - bridge.mjs (Node)    → sección [3]  (mismos checks: ping, Host/Origin
+    forjados, /run sin/con token, /kill, rutas desconocidas, límites de body)
+
   1) /ping del puente responde ok
   2) Host forjado (localhost.evil.com) -> 403   [DNS rebinding]
   3) Origin forjado (http://evil.com) -> 403    [CSRF desde webs externas]
@@ -12,6 +17,7 @@ Valida que cada cambio en los puentes no rompa la seguridad:
   6) POST /kill con token -> 200 ok
   7) Funciones puras origin_allowed / host_allowed
   8) piper_server.py: /ping con token, Host/Origin forjados, slug malicioso
+  9) proxy.py: endpoints de claves, token, límites y sin fugas
 
 Uso:
     python test_bridge.py
@@ -58,6 +64,25 @@ def start_server(script, port, token=""):
     p = subprocess.Popen(
         cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
     )
+    for _ in range(60):
+        if p.poll() is not None:
+            out = p.stdout.read().decode("utf-8", "replace") if p.stdout else ""
+            raise RuntimeError(f"{script} murió al arrancar:\n{out}")
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                return p
+        except OSError:
+            time.sleep(0.1)
+    p.kill()
+    raise RuntimeError(f"{script} no arrancó en {port}")
+
+
+def start_server_node(script, port, token=""):
+    """Arranca un servidor Node (bridge.mjs) en un puerto libre."""
+    cmd = ["node", str(ROOT / script), "--port", str(port)]
+    if token:
+        cmd += ["--token", token]
+    p = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     for _ in range(60):
         if p.poll() is not None:
             out = p.stdout.read().decode("utf-8", "replace") if p.stdout else ""
@@ -120,11 +145,33 @@ def raw_http(port, path, method="GET", host=None, origin=None, body=None, timeou
             break
         data += chunk
     sock.close()
-    head, _, body = data.partition(b"\r\n\r\n")
+    head, _, body_raw = data.partition(b"\r\n\r\n")
     try:
         status = int(head.split(b"\r\n")[0].split()[1])
     except Exception:
         status = 0
+    # bridge.mjs responde con chunked encoding (Transfer-Encoding: chunked):
+    # decodificamos para poder validar el contenido real del body. Los otros
+    # servidores (bridge.py, piper, proxy) usan Content-Length y no se tocan.
+    body = body_raw
+    if b"Transfer-Encoding: chunked" in head:
+        decoded = b""
+        buf = body_raw
+        while buf:
+            line, sep, rest = buf.partition(b"\r\n")
+            if not sep:
+                break
+            try:
+                size = int(line.strip().split(b";")[0], 16)
+            except ValueError:
+                break
+            if size == 0:
+                break
+            decoded += rest[:size]
+            buf = rest[size:]
+            if buf.startswith(b"\r\n"):
+                buf = buf[2:]
+        body = decoded
     return status, body
 
 
@@ -192,8 +239,56 @@ def test_bridge():
         stop(p)
 
 
+def test_bridge_node():
+    print("\n[3] Puente HTTP Node (bridge.mjs)")
+    port = free_port()
+    token = "test-token-node-456"
+    p = start_server_node("bridge.mjs", port, token)
+    try:
+        # 3.1 /ping con Host válido (el ping NO exige token por diseño)
+        st, body = raw_http(port, "/ping")
+        check("node /ping → 200", st == 200)
+        check("node /ping → ok:true", st == 200 and b'"ok":true' in body)
+        # 3.2 Host forjado (DNS rebinding)
+        st, _ = raw_http(port, "/ping", host="localhost.evil.com")
+        check("node Host forjado → 403", st == 403, f"got {st}")
+        st, _ = raw_http(port, "/ping", host="127.0.0.1.evil.com")
+        check("node Host forjado IP → 403", st == 403, f"got {st}")
+        # 3.3 Origin forjado (CSRF)
+        st, _ = raw_http(port, "/ping", origin="http://evil.com")
+        check("node Origin forjado → 403", st == 403, f"got {st}")
+        st, _ = raw_http(port, "/ping", origin="http://localhost.evil.com")
+        check("node Origin falsificado localhost → 403", st == 403, f"got {st}")
+        # 3.4 POST /run sin token → 403
+        st, _ = raw_http(port, "/run", method="POST", body=json.dumps({"cmd": "echo x"}))
+        check("node /run sin token → 403", st == 403, f"got {st}")
+        # 3.5 POST /run con token → 200 + salida
+        st, body = raw_http(port, "/run", method="POST",
+                            body=json.dumps({"token": token, "cmd": "echo hola-node"}))
+        check("node /run con token → 200", st == 200, f"got {st}")
+        txt = body.decode("utf-8", "replace")
+        check("node /run devuelve la salida", "hola-node" in txt, txt[:120])
+        check("node /run devuelve exit:0", '"exit":0' in txt, txt[:120])
+        # 3.6 POST /run con cmd vacío → 400
+        st, _ = raw_http(port, "/run", method="POST", body=json.dumps({"token": token, "cmd": "  "}))
+        check("node /run cmd vacío → 400", st == 400, f"got {st}")
+        # 3.7 POST /kill con token → 200
+        st, body = raw_http(port, "/kill", method="POST", body=json.dumps({"token": token}))
+        check("node /kill → 200", st == 200, f"got {st}")
+        check("node /kill → ok:true", st == 200 and b'"ok":true' in body)
+        # 3.8 Ruta desconocida → 404 (bridge.mjs usa 404, a diferencia del 403 de bridge.py)
+        st, _ = raw_http(port, "/otra-cosa", body=json.dumps({"token": token}), method="POST")
+        check("node ruta desconocida → 404", st == 404, f"got {st}")
+        # 3.9 Body > 1 MB → 413 (límite propio del puente Node)
+        big = '{"token":"' + token + '","cmd":"' + "a" * 1_100_000 + '"}'
+        st, _ = raw_http(port, "/run", method="POST", body=big, timeout=10)
+        check("node body > 1 MB → 413", st == 413, f"got {st}")
+    finally:
+        stop(p)
+
+
 def test_piper():
-    print("\n[3] Servidor de voz local (piper_server.py)")
+    print("\n[4] Servidor de voz local (piper_server.py)")
     port = free_port()
     token = "piper-token-456"
     p = start_server("piper_server.py", port, token)
@@ -239,7 +334,7 @@ def test_piper():
 
 
 def test_proxy():
-    print("\n[4] Proxy de claves (proxy.py — las claves nunca viajan al navegador)")
+    print("\n[5] Proxy de claves (proxy.py — las claves nunca viajan al navegador)")
     port = free_port()
     token = "proxy-token-789"
     p = start_server("proxy.py", port, token)
@@ -287,7 +382,17 @@ def test_proxy():
                          extra_headers=[f"X-Proxy-Token: {token}"],
                          body='{"provider":"nasa","model":"x","messages":[]}')
         check("proveedor desconocido → 400", st == 400, f"got {st}")
-        # 4.12 Body demasiado grande (> 1 MB) → 400
+        # 4.12 /v1/models sin token → 403
+        st, _ = raw_http(port, "/v1/models?provider=mistral")
+        check("/v1/models sin token → 403", st == 403, f"got {st}")
+        # 4.13 /v1/models con token pero proveedor desconocido → 400
+        st, _ = raw_http(port, "/v1/models?provider=nasa", extra_headers=[f"X-Proxy-Token: {token}"])
+        check("/v1/models proveedor desconocido → 400", st == 400, f"got {st}")
+        # 4.14 /v1/models con token sin clave configurada → 502 limpio (sin sk-)
+        st, body = raw_http(port, "/v1/models?provider=mistral", extra_headers=[f"X-Proxy-Token: {token}"])
+        check("/v1/models con token sin clave → 502", st == 502, f"got {st}")
+        check("/v1/models error claro y sin claves", st == 502 and b"no hay clave" in body and b"sk-" not in body, f"got {body[:80]}")
+        # 4.15 Body demasiado grande (> 1 MB) → 400
         big = '{"provider":"mistral","model":"x","messages":[{"role":"user","content":"' + "a" * 1_100_000 + '"}]}'
         st, _ = raw_http(port, "/v1/chat/completions", method="POST",
                          extra_headers=[f"X-Proxy-Token: {token}"], body=big, timeout=10)
@@ -302,6 +407,7 @@ def main():
     print("=" * 60)
     test_pure_functions()
     test_bridge()
+    test_bridge_node()
     test_piper()
     test_proxy()
     print("\n" + "=" * 60)

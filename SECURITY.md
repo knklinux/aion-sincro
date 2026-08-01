@@ -158,10 +158,12 @@ ejemplo, no una clave real.
    en `localhost`/HTTPS; si la expones en LAN, hazlo con HTTPS.
 3. **Proxy de claves — ya implementado** (`proxy.py`): mueve las llamadas a los
    proveedores a un backend local para que las API keys nunca viajen al
-   navegador. **Mejoras pendientes**: (a) reenvío por streams con backpressure
-   ya activo; (b) añadir un `/v1/models` proxy para listar modelos sin exponer
-   el catálogo; (c) cifrado en reposo de `keys.json` (p. ej. con `age` o la
-   passphrase WebCrypto) si quieres proteger el archivo en disco.
+   navegador. (a) Reenvío por streams con backpressure activo; (b) **`/v1/models`
+   ya implementado**: el proxy consulta el catálogo de modelos del proveedor
+   con la clave solo en el lado del servidor y devuelve al navegador únicamente
+   la lista de ids (la app lo usa con el botón ↻ de Ajustes → Modelo cuando el
+   proxy está activo); (c) pendiente: cifrado en reposo de `keys.json` (p. ej.
+   con `age` o la passphrase WebCrypto) si quieres proteger el archivo en disco.
 4. **Puente con mínimo privilegio**: ejecútalo con el menor privilegio posible
    y en una carpeta dedicada (el cwd del puente es el directorio desde el que
    se lanzan los comandos). Considera un usuario separado o `systemd` en Linux.

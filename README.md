@@ -337,12 +337,37 @@ O en partes:
 
 | Comando | Qué valida |
 |---|---|
-| `python test_bridge.py` | **Puentes**: `/ping` del bridge, **Host forjado** (`localhost.evil.com` → 403), **Origin forjado** (`http://evil.com` → 403), **403 sin token**, `/run` ejecuta y devuelve salida + `exit:0`, `/kill`, y lo mismo para `piper_server.py` (token, slug malicioso path-traversal → 400) |
+| `python test_bridge.py` | **Puentes (Python y Node)**: la misma matriz de seguridad se aplica a `bridge.py` **y a `bridge.mjs`** — `/ping`, **Host forjado** (`localhost.evil.com` → 403), **Origin forjado** (`http://evil.com` → 403), **403 sin token**, `/run` ejecuta y devuelve salida + `exit:0`, `/kill`, rutas desconocidas (403 Python / 404 Node), body > 1 MB (413 Node), y lo mismo para `piper_server.py` (token, slug malicioso path-traversal → 400) |
 | `node test_app.js` | **App**: sintaxis del `<script>` (`node --check`), **ausencia de secretos** en el código, funciones puras (`detectEmotion` por tono, `voxtralSlug`, `detectLang`), presencia de elementos/funciones clave y sin `eval`/`document.write` |
 | **Cifrado WebCrypto** (dentro de `test_app.js`) | **Parámetros**: PBKDF2-SHA256 con 120 000 iteraciones, AES-GCM 256, clave no-extraíble, salt 16 B e IV 12 B aleatorios. **Round-trip real**: ejecuta `encryptSecrets`/`decryptSecrets` extraídas del `<script>` con `crypto.subtle` de Node — cifra y descifra, passphrase errónea → `null` (no lanza), salts aleatorios producen blobs distintos y el blob cifrado no contiene el secreto en claro |
 
 Ambas suites **fallan (exit ≠ 0)** si se rompe la seguridad (quitar la
 validación de Host, filtrar una clave, romper la sintaxis JS…).
+
+### 🔒 Pre-commit hook (opcional pero recomendado)
+
+La suite se puede integrar en el flujo de git: un **pre-commit hook**
+(`hooks/pre-commit`) ejecuta la suite completa **antes de cada commit** y
+**bloquea el commit** si algo falla. Instalación en un solo paso:
+
+```bat
+:: Windows (doble clic o desde cmd)
+hooks\instalar-pre-commit.cmd
+```
+
+```bash
+# Linux / macOS
+./hooks/instalar-pre-commit.sh
+```
+
+Una vez instalado, cada `git commit` corre `test_all.cmd` (Windows) o
+`./test_all.sh` (Linux/macOS) automáticamente. **Ten en cuenta que la suite
+tarda unos minutos** (los tests del puente arrancan servidores reales), así
+que el primer commit tras instalar el hook será el más lento. Para un salto
+puntual (por ejemplo, un commit de documentación): `git commit --no-verify`.
+
+> El hook se copia a `.git/hooks/` (no versionado por git), por eso se
+> incluye el instalador en el repo: cada desarrollador lo activa una vez.
 
 ## ⚖️ Comparativa con el ecosistema
 

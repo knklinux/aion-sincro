@@ -172,6 +172,63 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._json({"ok": True, "providers": {p: bool(KEYS.get(p)) for p in PROVIDERS}})
             return
+        if path == "/v1/models":
+            # Lista los modelos del proveedor SIN exponer el catálogo completo
+            # en el navegador: la llamada al proveedor sale del proxy, con la
+            # clave solo en el lado del servidor.
+            if not self._check():
+                self._deny()
+                return
+            provider = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get(
+                "provider", [""]
+            )[0].strip()
+            if provider not in PROVIDERS:
+                self._json({"ok": False, "error": f"proveedor desconocido: {provider}"}, 400)
+                return
+            key = KEYS.get(provider)
+            if not key:
+                self._json(
+                    {"ok": False, "error": f"no hay clave configurada para {provider} "
+                                           "(usa env vars o keys.json)"},
+                    502,
+                )
+                return
+            if provider == "huggingface":
+                url = f"{PROVIDERS['huggingface']['base']}/models?limit=50&sort=trendingScore&direction=-1"
+            else:
+                url = f"{PROVIDERS[provider]['base']}/models"
+            try:
+                req = urllib.request.Request(
+                    url, headers={"Authorization": "Bearer " + key, "Accept": "application/json"}
+                )
+                upstream = urllib.request.urlopen(req, timeout=UPSTREAM_TIMEOUT)
+                raw = upstream.read().decode("utf-8", errors="replace")
+                data = json.loads(raw)
+                ids = (
+                    data.get("data", [])
+                    if isinstance(data, dict)
+                    else data
+                )
+                models = []
+                for m in ids:
+                    mid = m.get("id") if isinstance(m, dict) else str(m)
+                    if mid:
+                        models.append(mid)
+                self._json({"ok": True, "provider": provider, "models": models})
+            except urllib.error.HTTPError as e:
+                detail = b""
+                try:
+                    detail = e.read()
+                except Exception:
+                    pass
+                self._json(
+                    {"ok": False, "error": f"el proveedor respondió {e.code}: "
+                                           + detail.decode("utf-8", errors="replace")[:300]},
+                    e.code if e.code < 600 else 502,
+                )
+            except Exception as e:
+                self._json({"ok": False, "error": str(e)[:300]}, 502)
+            return
         self._deny()
 
     def do_POST(self):

@@ -89,6 +89,29 @@ header.top{
 .head-btn.on{color:var(--cyan);border-color:rgba(245,165,36,.4);background:var(--cyan-soft);
   box-shadow:0 0 14px rgba(245,165,36,.15)}
 #btnPentest.on{color:#ffd6a5;border-color:rgba(245,185,66,.5);background:rgba(245,185,66,.1)}
+/* Candado de cifrado en el header (bloqueado/desbloqueado) */
+#btnLock{display:none}
+#btnLock.visible{display:flex}
+#btnLock.locked{color:#fda4af;border-color:rgba(251,113,133,.4);background:rgba(251,113,133,.08)}
+#btnLock.unlocked{color:#9fe8c9;border-color:rgba(52,211,153,.45);background:rgba(16,185,129,.1)}
+#btnLock.locked:hover,#btnLock.unlocked:hover{border-color:var(--line);background:rgba(245,165,36,.06)}
+.lockWrap{position:relative;display:inline-flex}
+.lockPop{position:absolute;top:calc(100% + 10px);right:0;z-index:80;width:264px;padding:14px;border-radius:12px;
+  border:1px solid rgba(214,164,70,.25);background:linear-gradient(180deg,rgba(12,18,28,.99),rgba(6,10,18,.99));
+  box-shadow:0 18px 50px rgba(0,0,0,.7),0 0 24px rgba(245,165,36,.07);opacity:0;visibility:hidden;transform:translateY(-4px);
+  transition:.22s}
+.lockPop.show{opacity:1;visibility:visible;transform:none}
+.lockPop h5{margin:0 0 3px;font-size:12.5px;color:#ffe9c2;letter-spacing:.05em}
+.lockPop p{font-size:11px;color:var(--dim);line-height:1.55;margin:0 0 10px}
+.lockPop input{width:100%;padding:9px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);color:var(--text);font-size:12.5px;margin-bottom:9px;outline:none}
+.lockPop input:focus{border-color:rgba(245,165,36,.5)}
+.lockPop .lp-actions{display:flex;gap:7px}
+.lockPop button{flex:1;padding:8px 10px;border-radius:8px;font-size:11.5px;font-weight:600;letter-spacing:.04em;cursor:pointer;transition:.2s}
+#lockUnlockBtn{color:#9fe8c9;border:1px solid rgba(52,211,153,.4);background:rgba(16,185,129,.12)}
+#lockUnlockBtn:hover{background:rgba(16,185,129,.24)}
+#lockNowBtn{color:#fda4af;border:1px solid rgba(251,113,133,.35);background:rgba(251,113,133,.08)}
+#lockNowBtn:hover{background:rgba(251,113,133,.18)}
 #btnSincronia.on{color:#9fe8c9;border-color:rgba(52,211,153,.55);background:rgba(16,185,129,.12);
   box-shadow:0 0 16px rgba(52,211,153,.25)}
 .dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
@@ -476,6 +499,16 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
   footer.controls{gap:10px;padding:12px}
   .tinyBtns .toggle .tlabel{display:none}
 }
+/* ---------- Refresco de modelos vía proxy ---------- */
+.modelRow{display:flex;gap:8px;align-items:center}
+.modelRow input{flex:1}
+.miniBtn{flex:none;width:34px;height:34px;border-radius:9px;font-size:15px;cursor:pointer;color:#ffd9a8;
+  border:1px solid rgba(245,165,36,.35);background:rgba(245,165,36,.08);transition:.2s}
+.miniBtn:hover:not(:disabled){background:rgba(245,165,36,.2);box-shadow:0 0 12px rgba(245,165,36,.25)}
+.miniBtn:disabled{opacity:.4;cursor:not-allowed}
+.miniBtn.busy{animation:coreSpin 1s linear infinite}
+@keyframes coreSpin{to{transform:rotate(360deg)}}
+
 /* ---------- Módulo de aprendizaje guiado (Ruta Red Team) ---------- */
 #learnOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
   background:radial-gradient(circle at 50% 30%,rgba(245,165,36,.08),rgba(2,6,12,.85) 70%);
@@ -555,6 +588,18 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
     <button class="head-btn" id="btnPentest" title="Activar asistencia de seguridad ofensiva (solo uso autorizado)">🛡️ Pentest</button>
     <button class="head-btn" id="btnLearn" title="Ruta Red Team: aprendizaje guiado con checkpoints de práctica">🧭 Ruta</button>
     <button class="head-btn" id="btnStory" title="Releer la historia de Ark & Jimmy (MANIFIESTO)">📖 Ver historia</button>
+    <div class="lockWrap" id="lockWrap">
+      <button class="head-btn" id="btnLock" title="Claves cifradas — desbloquear">🔒</button>
+      <div class="lockPop" id="lockPop">
+        <h5>🔐 Claves cifradas</h5>
+        <p>Introduce tu contraseña maestra para desbloquear las claves de esta sesión (AES-GCM 256 · la contraseña no se guarda).</p>
+        <input type="password" id="lockPass" placeholder="Contraseña maestra" autocomplete="off">
+        <div class="lp-actions">
+          <button id="lockUnlockBtn">🔓 Desbloquear</button>
+          <button id="lockNowBtn" style="display:none">🔒 Bloquear</button>
+        </div>
+      </div>
+    </div>
     <button class="head-btn" id="btnSettings" title="Configuración">⚙️ Ajustes</button>
   </header>
 
@@ -697,7 +742,10 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
       </div>
       <div class="field">
         <label>Modelo (basado en Hermes por defecto)</label>
-        <input type="text" id="modelInput" placeholder="hermes3">
+        <div class="modelRow">
+          <input type="text" id="modelInput" placeholder="hermes3">
+          <button class="miniBtn" id="btnRefreshModels" title="Sincronizar la lista de modelos desde el proveedor (vía proxy local, sin exponer claves)" disabled>↻</button>
+        </div>
         <div class="hint">Deja el nombre o escribe el tuyo. En Ollama: <b>ollama pull hermes3</b> instala Hermes 3 local.</div>
       </div>
       <button class="ghostBtn" id="btnTest">🔌 Probar conexión</button>
@@ -880,6 +928,7 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
 
 <div id="toast"></div>
 
+
 <!-- Módulo de aprendizaje guiado: Ruta Red Team -->
 <div id="learnOverlay">
   <div class="learn-card">
@@ -1048,11 +1097,29 @@ async function reEncryptSecrets(){
   store.encSecrets={v:1,salt:buf2b64(salt),iv:buf2b64(iv),data:buf2b64(data)};
 }
 function applySecrets(s){ store.mistralKey=s.mistralKey||''; store.groqKey=s.groqKey||''; store.openrouterKey=s.openrouterKey||''; store.hfToken=s.hfToken||''; store.bridgeToken=s.bridgeToken||''; store.piperToken=s.piperToken||''; store.proxyToken=s.proxyToken||''; }
+function lockSecrets(){
+  // Bloquear SIN desactivar el cifrado: las claves cifradas siguen en el blob,
+  // solo se purgan de la memoria y de los inputs de esta sesión.
+  cryptoUnlocked=false; cryptoKey=null;
+  ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(k=>{ store[k]=''; const el=$('#'+k); if(el) el.value=''; });
+  saveStore(); syncCryptoUI();
+  toast('🔒 Claves bloqueadas para esta sesión');
+}
 function syncCryptoUI(){
   const on=!!store.crypto, unlocked=on&&cryptoUnlocked;
   const btn=$('#btnCrypto');
-  btn.classList.toggle('on',on);
-  btn.textContent=on?(unlocked?'❌ Desactivar cifrado (claves activas)':'🔓 Desbloquear claves'):'🔐 Activar cifrado WebCrypto';
+  if(btn){
+    btn.classList.toggle('on',on);
+    btn.textContent=on?(unlocked?'❌ Desactivar cifrado (claves activas)':'🔓 Desbloquear claves'):'🔐 Activar cifrado WebCrypto';
+  }
+  // Indicador del header: visible solo con cifrado activo
+  const lb=$('#btnLock'), lw=$('#lockWrap'), pop=$('#lockPop');
+  if(lb){ lb.classList.toggle('visible',on); lb.classList.toggle('locked',on&&!unlocked); lb.classList.toggle('unlocked',on&&unlocked); lb.textContent=on?(unlocked?'🔓':'🔒'):'🔒'; lb.title=on?(unlocked?'Claves desbloqueadas — bloquear':'Claves cifradas — desbloquear'):'Cifrado de claves';
+    if(lw&&!on){ if(pop) pop.classList.remove('show'); }
+    const lu=$('#lockUnlockBtn'), ln=$('#lockNowBtn');
+    if(lu) lu.style.display=on&&!unlocked?'block':'none';
+    if(ln) ln.style.display=on&&unlocked?'block':'none';
+  }
   ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken'].forEach(id=>{ const el=$('#'+id); if(el) el.disabled=on&&!unlocked; });
   $('#cryptoHint').innerHTML=on
     ?(unlocked
@@ -2197,7 +2264,24 @@ function bind(){
     store.pentest=!store.pentest; syncPentestUI(); saveStore();
     toast(store.pentest?'🛡️ Modo Pentest activado':'Modo Pentest desactivado');
   };
-  $('#btnSettings').onclick=openSettings;
+  $('#btnLock').onclick=e=>{ e.stopPropagation(); const pop=$('#lockPop'); if(pop){ pop.classList.toggle('show'); const p=$('#lockPass'); if(p&&cryptoUnlocked===false&&pop.classList.contains('show')){ p.focus(); } } };
+  $('#lockPass').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); const b=$('#lockUnlockBtn'); if(b&&b.style.display!=='none') b.click(); } });
+  $('#lockUnlockBtn').onclick=async()=>{
+    const pass=$('#lockPass').value;
+    if(!pass){ toast('⚠ Escribe la contraseña para desbloquear'); return; }
+    const s=await decryptSecrets(pass,store.encSecrets);
+    if(!s){ toast('❌ Contraseña incorrecta'); $('#lockPass').value=''; return; }
+    applySecrets(s); cryptoUnlocked=true; cryptoKey=await deriveKey(pass,b642buf(store.encSecrets.salt));
+    ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(id=>{ const el=$('#'+id); if(el) el.value=store[id]||''; });
+    $('#lockPass').value=''; const pop=$('#lockPop'); if(pop) pop.classList.remove('show');
+    syncCryptoUI(); saveStore(); toast('🔓 Claves desbloqueadas para esta sesión');
+  };
+  $('#lockNowBtn').onclick=()=>{ const pop=$('#lockPop'); if(pop) pop.classList.remove('show'); lockSecrets(); };
+  document.addEventListener('click',e=>{
+    const w=$('#lockWrap'); const pop=$('#lockPop');
+    if(w&&pop&&!w.contains(e.target)) pop.classList.remove('show');
+  });
+  $('#btnSettings').onclick=()=>{ const pop=$('#lockPop'); if(pop) pop.classList.remove('show'); openSettings(); };
   $('#btnCloseSet').onclick=closeSettings;
   $('#backdrop').onclick=closeSettings;
   $('#btnSave').onclick=()=>{ collectSettings(); saveStore(); closeSettings(); toast('💾 Ajustes guardados'); };
@@ -2245,6 +2329,7 @@ function bind(){
     saveStore();
   };
   $('#modelInput').onchange=()=>{ collectSettings(true); };
+  $('#btnRefreshModels').onclick=refreshModelsViaProxy;
   $('#langSel').onchange=()=>{ store.lang=$('#langSel').value; if(recog)recog.lang=store.lang; saveStore(); renderWelcomeLang(); syncStoryBtnUI(); };
   $('#voiceSel').onchange=()=>{ store.voice=$('#voiceSel').value; saveStore(); syncVoxtralEmotionUI(); syncPiperUI(); if(isPiperVoice()) piperPing(()=>syncPiperUI()); };
   $('#voxtralEmotion').onchange=()=>{ store.voxtralEmotion=$('#voxtralEmotion').value; saveStore(); };
@@ -2298,8 +2383,34 @@ function collectSettings(noSave){
 function syncSearchUI(){ $('#btnSearch').classList.toggle('on',store.search); $('#btnSearchSet').classList.toggle('on',store.search); }
 function syncWakeUI(){ const b=$('#btnWakeSet'); if(b)b.classList.toggle('on',store.wake); }
 function syncAutoLangUI(){ const b=$('#btnAutoLang'); if(b)b.classList.toggle('on',store.autoLang); }
+function refreshModelsViaProxy(){
+  const p=store.provider, btn=$('#btnRefreshModels');
+  if(!btn) return;
+  if(!store.proxyOn||p==='demo'||p==='ollama'||!proxyOnline){ toast('🔑 Activa el proxy de claves y verifica la conexión para sincronizar modelos'); return; }
+  btn.disabled=true; btn.classList.add('busy');
+  const base=(store.proxyUrl||'http://127.0.0.1:8797').replace(/\/$/,'');
+  const headers={'Content-Type':'application/json'};
+  if(store.proxyToken) headers['X-Proxy-Token']=store.proxyToken;
+  fetch(base+'/v1/models?provider='+encodeURIComponent(p),{signal:AbortSignal.timeout(15000),headers})
+    .then(r=>r.json())
+    .then(j=>{
+      if(!(j&&j.ok&&Array.isArray(j.models)&&j.models.length)){ toast('⚠ '+((j&&j.error)||'Sin modelos disponibles')); return; }
+      const defs=PROVIDERS[p].models||[];
+      PROVIDERS[p].models=Array.from(new Set([...j.models.filter(m=>m&&!m.includes(':')) ,...defs]));
+      toast('↻ '+j.models.length+' modelos sincronizados desde '+p);
+      store.model=PROVIDERS[p].models[0]; $('#modelInput').value=store.model;
+      if(store.provider) store.modelByProvider[store.provider]=store.model;
+      saveStore();
+    })
+    .catch(e=>toast('❌ No pude sincronizar modelos: '+(e.message||e)))
+    .finally(()=>{ btn.disabled=false; btn.classList.remove('busy'); });
+}
 function syncProxyUI(){
   const b=$('#btnProxy'); if(b)b.classList.toggle('on',store.proxyOn);
+  const rm=$('#btnRefreshModels'); if(rm){
+    const on=store.proxyOn&&store.provider&&store.provider!=='demo'&&store.provider!=='ollama';
+    rm.disabled=!on; rm.title=on?'Sincronizar la lista de modelos desde el proveedor (vía proxy local, sin exponer claves)':'Activa el proxy de claves y elige Mistral/Groq/OpenRouter/HuggingFace para sincronizar modelos';
+  }
   const st=$('#proxyStatus'); if(st){
     if(store.proxyOn){
       st.style.display='block';

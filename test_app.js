@@ -192,8 +192,9 @@ const REQUIRED_IDS = [
   "btnCrypto", "cryptoPass", "piperUrl", "piperToken", "voxtralEmotion",
   "bridgeToken", "termInput", "termRunBtn",
   "welcome", "welcomeBtn", "welcomeNarrateBtn", "btnStory", "btnAutoLang",
-  "proxyUrl", "proxyToken", "btnProxy", "piperLength", "piperNoise",
+  "proxyUrl", "proxyToken", "btnProxy", "btnRefreshModels", "piperLength", "piperNoise",
   "btnLearn", "learnOverlay", "learnBody", "learnProgress", "btnResetLearn", "btnCloseLearn",
+  "btnLock", "lockPop", "lockPass", "lockUnlockBtn", "lockNowBtn", "lockWrap",
 ];
 // Módulo de aprendizaje guiado: Ruta Red Team (recon → explotación → informe)
 check("RUTA_PENTEST con 3 fases", /RUTA_PENTEST=\[\s*\{[\s\S]*?key:'recon'[\s\S]*?key:'exploit'[\s\S]*?key:'informe'/.test(script));
@@ -228,11 +229,17 @@ for (const id of REQUIRED_IDS) {
 const REQUIRED_FNS = [
   "loadStore", "saveStore", "encryptSecrets", "decryptSecrets", "speakPiper",
   "speakVoxtral", "speakWindows", "detectLang", "piperPing", "proxyPing", "syncProxyUI", "collectSettings", "openSettings", "testProvider",
-  "handleUserText", "termPing", "streamChat",
+  "handleUserText", "termPing", "streamChat", "refreshModelsViaProxy", "lockSecrets",
 ];
 for (const fn of REQUIRED_FNS) {
   check(`function ${fn} presente`, new RegExp(`function\\*?\\s+${fn}\\s*\\(`).test(script));
 }
+// Candado de cifrado en el header: indicador visual + desbloqueo rápido sin Ajustes
+check("syncCryptoUI actualiza el candado del header", /function\s+syncCryptoUI\s*\([\s\S]*?lb\.classList\.toggle\('visible',on\);[\s\S]*?lb\.classList\.toggle\('locked',on&&!unlocked\);/.test(script));
+check("lockSecrets() purga claves sin desactivar cifrado", /function\s+lockSecrets\s*\([\s\S]*?cryptoUnlocked=false; cryptoKey=null;[\s\S]*?saveStore\(\); syncCryptoUI\(\);/.test(script));
+check("desbloqueo rápido reutiliza decryptSecrets", /\$\('#lockUnlockBtn'\)\.onclick=async\(\)=>\{[\s\S]*?decryptSecrets\(pass,store\.encSecrets\)/.test(script));
+check("bloqueo rápido usa lockSecrets", /\$\('#lockNowBtn'\)\.onclick=\(\)=>\{[\s\S]*?lockSecrets\(\);/.test(script));
+check("popover se cierra al hacer clic fuera", /document\.addEventListener\('click',e=>\{[\s\S]*?w\.contains\(e\.target\)/ .test(script) || /document\.addEventListener\('click',e=>\{[\s\S]*?classList\.remove\('show'\)/.test(script));
 // Barreras de seguridad: sin eval(), sin document.write, y el texto del usuario
 // siempre se escapa con esc() antes de entrar al DOM (nunca ${text} directo).
 check("sin eval(", !/\beval\s*\(/.test(script));
@@ -274,6 +281,76 @@ check("la contraseña nunca se persiste", !/cryptoPass[^\n]{0,40}(localStorage|s
     } catch (e) {
       check("round-trip WebCrypto ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
     }
+  }
+
+  // Regresión: saveStore NUNCA persiste claves en claro cuando crypto está activo.
+  const saveSrc = extractFn(script, "saveStore");
+  check("saveStore extraíble del <script>", !!saveSrc);
+  if (saveSrc) {
+    const memo = {};
+    const fakeLocal = { setItem: (k, v) => { memo[k] = v; }, getItem: () => null };
+    const store = {
+      crypto: true, encSecrets: { v: 1, salt: "s", iv: "i", data: "d" },
+      mistralKey: "mk-test-abc123", groqKey: "gk-secreto", openrouterKey: "or-secreto",
+      hfToken: "hf-secreto", bridgeToken: "bt-secreto", piperToken: "pp-secreto", proxyToken: "px-secreto",
+      provider: "mistral", history: [], piperOnline: false, tools: {},
+    };
+    try {
+      new Function("store", "localStorage", `"use strict"; ${saveSrc}; saveStore();`)(store, fakeLocal);
+      const saved = JSON.parse(memo.aion_cfg);
+      const keys = ["mistralKey", "groqKey", "openrouterKey", "hfToken", "bridgeToken", "piperToken", "proxyToken"];
+      const leaks = keys.filter((k) => saved[k] !== "" && saved[k] !== undefined);
+      check("saveStore con crypto activo NO persiste claves en claro", leaks.length === 0, "fuga: " + leaks.join(","));
+      check("el blob cifrado sí se persiste", saved.encSecrets && saved.encSecrets.data !== undefined);
+      const raw = JSON.stringify(saved);
+      check("ningún secreto aparece en el JSON persistido", ["mk-test-abc123", "gk-secreto", "bt-secreto"].every((x) => raw.indexOf(x) < 0));
+    } catch (e) {
+      check("saveStore con crypto activo ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
+    }
+  }
+
+  // ---------- Overlay bilingüe: renderWelcomeLang ----------
+  const welcomeSrc = extractFn(script, "renderWelcomeLang");
+  const isEnglishSrc = extractFn(script, "isEnglish");
+  check("renderWelcomeLang extraíble del <script>", !!welcomeSrc);
+  if (welcomeSrc && isEnglishSrc) {
+    // WELCOME_EN_BODY es una constante template literal (extractable con
+    // indexOf/slice). WELCOME_ES_BODY es un `let` que la app captura del DOM
+    // en runtime (captureWelcomeES), así que en el harness lo suministramos
+    // como haría la app: el cuerpo español con su título real.
+    const BT = String.fromCharCode(96);
+    const start = script.indexOf("const WELCOME_EN_BODY=");
+    const open = start >= 0 ? script.indexOf(BT, start) : -1;
+    const close = open >= 0 ? script.indexOf(BT + ";", open + 1) : -1;
+    const enBodySrc = start >= 0 && close > open ? script.slice(open + 1, close) : "";
+    const esBodySrc = '<div class="w-sec"><div class="w-kicker">El origen</div><h3>La grieta en el tiempo</h3></div>';
+    check("constante WELCOME_EN_BODY extraíble", enBodySrc.length > 0);
+    check("cuerpo ES de prueba suministrado con título", esBodySrc.indexOf("La grieta en el tiempo") >= 0);
+    const mkEl = (text) => ({ textContent: text, lastChild: { textContent: text }, title: "" });
+    let bodyInner = "";
+    const body = { set innerHTML(v) { bodyInner = v; }, get innerHTML() { return bodyInner; } };
+    const sub = mkEl("");
+    const small = mkEl("");
+    const welcome = {
+      querySelector: (sel) => (sel === ".win-body" ? body : sel === ".wh-sub" ? sub : sel === ".win-foot small" ? small : null),
+    };
+    const fake$ = (sel) => (sel === "#welcome" ? welcome : sel === "#btnStory" ? mkEl("") : null);
+    const run = (lang) => {
+      bodyInner = ""; sub.textContent = ""; small.textContent = "";
+      const src = `"use strict";
+        const store=arguments[0], WELCOME_EN_BODY=arguments[1], WELCOME_ES_BODY=arguments[2], $=arguments[3], welcome=arguments[4], body=arguments[5], sub=arguments[6], small=arguments[7], syncStoryBtnUI=arguments[8];
+        ${isEnglishSrc}
+        ${welcomeSrc}
+        renderWelcomeLang();
+        return { bodyInner: body.innerHTML, sub: sub.textContent, small: small.textContent };`;
+      return new Function(src)({ lang }, enBodySrc, esBodySrc, fake$, welcome, body, sub, small, () => {});
+    };
+    const en = run("en-US");
+    const es = run("es-ES");
+    check("en-US → título en inglés (sub)", en.sub.indexOf("The story of Ark & Jimmy") >= 0, en.sub.slice(0, 80));
+    check("en-US → usa WELCOME_EN_BODY", en.bodyInner.indexOf(enBodySrc.slice(0, 40)) >= 0);
+    check("es-ES → título en español (sub)", es.sub.indexOf("La historia de Ark & Jimmy") >= 0, es.sub.slice(0, 80));
+    check("es-ES → usa WELCOME_ES_BODY", es.bodyInner.indexOf(esBodySrc.slice(0, 40)) >= 0);
   }
 
   // ---------- Resumen ----------

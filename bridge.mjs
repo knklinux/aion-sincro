@@ -60,7 +60,9 @@ const killProc = () => {
 
 http
   .createServer((req, res) => {
-    if (!hostAllowed(req.headers.host)) {
+    if (!hostAllowed(req.headers.host) || !originAllowed(req.headers.origin)) {
+      // Mismo criterio que bridge.py: Host Y Origin exactos (localhost/127.0.0.1).
+      // Bloquea DNS rebinding (Host forjado) y CSRF desde webs externas (Origin forjado).
       res.writeHead(403);
       res.end();
       return;
