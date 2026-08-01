@@ -12,10 +12,14 @@
 # ============================================================
 set -u
 
-# Repo root: git rev-parse es robusto también en worktrees, con fallback
-# a la resolución clásica (.git/hooks/../..) si fallara.
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null || cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT"
+# Repo root. git rev-parse es robusto también en worktrees, PERO en Git Bash
+# de Windows devuelve un salto de línea final que rompería el cd — lo limpiamos
+# con tr -d. Si git fallara, caemos a la resolución clásica (.git/hooks/../..).
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null | tr -d '\r\n')"
+if [ -z "$ROOT" ]; then
+    ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+fi
+cd "$ROOT" || { echo "[pre-commit] No se pudo resolver el root del repo: $ROOT"; exit 1; }
 
 echo ""
 echo "============================================================"
