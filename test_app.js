@@ -74,9 +74,10 @@ const KNOWN_LEAKS = [
 ];
 // Solo archivos de CÓDIGO real (los tests referencian las claves conocidas por diseño)
 const CODE_FILES = [
-  "index.html", "bridge.py", "bridge.mjs", "piper_server.py", "proxy.py",
+  "index.html", "bridge.py", "bridge.mjs", "piper_server.py", "proxy.py", "piper_compare.py",
   "windows/install.cmd", "windows/uninstall.cmd", "windows/aion-sincro.cmd",
-  "windows/crear-acceso-directo.ps1", "linux/install.sh", "linux/uninstall.sh",
+  "windows/crear-acceso-directo.ps1", "windows/instalar-piper.cmd",
+  "linux/install.sh", "linux/uninstall.sh", "linux/instalar-piper.sh",
 ];
 let leaks = [];
 for (const f of CODE_FILES) {
@@ -191,8 +192,12 @@ const REQUIRED_IDS = [
   "btnCrypto", "cryptoPass", "piperUrl", "piperToken", "voxtralEmotion",
   "bridgeToken", "termInput", "termRunBtn",
   "welcome", "welcomeBtn", "welcomeNarrateBtn", "btnStory", "btnAutoLang",
-  "proxyUrl", "proxyToken", "btnProxy",
+  "proxyUrl", "proxyToken", "btnProxy", "piperLength", "piperNoise",
 ];
+// Piper: velocidad y expresividad configurables (length_scale/noise_scale)
+check("piperPlay envía length_scale", /p\.length_scale=store\.piperLength\|\|1\.0;/.test(script));
+check("piperPlay envía noise_scale", /p\.noise_scale=store\.piperNoise\|\|0\.667;/.test(script));
+check("store persiste piperLength/piperNoise", /piperLength:1\.0, piperNoise:0\.667,/.test(script));
 // Proxy de claves: las claves nunca viajan al navegador cuando está activo
 check("streamChat enruta por proxy cuando proxyOn", /if\(store\.proxyOn&&provider!=='demo'&&provider!=='ollama'\)\{[\s\S]*?url=pb\+'\/v1\/chat\/completions'/.test(script));
 check("proxy no envía Authorization desde el navegador", /if\(store\.proxyOn&&provider!=='demo'&&provider!=='ollama'\)\{[\s\S]*?headers=\{'Content-Type':'application\/json'\}[\s\S]*?headers\['X-Proxy-Token'\]/.test(script));

@@ -11,6 +11,8 @@ __pycache__/
 # Piper TTS local (venv + modelos de voz, ~600 MB — no subir)
 .venv-piper/
 piper-voices/
+# Audio de prueba generado por piper_compare.py
+salida-voces/
 
 # Node
 node_modules/

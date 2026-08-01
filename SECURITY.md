@@ -76,6 +76,10 @@ máquina). Sus componentes y superficie de ataque:
   síntesis concurrentes se encolan para evitar corrupción.
 - **Texto limitado a 5000 caracteres** por petición; respuesta `audio/wav` con
   `Cache-Control: no-store`.
+- **Parámetros de síntesis validados y acotados**: `/synthesize` acepta
+  `length_scale` (0.3–3.0) y `noise_scale` (0.1–2.0); los valores no numéricos
+  se toleran con el default y los fuera de rango se recortan — un cliente local
+  no puede forzar síntesis extremas ni provocar errores de parsing.
 - **El venv y los modelos se excluyen del repo** (`.gitignore`: `.venv-piper/`,
   `piper-voices/`) — el código fuente no contiene binarios ni voces.
 - **Manejo de errores de escritura**: si el cliente cierra la pestaña, el puente

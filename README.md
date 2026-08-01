@@ -174,7 +174,14 @@ La voz de Aion puede ser **100% local**: Piper es un TTS neuronal que se ejecuta
 en tu máquina (no envía audio a ningún servidor y no cuesta nada). Incluye
 voces en español (España, México, Argentina).
 
-**Instalación (una sola vez):**
+**Instalación (una sola vez) — con doble clic:**
+
+| Sistema | Qué hacer |
+|---|---|
+| **Windows** | Doble clic en `windows/instalar-piper.cmd` — crea el venv, instala `piper-tts`, descarga la voz `es_ES-sharvard-medium` y **arranca el servidor** |
+| **Linux / macOS** | `chmod +x linux/instalar-piper.sh && ./linux/instalar-piper.sh` — hace lo mismo y deja el servidor escuchando |
+
+O manualmente:
 
 ```bat
 cd aion-sincro
@@ -185,7 +192,9 @@ python -m venv .venv-piper
 
 > ⚠️ En **Linux / macOS** el comando del venv es `.venv-piper/bin/python` y
 > puedes añadir más voces con el mismo comando (p. ej. `es_MX-ald-medium`,
-> `es_MX-claude-high`, `es_AR-daniela-high`…).
+> `es_MX-claude-high`, `es_AR-daniela-high`…). Los instaladores aceptan la
+> variable `PIPER_VOICE` para elegir otra voz (`PIPER_VOICE=es_MX-ald-medium`),
+> `PIPER_PORT` para el puerto y `PIPER_TOKEN` para proteger el servidor.
 
 **Arrancar el servidor de voz local:**
 

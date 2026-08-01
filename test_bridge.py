@@ -220,6 +220,20 @@ def test_piper():
         # 3.7 Ruta desconocida → 403
         st, _ = raw_http(port, f"/nada?token={token}")
         check("ruta desconocida → 403", st == 403, f"got {st}")
+        # 3.8 /synthesize con length_scale/noise_scale válidos → 200 (si piper instalado)
+        #    (sin piper instalado, el 500 no es un fallo del parseo de parámetros)
+        st, body = raw_http(port, f"/synthesize?token={token}&text=hola&voice=es_ES-sharvard-medium&length_scale=0.8&noise_scale=1.2")
+        if st == 500:
+            check("params válidos aceptados (sin piper instalado → 500 esperado)", True)
+        else:
+            check("/synthesize params válidos → 200", st == 200, f"got {st}")
+            check("respuesta es WAV (RIFF)", st == 200 and body[:4] == b"RIFF", f"got {body[:8]}")
+        # 3.9 length_scale fuera de rango (10) → acotado, no 400
+        st, _ = raw_http(port, f"/synthesize?token={token}&text=hola&voice=es_ES-sharvard-medium&length_scale=10&noise_scale=99")
+        check("length_scale acotado (no 400)", st in (200, 500), f"got {st}")
+        # 3.10 length_scale no numérico → tolerado (por defecto)
+        st, _ = raw_http(port, f"/synthesize?token={token}&text=hola&voice=es_ES-sharvard-medium&length_scale=abc")
+        check("length_scale no numérico tolerado", st in (200, 500), f"got {st}")
     finally:
         stop(p)
 

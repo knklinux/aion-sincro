@@ -112,8 +112,12 @@ def get_voice(slug):
             return None
 
 
-def synthesize(text, slug):
-    """Devuelve bytes WAV o None si falla."""
+def synthesize(text, slug, length_scale=1.0, noise_scale=0.667):
+    """Devuelve bytes WAV o None si falla.
+
+    length_scale: 1.0 = normal; >1 más lento (velocidad).
+    noise_scale:  0.667 = normal; subirlo añade expresividad/variación.
+    """
     v = get_voice(slug)
     if v is None:
         return None
@@ -121,7 +125,19 @@ def synthesize(text, slug):
     try:
         with _synth_lock:  # onnxruntime comparte estado: serializar la síntesis
             with wave.open(buf, "wb") as w:
-                v.synthesize_wav(text, w)
+                cfg = None
+                try:
+                    from piper.voice import SynthesisConfig
+
+                    cfg = SynthesisConfig(
+                        length_scale=float(length_scale), noise_scale=float(noise_scale)
+                    )
+                except Exception:
+                    cfg = None  # piper antiguo sin SynthesisConfig: sintetiza con defaults
+                if cfg is not None:
+                    v.synthesize_wav(text, w, syn_config=cfg)  # piper 1.6.0: el kwarg es syn_config
+                else:
+                    v.synthesize_wav(text, w)
         return buf.getvalue()
     except Exception:
         return None
@@ -241,6 +257,17 @@ class Handler(BaseHTTPRequestHandler):
             slug = params.get("voice", "es_ES-sharvard-medium")
             if not VOICE_SLUG_RE.match(slug):
                 return self._json({"ok": False, "error": "voz no válida"}, 400)
+            # Parámetros opcionales de síntesis (validados y acotados)
+            try:
+                length_scale = float(params.get("length_scale", "1.0") or "1.0")
+            except ValueError:
+                length_scale = 1.0
+            try:
+                noise_scale = float(params.get("noise_scale", "0.667") or "0.667")
+            except ValueError:
+                noise_scale = 0.667
+            length_scale = max(0.3, min(3.0, length_scale))
+            noise_scale = max(0.1, min(2.0, noise_scale))
             if not piper_ok():
                 return self._json(
                     {"ok": False, "error": "piper-tts no está instalado. Ejecuta: .venv-piper\\Scripts\\python -m pip install piper-tts (Linux/macOS: .venv-piper/bin/python -m pip install piper-tts)"},
@@ -250,7 +277,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"ok": False, "error": "falta ?text="}, 400)
             if len(text) > MAX_TEXT:
                 text = text[:MAX_TEXT]
-            data = synthesize(text, slug)
+            data = synthesize(text, slug, length_scale=length_scale, noise_scale=noise_scale)
             if data is None:
                 if VOICES_DIR.joinpath(f"{slug}.onnx").is_file():
                     return self._json({"ok": False, "error": "no se pudo sintetizar"}, 500)

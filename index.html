@@ -699,6 +699,10 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
       </div>
       <div class="field rangeRow"><label>Velocidad</label><input type="range" id="rate" min="0.7" max="1.5" step="0.05" value="1"><output id="rateOut">1.0</output></div>
       <div class="field rangeRow"><label>Tono</label><input type="range" id="pitch" min="0.6" max="1.4" step="0.05" value="1"><output id="pitchOut">1.0</output></div>
+      <div class="field rangeRow"><label>Piper · Velocidad</label><input type="range" id="piperLength" min="0.5" max="1.8" step="0.05" value="1"><output id="piperLengthOut">1.00</output></div>
+      <div class="hint">Solo afecta a la voz 🗣️ Piper local (length_scale del servidor). &lt;1 más rápida · &gt;1 más pausada.</div>
+      <div class="field rangeRow"><label>Piper · Expresividad</label><input type="range" id="piperNoise" min="0.1" max="1.5" step="0.05" value="0.667"><output id="piperNoiseOut">0.67</output></div>
+      <div class="hint">Variación/emoción de la voz Piper (noise_scale del servidor). El valor por defecto 0.667 es el natural de Piper.</div>
       <div class="field">
         <button class="toggle" id="btnWakeSet" style="width:100%;justify-content:center"><span class="tk"></span> 🎙️ Activación por voz (di «Hola Aion»)</button>
         <div class="hint">Aion queda a la escucha permanente: di <b>«Hola Aion»</b> (o «Aion») y te escuchará sin tocar el micrófono — el estado lo indicará (<b>DI «HOLA AION»</b>). Haz una breve pausa tras el wake word antes de decir tu petición. Requiere micrófono permitido.</div>
@@ -835,7 +839,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const store={
   provider:'demo', model:'hermes3', modelByProvider:{},
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
-  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, tts:true, search:true, pentest:false, sincronia:false, wake:false,
+  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, search:true, pentest:false, sincronia:false, wake:false,
   pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
 };
 
@@ -1321,6 +1325,7 @@ async function speakPiper(text){
 function piperPlay(chunk){
   return new Promise(res=>{
     const p=piperAuth(); p.text=chunk; p.voice=piperSlug();
+    p.length_scale=store.piperLength||1.0; p.noise_scale=store.piperNoise||0.667;
     const url=piperBase()+'/synthesize?'+new URLSearchParams(p).toString();
     fetch(url,{signal:AbortSignal.timeout(20000)})
       .then(r=>{
@@ -2076,6 +2081,8 @@ function bind(){
   $('#piperToken').onchange=()=>{ collectSettings(true); piperPing(()=>syncPiperUI()); };
   $('#rate').oninput=e=>{store.rate=+e.target.value;$('#rateOut').textContent=(+e.target.value).toFixed(2);};
   $('#pitch').oninput=e=>{store.pitch=+e.target.value;$('#pitchOut').textContent=(+e.target.value).toFixed(2);};
+  $('#piperLength').oninput=e=>{store.piperLength=+e.target.value;$('#piperLengthOut').textContent=(+e.target.value).toFixed(2);};
+  $('#piperNoise').oninput=e=>{store.piperNoise=+e.target.value;$('#piperNoiseOut').textContent=(+e.target.value).toFixed(2);};
   $('#pentestScope').onchange=()=>{store.pentestScope=$('#pentestScope').value;saveStore();};
   document.addEventListener('keydown',e=>{
     if(e.code==='Space'&&document.activeElement!==$('#textInput')&&!$('#settings').classList.contains('open')&&!e.repeat&&!e.target.matches('input,select,textarea')){ e.preventDefault(); toggleMic(); }
@@ -2091,6 +2098,8 @@ function openSettings(){
   $('#openrouterKey').value=store.openrouterKey; $('#hfToken').value=store.hfToken; $('#mistralKey').value=store.mistralKey;
   $('#langSel').value=store.lang; $('#rate').value=store.rate; $('#pitch').value=store.pitch;
   $('#rateOut').textContent=store.rate.toFixed(2); $('#pitchOut').textContent=store.pitch.toFixed(2);
+  $('#piperLength').value=store.piperLength; $('#piperLengthOut').textContent=store.piperLength.toFixed(2);
+  $('#piperNoise').value=store.piperNoise; $('#piperNoiseOut').textContent=store.piperNoise.toFixed(2);
   $('#pentestScope').value=store.pentestScope;
   $('#bridgeToken').value=store.bridgeToken;
   $('#piperUrl').value=store.piperUrl||'http://127.0.0.1:8766';
