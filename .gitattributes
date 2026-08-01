@@ -1,0 +1,9 @@
+# Finales de línea LF para que el repo funcione idéntico en Windows y Linux/macOS.
+# Un shebang con CRLF o un .py/.mjs con CRLF puede romper al clonar en Linux.
+*.sh text eol=lf
+*.py text eol=lf
+*.mjs text eol=lf
+*.html text eol=lf
+linux/aion-sincro text eol=lf
+linux/install.sh text eol=lf
+linux/uninstall.sh text eol=lf

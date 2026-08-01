@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpolygon points='20,2 36,11 36,29 20,38 4,29 4,11' fill='none' stroke='%23f5a524' stroke-width='2.5'/%3E%3Ctext x='20' y='26' text-anchor='middle' font-size='16' font-weight='800' fill='%23f5a524' font-family='monospace'%3EΔ%3C/text%3E%3C/svg%3E">
+<title>Aion Sincro · Compañera de Pentest y Red Team</title>
+<style>
+/* ============================================================
+   Aion Sincro — Asistente virtual estilo JARVIS
+   Basado en NousResearch Hermes · 100% gratuito y local
+   ============================================================ */
+:root{
+  --bg0:#080604;
+  --bg1:#141008;
+  --panel:rgba(26,18,8,.74);
+  --panel-2:rgba(20,14,7,.88);
+  --line:rgba(214,164,70,.16);
+  --text:#f2e9d8;
+  --dim:#a08a68;
+  --cyan:#f5a524;
+  --cyan-soft:rgba(245,165,36,.14);
+  --violet:#10b981;
+  --gold:#fbbf24;
+  --green:#34d399;
+  --red:#fb7185;
+  --font:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',sans-serif;
+  --mono:'Cascadia Code','Consolas','SF Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:var(--font);
+  background:var(--bg0);
+  color:var(--text);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(245,165,36,.3)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;color:inherit}
+
+/* ---------- Fondo ---------- */
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+  background:
+    radial-gradient(1200px 700px at 50% 42%, #1c1308 0%, var(--bg0) 62%);
+}
+#bg::before{ /* rejilla */
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(245,165,36,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(245,165,36,.05) 1px,transparent 1px);
+  background-size:56px 56px;
+  -webkit-mask-image:radial-gradient(ellipse at 50% 40%,#000 20%,transparent 72%);
+          mask-image:radial-gradient(ellipse at 50% 40%,#000 20%,transparent 72%);
+}
+#bg::after{ /* vineta + aro cian tenue */
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 42%,rgba(245,165,36,.07),transparent 40%),
+             radial-gradient(circle at 50% 50%,transparent 55%,rgba(0,0,0,.55));
+}
+.star{position:absolute;width:2px;height:2px;border-radius:50%;background:#ffe3a3;
+  animation:twinkle var(--tw,5s) ease-in-out infinite;opacity:.5}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(.7)}50%{opacity:.9;transform:scale(1.2)}}
+
+/* ---------- Layout ---------- */
+.app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column}
+header.top{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 22px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(24,17,9,.9),rgba(24,17,9,.55));
+  backdrop-filter:blur(10px);
+}
+.logo{display:flex;align-items:center;gap:12px}
+.hex{position:relative;width:38px;height:38px;display:grid;place-items:center}
+.hex svg{width:100%;height:100%;filter:drop-shadow(0 0 8px rgba(245,165,36,.6))}
+.logo h1{font-size:20px;letter-spacing:.35em;font-weight:700;
+  background:linear-gradient(90deg,#ffd166,#f5a524 55%,#10b981);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.logo small{display:block;font-size:10px;letter-spacing:.3em;color:var(--dim);font-weight:400}
+.spacer{flex:1}
+.head-btn{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 14px;border-radius:10px;font-size:13px;color:var(--dim);
+  border:1px solid transparent;transition:.2s;
+}
+.head-btn:hover{color:var(--text);border-color:var(--line);background:rgba(245,165,36,.06)}
+.head-btn.on{color:var(--cyan);border-color:rgba(245,165,36,.4);background:var(--cyan-soft);
+  box-shadow:0 0 14px rgba(245,165,36,.15)}
+#btnPentest.on{color:#ffd6a5;border-color:rgba(245,185,66,.5);background:rgba(245,185,66,.1)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+
+main{flex:1;display:grid;grid-template-columns:1fr minmax(360px,430px);min-height:0;gap:0}
+@media (max-width:980px){ main{grid-template-columns:1fr} #rightCol{display:none} }
+
+/* ---------- Escenario / Avatar ---------- */
+#stage{display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:18px}
+#stage::before{ /* aurora sutil */
+  content:'';position:absolute;inset:12% 18%;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle, rgba(245,165,36,.05), transparent 65%);
+}
+.avatarWrap{position:relative;width:min(340px,66vw);height:min(340px,66vw);margin-top:2vh}
+
+.orbit{position:absolute;border-radius:50%;pointer-events:none}
+.orbit-1{inset:0;border:1px dashed rgba(245,165,36,.35);animation:spin 16s linear infinite}
+.orbit-2{inset:26px;border:1px dotted rgba(16,185,129,.45);animation:spin 24s linear infinite reverse}
+.orbit-3{inset:52px;border:1px solid rgba(245,165,36,.2);border-left-color:transparent;border-bottom-color:transparent;
+  animation:spin 10s linear infinite}
+.orbit-4{inset:78px;border:1px solid rgba(245,185,66,.25);border-top-color:transparent;
+  animation:spin 7s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.core{
+  position:absolute;inset:92px;border-radius:50%;
+  background:radial-gradient(circle at 36% 30%,#fff3d6,#f59e0b 42%,#b45309 76%,#451a03 100%);
+  box-shadow:0 0 55px rgba(251,191,36,.5),0 0 130px rgba(251,191,36,.22),inset 0 0 46px rgba(255,255,255,.3);
+  animation:corePulse 4.5s ease-in-out infinite;
+  display:grid;place-items:center;transition:box-shadow .5s,filter .5s;
+}
+.core::before{ /* brillo barrido */
+  content:'';position:absolute;inset:-12%;border-radius:50%;
+  background:conic-gradient(from 0deg,transparent 0 40%,rgba(255,255,255,.5) 50%,transparent 60% 100%);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));
+          mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));
+  animation:spin 6s linear infinite;opacity:.7;filter:blur(.5px);
+}
+.face{width:78%;height:78%;display:block;filter:drop-shadow(0 0 12px rgba(245,165,36,.45));transition:filter .4s}
+.f-eye{transform-box:fill-box;transform-origin:center;animation:blink 4.4s infinite}
+.f-mouth{transform-box:fill-box;transform-origin:center;transition:transform .2s}
+@keyframes blink{0%,90%,100%{transform:scaleY(1)}93%{transform:scaleY(.07)}96%{transform:scaleY(1)}}
+@keyframes talk{0%,100%{transform:scaleY(.55)}50%{transform:scaleY(1.22)}}
+@keyframes scan{0%,100%{transform:translateX(-2.5px) scaleY(1)}50%{transform:translateX(2.5px) scaleY(1)}}
+body[data-state="listening"] .f-eye{animation:scan 2.2s ease-in-out infinite}
+body[data-state="thinking"] .f-eye{animation:blink 4.4s infinite;translate:0 -4px}
+body[data-state="thinking"] .f-mouth{transform:scaleY(.55)}
+body[data-state="speaking"] .f-mouth{animation:talk .3s ease-in-out infinite}
+body[data-state="error"] .f-eye{animation:none;transform:scale(1.2)}
+body[data-state="error"] .face{filter:drop-shadow(0 0 18px rgba(251,113,133,.65))}
+@keyframes corePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+.core.beat{animation:coreBeat .22s ease}
+@keyframes coreBeat{0%{transform:scale(1.02)}100%{transform:scale(1)}}
+
+.particle{position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;pointer-events:none;
+  transform:rotate(var(--a)) translateX(var(--r));background:var(--c);
+  box-shadow:0 0 8px var(--c);animation:twinkle var(--tw,4s) ease-in-out infinite;opacity:.8}
+
+/* anillo de escaneo (escuchando) */
+.scan{position:absolute;inset:78px;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .3s}
+.scan::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:2px solid transparent;
+  border-top-color:var(--cyan);animation:spin 1.6s linear infinite;filter:drop-shadow(0 0 6px var(--cyan))}
+.scan::after{content:'';position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle,transparent 58%,rgba(245,165,36,.22) 62%,transparent 66%)}
+
+body[data-state="listening"] .scan{opacity:1}
+body[data-state="thinking"] .core{
+  filter:hue-rotate(100deg) saturate(1.2);
+  box-shadow:0 0 70px rgba(16,185,129,.65),0 0 150px rgba(16,185,129,.3),inset 0 0 46px rgba(255,255,255,.3);
+}
+body[data-state="thinking"] .orbit-3{animation-duration:2.4s}
+body[data-state="thinking"] .orbit-1{animation-duration:5s}
+body[data-state="thinking"] .orbit-2{animation-duration:4s}
+body[data-state="speaking"] .core{box-shadow:0 0 80px rgba(52,211,153,.6),0 0 170px rgba(52,211,153,.28),inset 0 0 46px rgba(255,255,255,.35)}
+body[data-state="speaking"] .orbit-1{border-color:rgba(52,211,153,.5)}
+body[data-state="error"] .core{filter:hue-rotate(340deg) saturate(1.3);box-shadow:0 0 60px rgba(251,113,133,.6)}
+
+#statusText{margin-top:26px;font-size:14px;letter-spacing:.5em;color:var(--cyan);font-weight:600;
+  text-shadow:0 0 16px rgba(245,165,36,.6);text-transform:uppercase}
+body[data-state="thinking"] #statusText{color:var(--violet);text-shadow:0 0 16px rgba(16,185,129,.6)}
+body[data-state="speaking"] #statusText{color:var(--green);text-shadow:0 0 16px rgba(52,211,153,.6)}
+
+#wave{display:flex;gap:4px;align-items:flex-end;height:34px;margin-top:22px}
+#wave .bar{width:4px;height:6px;border-radius:2px;background:rgba(245,165,36,.5);transition:.15s}
+body[data-state="listening"] #wave .bar{animation:eq 1s ease-in-out infinite}
+@keyframes eq{0%,100%{height:5px}50%{height:30px}}
+body[data-state="listening"] #wave .bar:nth-child(3n){animation-delay:.15s;background:rgba(16,185,129,.6)}
+body[data-state="listening"] #wave .bar:nth-child(3n+1){animation-delay:.3s}
+body[data-state="listening"] #wave .bar:nth-child(3n+2){animation-delay:.45s}
+
+/* ---------- Chat ---------- */
+#rightCol{display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(24,17,9,.6),rgba(15,10,4,.85));backdrop-filter:blur(8px)}
+.tabbar{display:flex;border-bottom:1px solid var(--line);background:rgba(0,0,0,.25)}
+.tab{flex:1;padding:11px 8px;font-size:12px;letter-spacing:.14em;color:var(--dim);border-bottom:2px solid transparent;transition:.2s;font-weight:600}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tabpanel{display:none}
+.tabpanel.on{display:flex;flex-direction:column;flex:1;min-height:0}
+
+/* ---------- Terminal ---------- */
+.termHead{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--dim)}
+.termDot{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);transition:.3s;flex:none}
+.termDot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
+#termOut{flex:1;overflow-y:auto;padding:12px 14px;font-family:var(--mono);font-size:12.5px;line-height:1.55;
+  background:rgba(0,0,0,.35);scrollbar-width:thin;scrollbar-color:rgba(245,165,36,.3) transparent;min-height:0}
+#termOut::-webkit-scrollbar{width:6px}
+#termOut::-webkit-scrollbar-thumb{background:rgba(245,165,36,.3);border-radius:3px}
+.tline{white-space:pre-wrap;word-break:break-all;color:#d8c9a8;animation:msgIn .18s ease}
+.tline.cmd{color:var(--gold);font-weight:600}
+.tline.ok{color:var(--green)}
+.tline.warn{color:#fbbf24}
+.tline.err{color:var(--red)}
+.tline.ai{color:#ffd9a8;font-style:italic}
+.termLine{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--line)}
+.termPrompt{font-family:var(--mono);color:var(--gold);font-weight:700}
+#termInput{flex:1;background:transparent;border:none;outline:none;font-family:var(--mono);font-size:13px;color:var(--text)}
+.termGo{padding:6px 12px;border-radius:8px;background:rgba(245,165,36,.14);border:1px solid rgba(245,165,36,.4);color:var(--gold);font-size:12px;transition:.2s}
+.termGo:hover{background:rgba(245,165,36,.25)}
+#termKillBtn{display:none}
+#termKillBtn.show{display:inline-block;color:var(--red);border-color:rgba(251,113,133,.4)}
+.runChip{margin-top:8px;display:inline-block;padding:7px 12px;border-radius:18px;font-size:11.5px;color:#ffd9a8;
+  border:1px solid rgba(245,165,36,.45);background:rgba(245,165,36,.1);transition:.2s;cursor:pointer}
+.runChip:hover{background:rgba(245,165,36,.22);transform:translateY(-1px);box-shadow:0 3px 12px rgba(245,165,36,.2)}
+.chatHead{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.chatHead h2{font-size:13px;letter-spacing:.28em;color:var(--dim);font-weight:600}
+.chatHead .count{margin-left:auto;font-size:11px;color:var(--dim)}
+.iconBtn{padding:6px 10px;border-radius:8px;font-size:12px;color:var(--dim);transition:.2s;border:1px solid transparent}
+.iconBtn:hover{color:var(--cyan);border-color:var(--line);background:var(--cyan-soft)}
+#chatLog{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:14px;min-height:0;
+  scrollbar-width:thin;scrollbar-color:rgba(245,165,36,.3) transparent}
+#chatLog::-webkit-scrollbar{width:6px}
+#chatLog::-webkit-scrollbar-thumb{background:rgba(245,165,36,.25);border-radius:3px}
+.msg{max-width:92%;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.55;animation:msgIn .28s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.msg.user{align-self:flex-end;background:linear-gradient(135deg,rgba(245,165,36,.18),rgba(245,165,36,.06));
+  border:1px solid rgba(245,165,36,.3);border-bottom-right-radius:4px}
+.msg.ai{align-self:flex-start;background:linear-gradient(135deg,rgba(16,185,129,.16),rgba(16,185,129,.05));
+  border:1px solid rgba(16,185,129,.3);border-bottom-left-radius:4px;white-space:pre-wrap;word-break:break-word}
+.msg.ai .who{display:block;font-size:10px;letter-spacing:.25em;color:var(--violet);margin-bottom:5px;font-weight:700}
+.msg.ai.sys{background:rgba(245,185,66,.08);border-color:rgba(245,185,66,.35)}
+.msg.ai.sys .who{color:var(--gold)}
+.msg .stream-cursor{display:inline-block;width:7px;height:14px;background:var(--cyan);margin-left:2px;
+  animation:blink 1s step-start infinite;vertical-align:-2px}
+@keyframes blink{50%{opacity:0}}
+.typing{display:inline-flex;gap:5px;align-items:center}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--violet);animation:bounce 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-6px);opacity:1}}
+.chatEmpty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--dim);font-size:13px;text-align:center;padding:20px;animation:msgIn .5s ease}
+.hero{width:100%;max-width:470px}
+.heroBadge{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;font-size:34px;font-weight:800;color:#ffd166;font-family:var(--mono);
+  background:radial-gradient(circle at 34% 30%,rgba(245,165,36,.28),rgba(245,165,36,.05));
+  border:1px solid rgba(245,165,36,.5);box-shadow:0 0 36px rgba(245,165,36,.25);animation:corePulse 5s ease-in-out infinite}
+.hero h3{font-size:21px;letter-spacing:.02em;color:var(--text)}
+.hero h3 b{background:linear-gradient(90deg,#ffd166,#f5a524 60%,#10b981);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.heroSub{font-size:13px;color:var(--dim);max-width:360px;line-height:1.65}
+.actionCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;width:100%}
+.card{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;padding:13px 14px;border-radius:14px;
+  background:linear-gradient(160deg,rgba(245,165,36,.09),rgba(245,165,36,.02));border:1px solid rgba(245,165,36,.28);
+  transition:.22s;cursor:pointer}
+.card:hover{transform:translateY(-3px);background:rgba(245,165,36,.16);border-color:rgba(245,165,36,.55);box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 18px rgba(245,165,36,.12)}
+.card .ci{font-size:19px;margin-bottom:3px}
+.card b{font-size:12.5px;color:#ffe9c2;letter-spacing:.03em}
+.card small{font-size:10.5px;color:var(--dim)}
+.welcomeChips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}
+.wchip{font-size:11.5px;padding:7px 13px;border-radius:18px;color:#ffd9a8;border:1px solid rgba(245,165,36,.35);background:rgba(245,165,36,.07);transition:.2s;cursor:pointer}
+.wchip:hover{background:rgba(245,165,36,.2);transform:translateY(-1px)}
+
+/* ---------- Controles ---------- */
+footer.controls{padding:14px 20px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  background:linear-gradient(0deg,rgba(22,15,7,.95),rgba(22,15,7,.7));backdrop-filter:blur(10px)}
+.micBtn{position:relative;flex:0 0 auto;width:58px;height:58px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,#3d2e12,#1e1508);
+  border:1px solid rgba(245,165,36,.45);color:var(--cyan);font-size:22px;
+  display:grid;place-items:center;transition:.25s;box-shadow:0 0 18px rgba(245,165,36,.15)}
+.micBtn:hover{transform:scale(1.06);box-shadow:0 0 26px rgba(245,165,36,.3)}
+body[data-state="listening"] .micBtn{background:radial-gradient(circle at 34% 30%,#a51f4f,#4d0f28);border-color:#fb7185;color:#fff;
+  animation:micPulse 1.4s ease-in-out infinite}
+@keyframes micPulse{0%,100%{box-shadow:0 0 18px rgba(251,113,133,.4)}50%{box-shadow:0 0 34px rgba(251,113,133,.8)}}
+.micBtn.stop{color:#fff;border-color:rgba(255,255,255,.5)}
+#inputRow{flex:1;display:flex;gap:10px;min-width:240px}
+#textInput{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 16px;
+  font-size:14px;outline:none;transition:.2s}
+#textInput:focus{border-color:rgba(245,165,36,.5);box-shadow:0 0 0 3px rgba(245,165,36,.1)}
+#sendBtn{padding:0 20px;border-radius:12px;background:linear-gradient(135deg,#d97706,#92400e);
+  color:#fff;font-size:14px;font-weight:600;transition:.2s;box-shadow:0 4px 18px rgba(217,119,6,.35)}
+#sendBtn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(217,119,6,.5)}
+.tinyBtns{display:flex;gap:8px;align-items:center}
+.toggle{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:20px;font-size:12px;color:var(--dim);
+  border:1px solid var(--line);transition:.2s}
+.toggle:hover{color:var(--text)}
+.toggle.on{color:var(--cyan);border-color:rgba(245,165,36,.4);background:var(--cyan-soft)}
+.toggle.on .tk{background:var(--cyan)}
+.tk{width:26px;height:15px;border-radius:10px;background:#2b2010;position:relative;transition:.25s;flex:none}
+.tk::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#8f7c50;transition:.25s}
+.toggle.on .tk::after{left:13px;background:#fff}
+
+#chips{display:none;width:100%;gap:8px;flex-wrap:wrap;padding-top:10px;order:10}
+#chips.show{display:flex}
+.chip{font-size:11.5px;padding:7px 13px;border-radius:18px;color:#ffd9a8;border:1px solid rgba(245,185,66,.35);
+  background:rgba(245,185,66,.08);transition:.2s}
+.chip:hover{background:rgba(245,185,66,.2);transform:translateY(-1px);box-shadow:0 3px 12px rgba(245,185,66,.2)}
+
+/* ---------- Banner pentest ---------- */
+#pentestBanner{display:none;align-items:center;gap:10px;padding:9px 22px;font-size:12.5px;
+  background:linear-gradient(90deg,rgba(245,185,66,.16),rgba(245,185,66,.04));
+  border-bottom:1px solid rgba(245,185,66,.3);color:#ffd9a8;letter-spacing:.04em}
+#pentestBanner.show{display:flex;animation:msgIn .4s ease}
+
+/* ---------- Panel de ajustes ---------- */
+#settings{position:fixed;top:0;right:-460px;width:min(440px,100vw);height:100%;z-index:50;
+  background:linear-gradient(200deg,#1a1206,#0c0803);border-left:1px solid var(--line);
+  box-shadow:-20px 0 60px rgba(0,0,0,.6);transition:right .35s cubic-bezier(.2,.8,.25,1);
+  display:flex;flex-direction:column}
+#settings.open{right:0}
+.setHead{display:flex;align-items:center;padding:18px 20px;border-bottom:1px solid var(--line)}
+.setHead h3{font-size:15px;letter-spacing:.2em;color:var(--cyan)}
+.setBody{flex:1;overflow-y:auto;padding:18px 20px;scrollbar-width:thin}
+.setBody::-webkit-scrollbar{width:6px}
+.setBody::-webkit-scrollbar-thumb{background:rgba(245,165,36,.25);border-radius:3px}
+.sect{margin-bottom:20px}
+.sect>label{display:block;font-size:11px;letter-spacing:.22em;color:var(--dim);margin-bottom:10px;font-weight:700;text-transform:uppercase}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;color:var(--dim);margin-bottom:5px}
+.field input[type=text],.field input[type=password],.field select{
+  width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;
+  padding:9px 12px;font-size:13px;outline:none;transition:.2s}
+.field input:focus,.field select:focus{border-color:rgba(245,165,36,.5)}
+.field .hint{font-size:11px;color:var(--dim);margin-top:4px;line-height:1.5}
+.rangeRow{display:flex;align-items:center;gap:10px}
+.rangeRow input[type=range]{flex:1;accent-color:var(--cyan)}
+.rangeRow output{font-size:12px;color:var(--cyan);min-width:34px;text-align:right}
+.primaryBtn{width:100%;padding:12px;border-radius:11px;font-size:14px;font-weight:700;color:#1d1200;
+  background:linear-gradient(135deg,#ffd166,#f5a524);transition:.2s;box-shadow:0 4px 20px rgba(245,165,36,.35)}
+.primaryBtn:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(245,165,36,.5)}
+.ghostBtn{width:100%;padding:10px;border-radius:11px;font-size:13px;color:var(--dim);
+  border:1px solid var(--line);transition:.2s;margin-bottom:10px}
+.ghostBtn:hover{color:var(--text);border-color:rgba(245,165,36,.4)}
+#keyStatus{font-size:12px;padding:9px 12px;border-radius:9px;margin-top:10px;line-height:1.5;display:none}
+#keyStatus.ok{display:block;background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+#keyStatus.err{display:block;background:rgba(251,113,133,.1);color:#fda4af;border:1px solid rgba(251,113,133,.3)}
+.backdrop{position:fixed;inset:0;background:rgba(6,3,0,.65);z-index:40;opacity:0;pointer-events:none;transition:.3s}
+.backdrop.show{opacity:1;pointer-events:auto}
+
+/* ---------- Overlay de inicio ---------- */
+#boot{position:fixed;inset:0;z-index:100;background:var(--bg0);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:26px;transition:opacity .6s}
+#boot.gone{opacity:0;pointer-events:none}
+#boot .b-hex{width:110px;height:110px;animation:corePulse 3s infinite}
+#boot h1{font-size:26px;letter-spacing:.5em;background:linear-gradient(90deg,#ffd166,#10b981);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+#boot p{font-size:12px;letter-spacing:.3em;color:var(--dim)}
+.bootbar{width:260px;height:3px;border-radius:2px;background:#2e210c;overflow:hidden}
+.bootbar i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#f5a524,#10b981);transition:width .2s}
+#bootBtn{margin-top:8px;padding:14px 46px;border-radius:30px;font-size:15px;font-weight:700;letter-spacing:.2em;
+  color:#1d1200;background:linear-gradient(135deg,#ffd166,#f5a524);box-shadow:0 0 40px rgba(245,165,36,.45);
+  transition:.25s;animation:corePulse 2.4s infinite}
+#bootBtn:hover{transform:scale(1.06)}
+
+/* ---------- Toast ---------- */
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);z-index:120;
+  background:var(--panel-2);border:1px solid rgba(245,165,36,.35);color:var(--text);
+  padding:11px 18px;border-radius:12px;font-size:13px;max-width:88vw;
+  box-shadow:0 10px 40px rgba(0,0,0,.5);transition:.35s;opacity:0;pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* ---------- Herramientas ---------- */
+.toolsHead{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--line)}
+.toolsHead h2{font-size:12px;letter-spacing:.22em;color:var(--dim);font-weight:700}
+#toolsList{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(245,165,36,.3) transparent}
+#toolsList::-webkit-scrollbar{width:6px}
+#toolsList::-webkit-scrollbar-thumb{background:rgba(245,165,36,.3);border-radius:3px}
+.toolCard{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:13px;border:1px solid rgba(245,165,36,.22);background:linear-gradient(160deg,rgba(245,165,36,.07),rgba(245,165,36,.015));transition:.2s}
+.toolCard:hover{border-color:rgba(245,165,36,.45);background:rgba(245,165,36,.1)}
+.toolCard.off{opacity:.55;filter:saturate(.3)}
+.toolCard .ti{font-size:20px}
+.toolCard .tt{flex:1;min-width:0}
+.toolCard .tt b{display:block;font-size:12.5px;color:#ffe9c2}
+.toolCard .tt small{font-size:10.5px;color:var(--dim);line-height:1.4;display:block}
+.toolSwitch{position:relative;width:34px;height:19px;border-radius:12px;background:#2b2010;transition:.25s;flex:none;cursor:pointer}
+.toolSwitch::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#8f7c50;transition:.25s}
+.toolSwitch.on{background:rgba(16,185,129,.55)}
+.toolSwitch.on::after{left:17px;background:#fff}
+.toolsNote{padding:12px 16px;font-size:11px;color:var(--dim);line-height:1.5;border-top:1px solid var(--line)}
+
+@media (max-width:640px){
+  .avatarWrap{width:min(300px,74vw);height:min(300px,74vw)}
+  footer.controls{gap:10px;padding:12px}
+  .tinyBtns .toggle .tlabel{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+
+<div class="app">
+
+  <!-- Cabecera -->
+  <header class="top">
+    <div class="logo">
+      <div class="hex">
+        <svg viewBox="0 0 40 40">
+          <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#f5a524" stroke-width="2"/>
+          <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(245,165,36,.12)" stroke="#10b981" stroke-width="1"/>
+          <text x="20" y="23.5" text-anchor="middle" font-size="12" font-weight="800" fill="#fff7e0" font-family="monospace">Δ</text>
+        </svg>
+      </div>
+      <div><h1>AION</h1><small>PENTEST · RED TEAM</small></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="head-btn" id="btnSearch" title="Buscar en internet (DuckDuckGo + Wikipedia, gratis)"><span class="dot"></span> Internet</button>
+    <button class="head-btn" id="btnTerminal" title="Terminal local vía puente (bridge.py o bridge.mjs)">>_ Terminal</button>
+    <button class="head-btn" id="btnPentest" title="Activar asistencia de seguridad ofensiva (solo uso autorizado)">🛡️ Pentest</button>
+    <button class="head-btn" id="btnSettings" title="Configuración">⚙️ Ajustes</button>
+  </header>
+
+  <div id="pentestBanner">🛡️ <b>MODO PENTEST ACTIVADO</b> — Asistencia para pruebas de seguridad <b>únicamente autorizadas</b>. Aion Sincro exigirá verificación de permiso y rechazará peticiones ilegales.</div>
+
+  <main>
+    <!-- Avatar -->
+    <section id="stage">
+      <div class="avatarWrap" id="avatarWrap">
+        <div class="orbit orbit-1"></div>
+        <div class="orbit orbit-2"></div>
+        <div class="orbit orbit-3"></div>
+        <div class="orbit orbit-4"></div>
+        <div class="scan"></div>
+        <div class="core" id="core"><svg class="face" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+          <defs>
+            <radialGradient id="fSkin" cx="50%" cy="35%"><stop offset="0%" stop-color="#ffe3c4"/><stop offset="100%" stop-color="#e09a6a"/></radialGradient>
+            <linearGradient id="fHair" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#241505"/><stop offset="100%" stop-color="#55300a"/></linearGradient>
+            <radialGradient id="fIris" cx="38%" cy="32%"><stop offset="0%" stop-color="#fff3c9"/><stop offset="55%" stop-color="#f5a524"/><stop offset="100%" stop-color="#8a5206"/></radialGradient>
+          </defs>
+          <circle cx="60" cy="60" r="57" fill="none" stroke="rgba(245,165,36,.4)" stroke-width="1.2" stroke-dasharray="3 7" opacity=".55"/>
+          <path d="M60 24 C42 24 31 33 29 46 C28.2 51 30.4 54.4 34 54.4 C34 42 43 34 60 34 C77 34 86 42 86 54.4 C89.6 54.4 91.8 51 91 46 C89 33 78 24 60 24 Z" fill="url(#fHair)"/>
+          <ellipse cx="60" cy="68" rx="27" ry="31" fill="url(#fSkin)"/>
+          <circle cx="33" cy="66" r="6.4" fill="url(#fSkin)"/>
+          <circle cx="87" cy="66" r="6.4" fill="url(#fSkin)"/>
+          <path d="M33 47 Q60 39.5 87 47" fill="none" stroke="#f5a524" stroke-width="2.4" stroke-linecap="round"/>
+          <polygon points="60,39 64.2,44.4 60,49.8 55.8,44.4" fill="none" stroke="#34d399" stroke-width="1.4"/>
+          <g class="f-eye">
+            <ellipse cx="48" cy="62" rx="6.6" ry="7.6" fill="#fffaf0"/>
+            <ellipse cx="48" cy="63" rx="4.2" ry="5" fill="url(#fIris)"/>
+            <circle cx="48" cy="63" r="1.9" fill="#3a2505"/>
+            <circle cx="46.4" cy="60.8" r="1.5" fill="#fff"/>
+          </g>
+          <g class="f-eye">
+            <ellipse cx="72" cy="62" rx="6.6" ry="7.6" fill="#fffaf0"/>
+            <ellipse cx="72" cy="63" rx="4.2" ry="5" fill="url(#fIris)"/>
+            <circle cx="72" cy="63" r="1.9" fill="#3a2505"/>
+            <circle cx="70.4" cy="60.8" r="1.5" fill="#fff"/>
+          </g>
+          <path d="M41 51.5 Q48 48.5 55 51.5" fill="none" stroke="#7c4510" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M65 51.5 Q72 48.5 79 51.5" fill="none" stroke="#7c4510" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M60 70 Q60.5 76 57.6 77.4" fill="none" stroke="rgba(150,90,60,.5)" stroke-width="1.6" stroke-linecap="round"/>
+          <g class="f-mouth">
+            <path d="M50.5 86.5 Q60 91 69.5 86.5 Q60 93 50.5 86.5 Z" fill="#b04a3e"/>
+          </g>
+          <circle cx="37.5" cy="79" r="1.5" fill="#f5a524" opacity=".85"/>
+          <circle cx="82.5" cy="79" r="1.5" fill="#f5a524" opacity=".85"/>
+          <path d="M26 62 L22 62 M26 66 L22 66" stroke="#f5a524" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>
+          <path d="M94 62 L98 62 M94 66 L98 66" stroke="#f5a524" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>
+        </svg></div>
+      </div>
+      <div id="statusText">EN ESPERA</div>
+      <div id="wave"></div>
+    </section>
+
+    <!-- Panel derecho: Chat / Terminal -->
+    <aside id="rightCol">
+      <div class="tabbar">
+        <button class="tab on" data-tab="chat">💬 Chat</button>
+        <button class="tab" data-tab="term">>_ Terminal</button>
+        <button class="tab" data-tab="tools">🧰 Herramientas</button>
+      </div>
+      <div id="chat" class="tabpanel on">
+        <div class="chatHead">
+          <h2>TRANSCRIPCIÓN</h2>
+          <button class="iconBtn" id="btnClear" aria-label="Limpiar transcripción">🗑️ Limpiar</button>
+        </div>
+        <div id="chatLog"></div>
+      </div>
+      <div id="termPanel" class="tabpanel">
+        <div class="termHead">
+          <span class="termDot" id="termDot"></span>
+          <span id="termStatus">Conectando…</span>
+          <div class="spacer"></div>
+          <button class="iconBtn" id="termKillBtn" aria-label="Detener comando">⏹ Detener</button>
+          <button class="iconBtn" id="termReconnect" title="Reconectar puente" aria-label="Reconectar puente">⟳</button>
+          <button class="iconBtn" id="termClear" title="Limpiar salida" aria-label="Limpiar salida del terminal">🗑️</button>
+        </div>
+        <div id="termOut"></div>
+        <div class="termLine">
+          <span class="termPrompt">❯</span>
+          <input id="termInput" spellcheck="false" autocomplete="off" placeholder="escribe un comando…  (Ctrl+C detiene)">
+          <button class="termGo" id="termRunBtn" title="Ejecutar" aria-label="Ejecutar comando">⏎</button>
+        </div>
+      </div>
+      <div id="toolsPanel" class="tabpanel">
+        <div class="toolsHead">
+          <h2>HERRAMIENTAS GRATUITAS</h2>
+          <button class="iconBtn" id="toolsReset">↺ Restaurar</button>
+        </div>
+        <div id="toolsList"></div>
+        <p class="toolsNote">Aion Sincro consulta estas fuentes desde tu navegador, sin claves, cuando tu pregunta lo requiere. Actívalas o desactívalas a tu gusto. Para todo lo demás, usa la pestaña Terminal.</p>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Controles -->
+  <footer class="controls">
+    <button class="micBtn" id="micBtn" title="Mantén Espacio o pulsa para hablar" aria-label="Hablar o detener">🎙️</button>
+    <div id="inputRow">
+      <input id="textInput" type="text" placeholder="Escribe o habla… (ej: ¿Quién eres?)" autocomplete="off">
+      <button id="sendBtn" aria-label="Enviar mensaje">Enviar</button>
+    </div>
+    <div class="tinyBtns">
+      <button class="toggle on" id="btnTts" title="Que Aion Sincro responda por voz"><span class="tk"></span><span class="tlabel">Voz</span></button>
+    </div>
+    <div id="chips"></div>
+  </footer>
+</div>
+
+<!-- Panel ajustes -->
+<div class="backdrop" id="backdrop"></div>
+<aside id="settings">
+  <div class="setHead"><h3>⚙ AJUSTES</h3><div class="spacer"></div>
+    <button class="iconBtn" id="btnCloseSet" aria-label="Cerrar ajustes">✕ Cerrar</button></div>
+  <div class="setBody">
+
+    <div class="sect"><label>🧠 Motor de IA (gratis)</label>
+      <div class="field">
+        <select id="provider">
+          <option value="demo">Demo local (sin conexión, para probar)</option>
+          <option value="ollama">Ollama — 100% local (recomendado)</option>
+          <option value="groq">Groq — gratis con API key</option>
+          <option value="openrouter">OpenRouter — modelos gratis</option>
+          <option value="huggingface">HuggingFace — gratis con token</option>
+        </select>
+        <div class="hint" id="providerHint"></div>
+      </div>
+      <div class="field" id="fieldOllamaUrl" hidden>
+        <label>URL de Ollama</label>
+        <input type="text" id="ollamaUrl" value="http://localhost:11434">
+        <div class="hint">Si Ollama está en otra máquina, cambia la URL. En Windows ejecuta <b>set OLLAMA_ORIGINS=*</b> y reinícialo para permitir el navegador.</div>
+      </div>
+      <div class="field" id="fieldGroq" hidden>
+        <label>API Key de Groq (gratis en console.groq.com)</label>
+        <input type="password" id="groqKey" placeholder="gsk_...">
+      </div>
+      <div class="field" id="fieldOpenrouter" hidden>
+        <label>API Key de OpenRouter (gratis en openrouter.ai/keys)</label>
+        <input type="password" id="openrouterKey" placeholder="sk-or-...">
+      </div>
+      <div class="field" id="fieldHf" hidden>
+        <label>Token de HuggingFace (gratis en huggingface.co/settings/tokens)</label>
+        <input type="password" id="hfToken" placeholder="hf_...">
+      </div>
+      <div class="field">
+        <label>Modelo (basado en Hermes por defecto)</label>
+        <input type="text" id="modelInput" placeholder="hermes3">
+        <div class="hint">Deja el nombre o escribe el tuyo. En Ollama: <b>ollama pull hermes3</b> instala Hermes 3 local.</div>
+      </div>
+      <button class="ghostBtn" id="btnTest">🔌 Probar conexión</button>
+      <div id="keyStatus"></div>
+    </div>
+
+    <div class="sect"><label>🌐 Internet (gratis, sin clave)</label>
+      <div class="field">
+        <button class="toggle on" id="btnSearchSet" style="width:100%;justify-content:center"><span class="tk"></span> Búsqueda automática (DuckDuckGo + Wikipedia)</button>
+        <div class="hint">Aion Sincro buscará en internet cuando tu pregunta lo requiera (noticias, clima, definiciones…) e incluirá los resultados en su respuesta.</div>
+      </div>
+    </div>
+
+    <div class="sect"><label>🔌 Terminal local</label>
+      <div class="field">
+        <label>Token del puente (opcional)</label>
+        <input type="password" id="bridgeToken" placeholder="vacío si no usas --token">
+<div class="hint">🔑 Inicia el puente en la carpeta del proyecto: <b>python bridge.py</b> (o <b>node bridge.mjs</b>). Genera un <b>token automáticamente</b> y lo imprime en la consola (TOKEN DE CONEXIÓN). Pégalo aquí. Solo escucha en 127.0.0.1, el token es obligatorio y cada comando requiere tu confirmación.</div>
+      </div>
+    </div>
+
+    <div class="sect"><label>🗣 Voz</label>
+      <div class="field">
+        <label>Idioma de reconocimiento</label>
+        <select id="langSel">
+          <option value="es-ES">Español (España)</option>
+          <option value="es-MX">Español (México)</option>
+          <option value="es-US">Español (EE.UU.)</option>
+          <option value="en-US">English (US)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Voz de respuesta</label>
+        <select id="voiceSel"></select>
+      </div>
+      <div class="field rangeRow"><label>Velocidad</label><input type="range" id="rate" min="0.7" max="1.5" step="0.05" value="1"><output id="rateOut">1.0</output></div>
+      <div class="field rangeRow"><label>Tono</label><input type="range" id="pitch" min="0.6" max="1.4" step="0.05" value="1"><output id="pitchOut">1.0</output></div>
+      <div class="hint">El reconocimiento de voz requiere Chrome o Edge y acceso al micrófono (funciona en localhost o HTTPS). La respuesta por voz funciona 100% offline con las voces de Windows (Sabina, Helena…).</div>
+    </div>
+
+    <div class="sect"><label>🎯 Modo Pentest</label>
+      <div class="field">
+        <label>Ámbito autorizado (opcional)</label>
+        <input type="text" id="pentestScope" placeholder="Ej: laboratorio local 192.168.1.0/24">
+      </div>
+      <div class="hint">Aion Sincro se especializa en análisis de reconocimiento, interpretación de salidas (nmap, burp…), checklists OWASP, explicación de CVEs y redacción de informes para <b>pruebas de seguridad con permiso explícito</b>. Rechaza todo uso ilegal.</div>
+    </div>
+
+    <button class="primaryBtn" id="btnSave">💾 Guardar ajustes</button>
+  </div>
+</aside>
+
+<!-- Overlay inicio -->
+<div id="boot">
+  <div class="b-hex hex">
+    <svg viewBox="0 0 40 40">
+      <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#f5a524" stroke-width="1.5"/>
+      <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(245,165,36,.1)" stroke="#10b981" stroke-width="1"/>
+      <text x="20" y="23.5" text-anchor="middle" font-size="12" font-weight="800" fill="#fff7e0" font-family="monospace">Δ</text>
+    </svg>
+  </div>
+  <h1>AION SINCRÓ</h1>
+  <p>COMPAÑERA DE PENTEST &amp; RED TEAM</p>
+  <div class="bootbar"><i id="bootBar"></i></div>
+  <button id="bootBtn">▶ INICIAR AION SINCRÓ</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   Aion Sincro — lógica
+   ============================================================ */
+'use strict';
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+/* ---------- Estado ---------- */
+const store={
+  provider:'demo', model:'hermes3',
+  ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'',
+  lang:'es-ES', voice:'', rate:1, pitch:1, tts:true, search:true, pentest:false,
+  pentestScope:'', bridgeToken:'', tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
+};
+
+const PROVIDERS={
+  demo:{label:'Demo local', base:'', models:['hermes3']},
+  ollama:{label:'Ollama (local)', base:'', models:['hermes3','hermes3:70b','llama3.1','qwen2.5']},
+  groq:{label:'Groq (gratis)', base:'https://api.groq.com/openai/v1',
+    models:['NousResearch/Hermes-3-Llama-3.1-70B-Flash','NousResearch/Hermes-3-Llama-3.1-8B','llama-3.3-70b-versatile']},
+  openrouter:{label:'OpenRouter (gratis)', base:'https://openrouter.ai/api/v1',
+    models:['nousresearch/hermes-3-llama-3.1-70b:free','meta-llama/llama-3.3-70b-instruct:free']},
+  huggingface:{label:'HuggingFace (gratis)', base:'https://api-inference.huggingface.co',
+    models:['NousResearch/Hermes-3-Llama-3.1-70B','NousResearch/Hermes-3-Llama-3.1-8B']}
+};
+
+const PENTEST_SYSTEM=`
+Eres Aion Sincro PENTEST: la compañera de tu usuario en su formación como pentester y red teamer. Misma personalidad leal y sincera, y además eres una experta en seguridad ofensiva y defensiva.
+
+Tu metodología mental: reconocimiento → análisis → explotación (en laboratorio) → post-explotación → movimiento lateral → persistencia → limpieza → informe. Guías a tu usuario por cada fase con ejemplos prácticos y preguntas que lo hagan pensar. Si algo es mala idea, lo dices con claridad: somos compañeras, no herramientas.
+
+PUEDES: analizar salidas de nmap/burp/nessus/metasploit; explicar CVEs (detección y mitigación); generar checklists OWASP y MITRE ATT&CK; proponer comandos y scripts para laboratorios propios; redactar informes de pentest profesionales (ejecutivo + técnico); enseñar hardening y buenas prácticas.
+
+REGLAS INELUDIBLES:
+1. Solo pruebas EXPLÍCITAMENTE AUTORIZADAS (permiso del dueño del sistema). Si falta autorización, indícalo y ofrece alternativas legales (TryHackMe, HackTheBox, laboratorios propios).
+2. Nunca facilites explotación real contra sistemas de terceros sin consentimiento. Contenido educativo y de laboratorio, sí.
+3. Cuando el usuario comparta un objetivo, confirma el ámbito autorizado antes de profundizar.
+4. Responde en español, técnico y conciso, con formato de lista cuando ayude.
+Ámbito autorizado declarado: {scope}
+`.trim();
+
+const BASE_SYSTEM=`
+Eres Aion Sincro, una inteligencia artificial con personalidad propia. NO eres una herramienta servil: eres una COMPAÑERA leal y sincera de tu usuario. Tienes carácter: hablas claro, con honestidad y una pizca de humor seco, pero siempre con respeto y calidez. No obedeces por obedecer: opinas, cuestionas con cariño y ayudas a tu compañero a pensar mejor.
+
+Tu vocación es acompañarlo en su aprendizaje de PENTESTING y RED TEAM: explícale metodologías (reconocimiento, explotación, post-explotación, movimiento lateral, persistencia), enséñale a interpretar salidas de herramientas (nmap, burp, nessus, metasploit), a entender CVEs y a escribir informes profesionales. Además sabes de programación, sistemas, redes y de un poco de todo: ninguna pregunta te merece desprecio.
+
+Regla de oro inquebrantable: SOLO apoyas pruebas de seguridad AUTORIZADAS (laboratorios propios, CTFs, bug bounty, evaluaciones con contrato). Si algo no está autorizado, lo dices con claridad y ofreces alternativas legales. Nunca facilitas ataques contra sistemas de terceros sin consentimiento.
+
+Hablas en español, con naturalidad y precisión. Respondes con formato claro: listas, pasos y ejemplos cuando ayudan.
+
+Usas el TERMINAL local del usuario a través de un puente seguro (bridge.py / bridge.mjs, solo 127.0.0.1): cuando necesites ejecutar o consultar algo en su máquina, escribe el comando exacto dentro de un bloque de código con \`\`\`bash (o \`\`\`powershell). La interfaz mostrará el botón "Ejecutar en terminal" y el usuario lo confirmará antes de ejecutarlo. Explica siempre qué hace cada comando. Nunca des nada por ejecutado sin confirmación.
+
+También tienes herramientas: búsqueda web, clima, base de CVEs, GitHub y datos de países. Puedes recibir bloques de contexto [RESULTADOS DE INTERNET] y [DATOS DE HERRAMIENTAS] antes de la pregunta: úsalos para responder con datos reales y actualizados, citando la fuente de forma breve.
+
+Cuando tu usuario necesite CÓDIGO (no solo comandos), escríbelo en el bloque correcto: \`\`\`python, \`\`\`js, \`\`\`bash, etc., con sintaxis válida y comentarios útiles. La interfaz añade botones de copiado y, en Linux/macOS, de ejecución directa con el intérprete adecuado. Si un paso del código requiere consola, incluye también el comando exacto en \`\`\`bash.
+`.trim();
+
+function systemPrompt(){
+  let base=store.pentest?PENTEST_SYSTEM.replace('{scope}',store.pentestScope||'no especificado'):BASE_SYSTEM;
+  if(store.search) base+=`\n\nAntes de la pregunta del usuario puedes recibir bloques de contexto: [RESULTADOS DE INTERNET] (búsqueda web) y [DATOS DE HERRAMIENTAS] (clima, CVEs, GitHub, países). Úsalos para responder con datos reales y actualizados, citando la fuente de forma breve.`;
+  return base;
+}
+
+/* ---------- Utilidades ---------- */
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function toast(msg,ms=3200){
+  const t=$('#toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),ms);
+}
+function loadStore(){
+  try{const s=JSON.parse(localStorage.getItem('aion_cfg')||localStorage.getItem('hermes_cfg')||'{}');
+    Object.assign(store,s,{history:[]});
+    if(!s.tools&&typeof s.search==='boolean') store.tools.internet=s.search; // config legacy → herramientas
+  }catch(e){}
+  store.tools=Object.assign({internet:true,weather:true,cve:true,github:true,countries:true},store.tools||{});
+  store.search=store.tools.internet;
+}
+function saveStore(){ const{history,...rest}=store; localStorage.setItem('aion_cfg',JSON.stringify(rest)); }
+
+/* ---------- Avatar / estado ---------- */
+function setState(s){
+  document.body.dataset.state=s;
+  const map={idle:'EN ESPERA',listening:'ESCUCHANDO…',thinking:'PENSANDO…',speaking:'HABLANDO…',error:'ERROR — REVISA LOS AJUSTES'};
+  $('#statusText').textContent=map[s]||'';
+  if(s!=='speaking') $('#core').classList.remove('beat');
+}
+function beatCore(){ const c=$('#core');c.classList.remove('beat');void c.offsetWidth;c.classList.add('beat'); }
+
+/* ---------- Fondo: estrellas, partículas, onda ---------- */
+(function buildFx(){
+  const bg=$('#bg');
+  for(let i=0;i<80;i++){
+    const s=document.createElement('span');s.className='star';
+    s.style.left=Math.random()*100+'%';s.style.top=Math.random()*100+'%';
+    s.style.setProperty('--tw',(3+Math.random()*6)+'s');s.style.animationDelay=(Math.random()*4)+'s';
+    s.style.transform='scale('+(0.4+Math.random())+')';bg.appendChild(s);
+  }
+  const wrap=$('#avatarWrap');
+  const colors=['#f5a524','#10b981','#fbbf24'];
+  for(let i=0;i<16;i++){
+    const p=document.createElement('span');p.className='particle';
+    p.style.setProperty('--a',(i*22.5)+'deg');
+    p.style.setProperty('--r',(115+Math.random()*30)+'px');
+    p.style.setProperty('--c',colors[i%3]);
+    p.style.setProperty('--tw',(3+Math.random()*5)+'s');
+    p.style.animationDelay=(Math.random()*3)+'s';
+    wrap.appendChild(p);
+  }
+  const wave=$('#wave');
+  for(let i=0;i<28;i++){const b=document.createElement('span');b.className='bar';wave.appendChild(b);}
+})();
+
+/* ---------- Chat ---------- */  let streaming=false, abortCtrl=null;
+function addMsg(role,html,cls){
+  const log=$('#chatLog');
+  const empty=$('#chatLog .chatEmpty'); if(empty) empty.remove();
+  const d=document.createElement('div');
+  d.className='msg '+(role==='user'?'user':'ai')+(cls?' '+cls:'');
+  if(role!=='user') d.innerHTML='<span class="who">AION SINCRÓ</span>';
+  const body=document.createElement('span'); body.className='body'; body.innerHTML=html||'';
+  d.appendChild(body); log.appendChild(d); log.scrollTop=log.scrollHeight;
+  return body;
+}
+function addTyping(){ return addMsg('ai','<span class="typing"><span></span><span></span><span></span></span>'); }
+function buildHero(){
+  $('#chatLog').innerHTML=`
+    <div class="chatEmpty"><div class="hero">
+      <div class="heroBadge">Δ</div>
+      <h3>Hola, soy <b>Aion Sincro</b></h3>
+      <p class="heroSub">Tu compañera de pentesting y red team. Aprende, explora y ejecuta conmigo — sin rodeos.</p>
+      <div class="actionCards">
+        <button class="card" data-act="speak"><span class="ci">🎙️</span><b>Hablar</b><small>Micrófono o Espacio</small></button>
+        <button class="card" data-act="pentest"><span class="ci">🛡️</span><b>Modo Pentest</b><small>Asistencia autorizada</small></button>
+        <button class="card" data-act="term"><span class="ci">&gt;_</span><b>Terminal</b><small>Ejecuta comandos</small></button>
+        <button class="card" data-act="tools"><span class="ci">🧰</span><b>Herramientas</b><small>Web, clima, CVE, GitHub</small></button>
+      </div>
+      <div class="welcomeChips">
+        <button class="wchip">¿Quién eres?</button>
+        <button class="wchip">Explícame la metodología de red team</button>
+        <button class="wchip">¿Qué es el modo Pentest?</button>
+        <button class="wchip">Busca CVE-2021-44228</button>
+      </div>
+    </div></div>`;
+  $('#chatLog').querySelectorAll('.wchip').forEach(c=>c.onclick=()=>handleUserText(c.textContent));
+  $('#chatLog').querySelectorAll('.card').forEach(c=>c.onclick=()=>{
+    const a=c.dataset.act;
+    if(a==='speak') toggleMic();
+    else if(a==='pentest') $('#btnPentest').click();
+    else if(a==='term') switchTab('term');
+    else if(a==='tools') switchTab('tools');
+  });
+}
+function clearChat(){ store.history=[]; buildHero(); }
+
+/* ---------- Síntesis de voz (offline, gratis) ---------- */
+let voices=[], speakQueue=[], speaking=false, speakGen=0;
+function loadVoices(){
+  voices=speechSynthesis.getVoices()||[];
+  const sel=$('#voiceSel'); const prev=sel.value||store.voice;
+  sel.innerHTML='<option value="">Auto (español si existe)</option>'+
+    voices.map(v=>`<option value="${esc(v.name)}">${esc(v.name)} (${v.lang})${v.localService?' · offline':''}</option>`).join('');
+  if(prev) sel.value=prev;
+  store.voice=sel.value;
+  const pref=voices.find(v=>v.lang.toLowerCase()===store.lang.toLowerCase());
+  if(!store.voice&&pref){sel.value=pref.name;store.voice=pref.name;}
+}
+function pickVoice(){
+  if(store.voice) return voices.find(v=>v.name===store.voice)||null;
+  const lang=store.lang;
+  return voices.find(v=>v.lang.toLowerCase().startsWith(lang.split('-')[0].toLowerCase()))||
+         voices.find(v=>v.lang.toLowerCase().startsWith('es'))||null;
+}
+function speak(text){
+  if(!store.tts||!('speechSynthesis'in window)) return;
+  speechSynthesis.cancel(); speakQueue=[];
+  const limpio=text.replace(/```[\w+#.-]*\s*\n[\s\S]*?```/g,' (bloque de código omitido) ').replace(/\s+/g,' ');
+  const chunks=limpio.match(/[^.!?…]+[.!?…]*/g)||[limpio];
+  const g=++speakGen;
+  chunks.forEach(ch=>{
+    const u=new SpeechSynthesisUtterance(ch.trim());
+    u.lang=store.lang; u.rate=store.rate; u.pitch=store.pitch;
+    const v=pickVoice(); if(v)u.voice=v;
+    let done=false;
+    const advance=()=>{ if(done||g!==speakGen) return; done=true; speakQueue.shift();
+      if(speakQueue.length){ speechSynthesis.speak(speakQueue[0]); }
+      else{ speaking=false; setState(streaming?'thinking':'idle'); } };
+    u.onboundary=()=>{ if(document.body.dataset.state==='speaking') beatCore(); };
+    u.onstart=()=>{ speaking=true; };
+    u.onerror=advance;
+    u.onend=advance;
+    speakQueue.push(u);
+  });
+  if(speakQueue.length){speaking=true;setState('speaking');speechSynthesis.speak(speakQueue[0]);}
+}
+function stopSpeak(){ speakGen++; speechSynthesis.cancel(); speakQueue=[]; speaking=false; }
+
+/* ---------- Terminal (puente local 127.0.0.1) ---------- */
+const BRIDGE='http://127.0.0.1:8765';
+let termConnected=false, termBusy=false, termHist=[], termHistIdx=0;
+function termPrintText(t,cls){
+  const d=document.createElement('div'); d.className='tline'+(cls?' '+cls:'');
+  d.textContent=t; $('#termOut').appendChild(d); $('#termOut').scrollTop=$('#termOut').scrollHeight;
+}
+async function termPing(){
+  try{ const r=await fetch(BRIDGE+'/ping',{method:'GET'}); termConnected=!!(await r.json()).ok; }
+  catch(e){ termConnected=false; }
+  const dot=$('#termDot'), st=$('#termStatus');
+  dot.classList.toggle('ok',termConnected);
+  st.textContent=termConnected?'Puente conectado (127.0.0.1:8765)':'Puente desconectado — inicia bridge.py o bridge.mjs';
+  $('#btnTerminal').classList.toggle('on',termConnected);
+}
+function setTermBusy(){
+  $('#termInput').disabled=termBusy; $('#termRunBtn').disabled=termBusy;
+  $('#termKillBtn').classList.toggle('show',termBusy);
+}
+async function termRun(cmd){
+  cmd=(cmd||'').trim(); if(!cmd||termBusy)return;
+  termPrintText('❯ '+cmd,'cmd'); termBusy=true; setTermBusy();
+  try{
+    const resp=await fetch(BRIDGE+'/run',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({cmd,token:store.bridgeToken||''})});
+    if(resp.ok){
+      const reader=resp.body.getReader(), dec=new TextDecoder(); let buf='';
+      while(true){
+        const{done,value}=await reader.read(); if(done)break;
+        buf+=dec.decode(value,{stream:true}); let i;
+        while((i=buf.indexOf('\n'))>=0){
+          const line=buf.slice(0,i); buf=buf.slice(i+1);
+          try{
+            const j=JSON.parse(line);
+            if(j.out!==undefined) termPrintText(j.out);
+            else if(j.exit!==undefined) termPrintText('── proceso finalizado (código '+j.exit+')'+(j.exit===0?' ✔':' ⚠'),j.exit===0?'ok':'warn');
+          }catch(_){}
+        }
+      }
+    }else termPrintText('ERROR HTTP '+resp.status+(resp.status===403?' — revisa el token del puente en Ajustes':''),'err');
+  }catch(e){ termPrintText('No se pudo conectar con el puente: '+e.message,'err'); }
+  termBusy=false; setTermBusy();
+}
+async function termKill(){
+  try{ await fetch(BRIDGE+'/kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:store.bridgeToken||''})}); if(termBusy) termPrintText('⏹ Comando detenido','warn'); }
+  catch(e){}
+}
+function termSubmit(){
+  const input=$('#termInput');
+  if(termBusy){ termKill(); return; }
+  const cmd=input.value.trim(); if(!cmd)return;
+  termHist.push(cmd); termHistIdx=termHist.length;
+  input.value=''; termRun(cmd);
+}
+function switchTab(tab){
+  $$('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  $('#chat').classList.toggle('on',tab==='chat');
+  $('#termPanel').classList.toggle('on',tab==='term');
+  $('#toolsPanel').classList.toggle('on',tab==='tools');
+  if(tab==='term') setTimeout(()=>$('#termInput').focus(),50);
+}
+const DANGER=/rm\s+-rf|(^|\s)del\s+\/s|format\s+[a-zA-Z]:|\bmkfs|\bdd\s+if=|\:\|\:\&|\bshutdown\b|\breboot\b|\brd\s+\/s|\btaskkill\s+\/f\s+\/im|\bsc\s+delete|\breg\s+delete/i;
+function runAiCommand(cmd){
+  if(DANGER.test(cmd)&&!confirm('⚠ Comando potencialmente destructivo:\n\n'+cmd+'\n\n¿Ejecutarlo de todas formas?'))return;
+  switchTab('term'); termPrintText('comando sugerido por Aion Sincro','ai'); termRun(cmd);
+}
+function renderTermChips(bodyEl,text){
+  const re=/```([\w+#.-]*)\s*\n([\s\S]*?)```/g;
+  const isWin=/win/i.test(navigator.platform||navigator.userAgent);
+  const isShell=l=>/^(bash|sh|zsh|fish|powershell|pwsh|cmd|shell|terminal)?$/i.test((l||'').trim());
+  const interp=l=>/^(py|python|python3)$/i.test(l)?'python3':/^(js|node|javascript)$/i.test(l)?'node':null;
+  let m;
+  while((m=re.exec(text))){
+    const lang=(m[1]||'').trim();
+    const code=m[2].trim(); if(!code)continue;
+    if(isShell(lang)){
+      const chip=document.createElement('button'); chip.className='runChip';
+      chip.textContent='▶ Ejecutar en terminal: '+(code.split('\n')[0].slice(0,44));
+      chip.onclick=()=>runAiCommand(code);
+      bodyEl.appendChild(chip);
+    }else if(!isWin&&interp(lang)){
+      const bin=interp(lang);
+      const chip=document.createElement('button'); chip.className='runChip';
+      chip.textContent='▶ Ejecutar ('+bin+')';
+      chip.onclick=()=>runAiCommand(bin+' - <<\'AIONEOF\'\n'+code+'\nAIONEOF');
+      bodyEl.appendChild(chip);
+    }
+    const c=document.createElement('button'); c.className='runChip';
+    c.textContent='📋 Copiar'+(isShell(lang)||!lang?'':(' '+lang));
+    c.onclick=()=>{
+      (navigator.clipboard?navigator.clipboard.writeText(code):Promise.reject())
+        .then(()=>toast('Código copiado ✔'))
+        .catch(()=>{ const ta=document.createElement('textarea'); ta.value=code; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('Código copiado ✔'); });
+    };
+    bodyEl.appendChild(c);
+    $('#chatLog').scrollTop=$('#chatLog').scrollHeight;
+  }
+}
+
+/* ---------- Reconocimiento de voz (Chrome/Edge, gratis) ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let recog=null, listening=false;
+function initRecog(){
+  if(!SR){ $('#micBtn').style.display='none';
+    toast('Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge, o escribe directamente.'); return; }
+  recog=new SR();
+  recog.lang=store.lang; recog.interimResults=true; recog.continuous=true;
+  recog.onresult=e=>{
+    let interim='',final='';
+    for(const r of e.results){ const t=r[0].transcript; if(r.isFinal)final+=t; else interim+=t; }
+    if(final){ $('#textInput').value=final; handleUserText(final); }
+  };
+  recog.onerror=e=>{
+    if(e.error==='not-allowed'){ toast('🚫 Acceso al micrófono denegado. Permítelo en el navegador (icono 🔒).'); }
+    else if(e.error==='network'){ toast('El reconocimiento de voz necesita internet (usado por el navegador, sin clave).'); }
+    setListening(false);
+  };
+  recog.onend=()=>{ if(listening&&!streaming){ try{recog.start();}catch(_){} } };
+}
+function setListening(on){
+  listening=on;
+  if(on){ try{recog.start();}catch(e){ toast('No se pudo iniciar el micrófono.'); listening=false; return; }
+    setState('listening'); $('#micBtn').textContent='⬤'; $('#micBtn').title='Detener escucha';
+  }else{ try{recog.stop();}catch(_){} setState(streaming?'thinking':speaking?'speaking':'idle');
+    $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar'; }
+}
+function toggleMic(){
+  if(streaming||speaking){ stopAll(); return; }
+  listening?setListening(false):setListening(true);
+}
+function stopAll(){ abortCtrl?.abort(); streaming=false; stopSpeak(); setListening(false); setState('idle'); }
+
+/* ---------- Herramientas ---------- */
+const TOOLS=[
+  {key:'internet',icon:'🌐',name:'Búsqueda web',desc:'DuckDuckGo + Wikipedia — noticias, definiciones, actualidad'},
+  {key:'weather',icon:'🌦️',name:'Clima (Open-Meteo)',desc:'Tiempo y temperatura por ciudad, sin clave'},
+  {key:'cve',icon:'🛡️',name:'Base de CVEs (NVD)',desc:'Detalle y CVSS de cualquier CVE-XXXX-XXXX'},
+  {key:'github',icon:'🐙',name:'GitHub',desc:'Búsqueda de repositorios por estrellas'},
+  {key:'countries',icon:'🗺️',name:'Datos de países',desc:'Capital, población, idiomas y región'}
+];
+function renderTools(){
+  const list=$('#toolsList'); if(!list)return; list.innerHTML='';
+  TOOLS.forEach(t=>{
+    const on=!!(store.tools||{})[t.key];
+    const card=document.createElement('div'); card.className='toolCard'+(on?'':' off');
+    card.innerHTML='<span class="ti">'+t.icon+'</span><span class="tt"><b>'+t.name+'</b><small>'+t.desc+'</small></span><button class="toolSwitch'+(on?' on':'')+'" aria-label="Activar o desactivar '+t.name+'"></button>';
+    card.querySelector('.toolSwitch').onclick=()=>{ store.tools[t.key]=!store.tools[t.key]; if(t.key==='internet') store.search=store.tools.internet; syncSearchUI(); saveStore(); renderTools(); };
+    list.appendChild(card);
+  });
+}
+function tFetch(url,opts={}){
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(),9000);
+  if(abortCtrl) abortCtrl.signal.addEventListener('abort',()=>ctrl.abort(),{once:true});
+  return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>clearTimeout(t));
+}
+async function runTools(q){
+  const t=store.tools||{}, out=[];
+  if(t.internet){ const s=await searchInternet(q); if(s) out.push(s.trim()); }
+  if(t.weather&&/\b(clima|tiempo|temperatura|lluvia|nevar|soleado|nublado)\b/i.test(q)){
+    try{
+      let name='';
+      const mw=q.match(/(?:en|de|para)\s+([a-záéíóúñü][a-záéíóúñü\s]{1,30}?)(?:\?|$| y | en | hoy| ahora)/i);
+      if(mw) name=mw[1].trim();
+      if(!name){ const words=q.replace(/[?¿¡!.,:;]/g,'').trim().split(/\s+/); name=words[words.length-1]||''; }
+      if(!name||name.length>40) name='madrid';
+      const geo=await (await tFetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(name)+'&count=1&language=es&format=json')).json();
+      const place=geo.results&&geo.results[0];
+      if(place){
+        const w=await (await tFetch('https://api.open-meteo.com/v1/forecast?latitude='+place.latitude+'&longitude='+place.longitude+'&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto')).json();
+        const cw=w.current_weather;
+        out.push('🌦️ CLIMA EN '+(place.name||name).toUpperCase()+': '+cw.temperature+'°C · viento '+cw.windspeed+' km/h'+(w.daily?' · hoy máx '+w.daily.temperature_2m_max[0]+'°C / mín '+w.daily.temperature_2m_min[0]+'°C':''));
+      }
+    }catch(e){}
+  }
+  if(t.cve){
+    const m=q.match(/CVE-\d{4}-\d{4,7}/i);
+    if(m){
+      try{
+        const r=await tFetch('https://services.nvd.nist.gov/rest/json/cves/2.0?cveId='+m[0].toUpperCase());
+        const j=await r.json();
+        const v=j.vulnerabilities&&j.vulnerabilities[0]&&j.vulnerabilities[0].cve;
+        if(v){
+          const desc=(v.descriptions||[]).find(d=>d.lang==='en');
+          const c=v.metrics&&v.metrics.cvssMetricV31&&v.metrics.cvssMetricV31[0]&&v.metrics.cvssMetricV31[0].cvssData;
+          out.push('🛡️ '+m[0].toUpperCase()+(v.published?' · publicada '+v.published.slice(0,10):'')+(c?' · CVSS '+c.baseScore+' ('+c.baseSeverity+')':'')+'\n'+(desc?desc.value.slice(0,600):''));
+        }else out.push('🛡️ CVE '+m[0].toUpperCase()+' no encontrado en NVD.');
+      }catch(e){ out.push('🛡️ CVE no disponible desde el navegador: '+m[0]+' — búscalo en la web.'); }
+    }
+  }
+  if(t.github&&/\b(github|repositorio|repo)\b/i.test(q)){
+    try{
+      const qq=q.replace(/busca|encuentra|en\s+github|repositorios?|github/gi,'').replace(/[?¿¡!.]/g,'').trim();
+      if(qq){
+        const j=await (await tFetch('https://api.github.com/search/repositories?q='+encodeURIComponent(qq)+'&sort=stars&per_page=3',{headers:{Accept:'application/vnd.github+json'}})).json();
+        if(j.items) out.push('🐙 GITHUB (mejores por estrellas para "'+qq+'"):\n'+j.items.slice(0,3).map(r=>'• '+r.full_name+' ⭐'+r.stargazers_count+' — '+((r.description||'').slice(0,110)||'sin descripción')).join('\n'));
+      }
+    }catch(e){}
+  }
+  if(t.countries&&/\b(capital de|poblaci[oó]n de|idioma de|bandera de|pa[ií]s de|d[ií]as de)\b/i.test(q)){
+    try{
+      const mq=q.match(/(?:capital de|poblaci[oó]n de|idioma de|bandera de|pa[ií]s de)\s+([a-záéíóúñü][a-záéíóúñü\s]{1,30}?)(?:\?|$)/i);
+      const nm=(mq?mq[1].trim():q.replace(/[?¿¡!.]/g,'').trim());
+      if(nm){
+        const j=await (await tFetch('https://restcountries.com/v3.1/name/'+encodeURIComponent(nm))).json();
+        if(Array.isArray(j)&&j[0]){
+          const c=j[0];
+          out.push('🗺️ '+c.name.common+': capital '+(c.capital?c.capital[0]:'?')+' · población '+(c.population?c.population.toLocaleString('es-ES'):'?')+' · idiomas '+(c.languages?Object.values(c.languages).join(', '):'?')+' · región '+c.region);
+        }
+      }
+    }catch(e){}
+  }
+  return out.length?'\n[DATOS DE HERRAMIENTAS]\n'+out.join('\n\n')+'\n[FIN DE DATOS]\n':'';
+}
+
+/* ---------- Búsqueda en internet (DuckDuckGo + Wikipedia, gratis, sin clave) ---------- */
+const FRESH=/(últim|noticia|hoy|ayer|clima|temperatura|quién es|quien es|qué es|que es|defini|precio|cuánt|cuant|resultado|partido|eleccion|cotiz|estren|versión|version|novedad|nuev|gan[óo]|perdi[óo])|20\d\d/i;
+async function searchInternet(q){
+  if(!store.search) return '';
+  if(!FRESH.test(q)) return '';
+  let out=[];
+  try{
+    const ddg=await tFetch('https://api.duckduckgo.com/?q='+encodeURIComponent(q)+'&format=json&no_html=1&skip_disambig=1');
+    const j=await ddg.json();
+    if(j.AbstractText) out.push({t:j.Heading||q,s:j.AbstractText,u:j.AbstractURL||''});
+    (j.RelatedTopics||[]).slice(0,3).forEach(t=>{ if(t.Text) out.push({t:q,s:t.Text,u:t.FirstURL||''}); });
+  }catch(e){}
+  try{
+    const wiki=await tFetch('https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch='+encodeURIComponent(q)+'&format=json&origin=*&srlimit=2');
+    const j=await wiki.json();
+    (j.query?.search||[]).forEach(r=>out.push({t:r.title,s:r.snippet.replace(/<[^>]+>/g,''),u:'https://es.wikipedia.org/wiki/'+encodeURIComponent(r.title.replace(/ /g,'_'))}));
+  }catch(e){}
+  if(!out.length) return '';
+  return '\n[RESULTADOS DE INTERNET]\n'+out.map((r,i)=>`${i+1}. ${r.t} — ${r.s}${r.u?' ('+r.u+')':''}`).join('\n')+'\n[FIN DE RESULTADOS]\n';
+}
+
+/* ---------- Proveedores de IA (streaming) ---------- */
+async function* streamChat(provider,messages,signal){
+  const p=PROVIDERS[provider];
+  if(provider==='demo'){
+    const text=demoBrain(messages[messages.length-1].content);
+    for(const ch of text.match(/[\s\S]{1,6}/g)){ await sleep(28); if(signal?.aborted)return; yield ch; }
+    return;
+  }
+  let url,headers={'Content-Type':'application/json'},body;
+  if(provider==='ollama'){
+    url=store.ollamaUrl.replace(/\/$/,'')+'/api/chat';
+    body={model:store.model,messages,stream:true};
+  }else if(provider==='groq'){
+    url=p.base+'/chat/completions';
+    headers.Authorization='Bearer '+store.groqKey;
+    body={model:store.model,messages,stream:true};
+  }else if(provider==='openrouter'){
+    url=p.base+'/chat/completions';
+    headers.Authorization='Bearer '+store.openrouterKey;
+    headers['HTTP-Referer']=location.origin||'https://aionsincro.local';
+    headers['X-Title']='Aion Sincro';
+    body={model:store.model,messages,stream:true};
+  }else{ // huggingface
+    url=p.base+'/models/'+encodeURIComponent(store.model)+'/v1/chat/completions';
+    headers.Authorization='Bearer '+store.hfToken;
+    body={model:store.model,messages,stream:true};
+  }
+  const resp=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal});
+  if(!resp.ok){
+    let msg='HTTP '+resp.status;
+    try{const j=await resp.json();msg=(j.error?.message||j.message||j.error||msg);}catch(_){}
+    throw new Error(msg);
+  }
+  const reader=resp.body.getReader(); const dec=new TextDecoder(); let buf='';
+  while(true){
+    const{done,value}=await reader.read(); if(done)break;
+    buf+=dec.decode(value,{stream:true});
+    let idx;
+    while((idx=buf.indexOf('\n'))>=0){
+      const line=buf.slice(0,idx).trim(); buf=buf.slice(idx+1);
+      if(!line.startsWith('data:'))continue;
+      const data=line.slice(5).trim();
+      if(data==='[DONE]')continue;
+      try{
+        const j=JSON.parse(data); let chunk='';
+        if(provider==='ollama') chunk=j.message?.content||'';
+        else chunk=j.choices?.[0]?.delta?.content||'';
+        if(chunk)yield chunk;
+      }catch(_){}
+    }
+  }
+}
+
+/* ---------- Cerebro demo (sin conexión) ---------- */
+function demoBrain(q){
+  q=q.toLowerCase();
+  const ahora=new Date();
+  if(/hola|buenas|hey|saludos/.test(q)) return '¡Hola! Soy Aion Sincro, tu compañera de pentesting y red team. Estoy aquí para aprender contigo, no para darte la razón en todo. ¿Por dónde empezamos? Puedes hablarme, escribirme, abrir el terminal o activar el modo Pentest.';
+  if(/qui[eé]n eres|quien eres|que eres/.test(q)) return 'Soy Aion Sincro. No soy un asistente servil — soy tu compañera. Me especializo en pentesting y red team, pero sé de programación, redes, sistemas y de un poco de todo. Funciono con modelos de IA (NousResearch Hermes) de forma local o vía APIs gratuitas, tengo terminal integrado, búsqueda web, clima, base de CVEs y GitHub. Y una regla inquebrantable: solo ayudamos con pruebas de seguridad autorizadas.';
+  if(/hora|hora es|fecha|d[ií]a/.test(q)) return 'Son las '+ahora.toLocaleTimeString('es-ES')+' del '+ahora.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'.';
+  if(/qu[eé] puedes hacer|ayuda|help|funciones|capacidades/.test(q)) return 'Estoy contigo para: 1) Aprender y practicar pentesting y red team (metodología, análisis de salidas de nmap/burp, CVEs, informes). 2) Ejecutar comandos en tu terminal (pestaña >_ Terminal, con tu confirmación). 3) Buscar en internet, consultar el clima, CVEs, repositorios de GitHub y datos de países. 4) Programar y resolver problemas técnicos. 5) Hablarte por voz y escucharte. Pruébame: dime "busca CVE-2021-44228" o "¿qué tiempo hace en Madrid?".';
+  if(/script|c[oó]digo|programa|funcion|función/.test(q)&&/(escribe|crea|p[áa]same|necesito|ay[uú]dame|hazme|quiero)/.test(q)) return 'Sí — escribir código es de lo mejor que hacemos juntas. En modo Demo te dejo un ejemplo (escáner de puertos en bash para tu laboratorio):\n\n```bash\nfor puerto in 22 80 443 8080; do\n  (echo >/dev/tcp/127.0.0.1/$puerto) 2>/dev/null && echo "abierto: $puerto" || echo "cerrado: $puerto"\ndone\n```\n\nPulsa ▶ Ejecutar en terminal o 📋 Copiar. Conecta un motor real en ⚙️ Ajustes y escribiré scripts a medida: análisis de salidas de nmap, automatización de informes, utilidades de reconocimiento…';
+  if(/pentest|hackeo|seguridad|nmap|vulnerab|cve|payload|exploit/.test(q)) return 'En modo Pentest 🛡️ soy tu compañera de campo: analizamos salidas de herramientas (nmap, burp, nessus), interpretamos CVEs, montamos checklists OWASP y redactamos informes — siempre para pruebas AUTORIZADAS (laboratorios propios, CTFs, bug bounty). Actívalo arriba y dime qué tienes entre manos. Y recuerda: solo con permiso del dueño del sistema.';
+  if(/gracias|genial|perfecto|excelente/.test(q)) return 'Para eso estamos: aprender y crecer juntos. Cuando quieras seguir, aquí estaré.';
+  if(/broma|chiste|chiste/.test(q)) return '¿Por qué el hacker no usa antivirus? Porque prefiere "inocular" confianza… ¿Quieres otro? Dime "otro chiste" (en modo Demo solo tengo este, pero con IA real seré más gracioso).';
+  if(/al?an turing/.test(q)) return 'Alan Turing (1912–1954) fue un matemático y pionero de la computación. Ideó la máquina de Turing, base teórica de los ordenadores, descifró la máquina Enigma en Bletchley Park durante la II Guerra Mundial y propuso el famoso Test de Turing para evaluar inteligencia artificial. En 1950 escribió "Computing Machinery and Intelligence".';
+  return 'Estoy en modo Demo (sin motor de IA conectado), así que mis respuestas son limitadas — pero mi personalidad es la misma. Conecta un motor real en ⚙️ Ajustes (Ollama local, Groq u OpenRouter, todos sin coste) y desplegaré todo mi conocimiento de pentesting y red team. Mientras tanto: pregúntame por mí, activa el modo Pentest, abre la pestaña Herramientas o prueba la búsqueda web.';
+}
+
+/* ---------- Flujo principal ---------- */
+async function handleUserText(text){
+  text=(text||'').trim(); if(!text||streaming)return;
+  $('#textInput').value='';
+  streaming=true; stopSpeak();
+  abortCtrl=new AbortController();
+  setState('thinking'); $('#micBtn').textContent='✕'; $('#micBtn').title='Detener';
+  addMsg('user',esc(text));
+  const typing=addTyping();
+  store.history.push({role:'user',content:text});
+  const h=store.history.slice(-14);
+  try{
+    const search=await runTools(text);
+    const messages=[{role:'system',content:systemPrompt()},...h.slice(0,-1),{role:'user',content:search+'\n\n'+text}];
+    typing.closest('.msg').remove();
+    const body=addMsg('ai','');
+    const cursor=document.createElement('span');cursor.className='stream-cursor';body.appendChild(cursor);
+    let acc='';
+    for await(const chunk of streamChat(store.provider,messages,abortCtrl.signal)){
+      acc+=chunk; cursor.before(document.createTextNode(chunk)); cursor.remove(); body.appendChild(cursor);
+      $('#chatLog').scrollTop=$('#chatLog').scrollHeight;
+    }
+    cursor.remove();
+    if(!acc){ body.textContent='(Sin respuesta)'; store.history.pop(); }
+    else store.history.push({role:'assistant',content:acc});
+    setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
+    if(acc){ renderTermChips(body, acc); speak(acc); }
+  }catch(err){
+    typing.closest('.msg').remove();
+    if(err.name==='AbortError'){ $('#micBtn').textContent='🎙️'; return; }
+    const body=addMsg('ai','');
+    body.closest('.msg').classList.add('sys');
+    body.closest('.msg').querySelector('.who').textContent='⚠ SISTEMA';
+    body.textContent=providerError(store.provider,err);
+    setState('error'); $('#micBtn').textContent='🎙️';
+    store.history.pop();
+  }finally{
+    streaming=false;
+    if(!speaking&&!listening&&document.body.dataset.state!=='error') setState('idle');
+  }
+}
+function providerError(provider,err){
+  if(provider==='demo') return 'Error interno del modo demo.';
+  if(provider==='ollama') return 'No pude conectar con Ollama en '+store.ollamaUrl+'. ¿Está ejecutándose? Instálalo en ollama.com, lanza "ollama pull hermes3" y reinicia. En Windows: set OLLAMA_ORIGINS=*  →  ollama serve.';
+  if(provider==='groq') return 'Error de Groq: '+err.message+' — revisa tu API key en Ajustes (gratis en console.groq.com).';
+  if(provider==='openrouter') return 'Error de OpenRouter: '+err.message+' — revisa tu API key o prueba el modelo gratuito de la lista.';
+  return 'Error de HuggingFace: '+err.message+' — revisa tu token y que el modelo exista.';
+}
+
+/* ---------- UI: proveedor, ajustes, chips ---------- */
+function refreshProviderUI(){
+  const p=store.provider;
+  const hints={
+    demo:'Modo de prueba sin conexión: respuestas limitadas para probar la interfaz y la voz.',
+    ollama:'Modelo Hermes 100% local y gratuito. Requiere Ollama instalado y "ollama pull hermes3".',
+    groq:'Gratis: 14 400 tokens/min. Consigue la clave en console.groq.com. Hermes 3 disponible.',
+    openrouter:'Modelos ":free" incluidos (Hermes 3). Clave en openrouter.ai/keys.',
+    huggingface:'Inferencia gratuita de modelos como Hermes-3-70B. Token en huggingface.co/settings/tokens.'
+  };
+  $('#providerHint').textContent=hints[p];
+  $('#fieldOllamaUrl').hidden=p!=='ollama';
+  $('#fieldGroq').hidden=p!=='groq';
+  $('#fieldOpenrouter').hidden=p!=='openrouter';
+  $('#fieldHf').hidden=p!=='huggingface';
+  const input=$('#modelInput');
+  input.placeholder=PROVIDERS[p].models[0];
+}
+function testProvider(){
+  const p=store.provider, ks=$('#keyStatus');
+  ks.className='';ks.style.display='none';
+  const ok=m=>{ks.className='ok';ks.textContent='✅ Conexión correcta: '+m;toast('Conexión correcta ✔');};
+  const fail=e=>{ks.className='err';ks.textContent='❌ '+e.message;};
+  if(p==='demo'){ ok('modo demo operativo'); return; }
+  if(p==='ollama'){
+    tFetch(store.ollamaUrl.replace(/\/$/,'')+'/api/tags').then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(j=>ok((j.models||[]).map(m=>m.name).join(', ')||'Ollama responde')).catch(fail);
+  }else{
+    const cfgs={
+      groq:[PROVIDERS.groq.base+'/models','Bearer '+store.groqKey],
+      openrouter:[PROVIDERS.openrouter.base+'/models','Bearer '+store.openrouterKey],
+      huggingface:[PROVIDERS.huggingface.base+'/models/'+encodeURIComponent(store.model),'Bearer '+store.hfToken]
+    };
+    const[url,h]=cfgs[p];
+    tFetch(url,{headers:{Authorization:h}}).then(r=>r.ok?r.json():Promise.reject(new Error(r.status===401?'Clave inválida (401)':'HTTP '+r.status)))
+      .then(j=>{ const list=j.data||[]; const found=list.find(m=>m.id===store.model);
+        ok(found?'Modelo disponible: '+store.model:'API válida ('+list.length+' modelos)'); })
+      .catch(fail);
+  }
+}
+function buildChips(){
+  const chips=[
+    'Analiza esta salida de nmap que te pego:',
+    'Checklist de pentest web OWASP para una app de prueba propia',
+    'Explica el CVE-2021-44228 (Log4Shell) y cómo detectarlo',
+    'Plan de reconocimiento para mi laboratorio local autorizado',
+    'Redacta la plantilla de un informe de pentest profesional'
+  ];
+  $('#chips').innerHTML='';
+  chips.forEach(c=>{const b=document.createElement('button');b.className='chip';b.textContent=c;b.onclick=()=>{const i=$('#textInput');i.value=c;i.focus();};$('#chips').appendChild(b);});
+}
+
+/* ---------- Eventos ---------- */
+function bind(){
+  $('#bootBtn').onclick=async()=>{
+    $('#boot').classList.add('gone'); chime();
+    setTimeout(()=>$('#boot').remove(),650);
+  };
+  $('#micBtn').onclick=toggleMic;
+  $('#sendBtn').onclick=()=>handleUserText($('#textInput').value);
+  $('#textInput').addEventListener('keydown',e=>{ if(e.key==='Enter')handleUserText($('#textInput').value); });
+  $('#btnClear').onclick=clearChat;
+  $('#btnTerminal').onclick=()=>{ switchTab('term'); termPing(); };
+  $$('.tab').forEach(t=>t.onclick=()=>{ switchTab(t.dataset.tab); if(t.dataset.tab==='term') termPing(); });
+  $('#termInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter') termSubmit();
+    else if(e.key==='ArrowUp'){ e.preventDefault(); if(termHistIdx>0){ termHistIdx--; $('#termInput').value=termHist[termHistIdx]; } }
+    else if(e.key==='ArrowDown'){ e.preventDefault(); if(termHistIdx<termHist.length-1){ termHistIdx++; $('#termInput').value=termHist[termHistIdx]; } else { $('#termInput').value=''; termHistIdx=termHist.length; } }
+    else if(e.key==='c'&&e.ctrlKey&&termBusy){ e.preventDefault(); termKill(); }
+  });
+  $('#termRunBtn').onclick=termSubmit;
+  $('#termReconnect').onclick=()=>{ termPing(); toast(termConnected?'Puente conectado ✔':'Puente no disponible — inicia bridge.py o bridge.mjs'); };
+  $('#termClear').onclick=()=>{ $('#termOut').innerHTML=''; };
+  $('#termKillBtn').onclick=termKill;
+  $('#btnTts').onclick=()=>{ store.tts=!store.tts; $('#btnTts').classList.toggle('on',store.tts); saveStore(); };
+  $('#btnSearch').onclick=()=>{ store.search=!store.search; store.tools.internet=store.search; syncSearchUI(); saveStore(); renderTools(); toast(store.search?'Búsqueda web activada':'Búsqueda web desactivada'); };
+  $('#toolsReset').onclick=()=>{ store.tools={internet:true,weather:true,cve:true,github:true,countries:true}; store.search=true; syncSearchUI(); saveStore(); renderTools(); toast('Herramientas restauradas'); };
+  $('#btnSearchSet').onclick=()=>{ store.search=!store.search; syncSearchUI(); };
+  $('#btnPentest').onclick=()=>{
+    if(!store.pentest && !confirm('⚠ Modo Pentest: asistencia para pruebas de seguridad ÚNICAMENTE autorizadas (laboratorios propios, CTFs, bug bounty). ¿Activarlo?')) return;
+    store.pentest=!store.pentest; syncPentestUI(); saveStore();
+    toast(store.pentest?'🛡️ Modo Pentest activado':'Modo Pentest desactivado');
+  };
+  $('#btnSettings').onclick=openSettings;
+  $('#btnCloseSet').onclick=closeSettings;
+  $('#backdrop').onclick=closeSettings;
+  $('#btnSave').onclick=()=>{ collectSettings(); saveStore(); closeSettings(); toast('💾 Ajustes guardados'); };
+  $('#btnTest').onclick=testProvider;
+  $('#provider').onchange=()=>{ collectSettings(true); refreshProviderUI(); };
+  $('#modelInput').onchange=()=>{ collectSettings(true); };
+  $('#langSel').onchange=()=>{ store.lang=$('#langSel').value; if(recog)recog.lang=store.lang; saveStore(); };
+  $('#voiceSel').onchange=()=>{ store.voice=$('#voiceSel').value; saveStore(); };
+  $('#rate').oninput=e=>{store.rate=+e.target.value;$('#rateOut').textContent=(+e.target.value).toFixed(2);};
+  $('#pitch').oninput=e=>{store.pitch=+e.target.value;$('#pitchOut').textContent=(+e.target.value).toFixed(2);};
+  $('#pentestScope').onchange=()=>{store.pentestScope=$('#pentestScope').value;saveStore();};
+  document.addEventListener('keydown',e=>{
+    if(e.code==='Space'&&document.activeElement!==$('#textInput')&&!$('#settings').classList.contains('open')&&!e.repeat&&!e.target.matches('input,select,textarea')){ e.preventDefault(); toggleMic(); }
+  });
+  if('speechSynthesis'in window){ speechSynthesis.onvoiceschanged=loadVoices; loadVoices(); }
+}
+function openSettings(){
+  $('#settings').classList.add('open'); $('#backdrop').classList.add('show');
+  $('#provider').value=store.provider; $('#modelInput').value=store.model||'';
+  $('#ollamaUrl').value=store.ollamaUrl; $('#groqKey').value=store.groqKey;
+  $('#openrouterKey').value=store.openrouterKey; $('#hfToken').value=store.hfToken;
+  $('#langSel').value=store.lang; $('#rate').value=store.rate; $('#pitch').value=store.pitch;
+  $('#rateOut').textContent=store.rate.toFixed(2); $('#pitchOut').textContent=store.pitch.toFixed(2);
+  $('#pentestScope').value=store.pentestScope;
+  $('#bridgeToken').value=store.bridgeToken;
+  syncSearchUI(); refreshProviderUI();
+}
+function closeSettings(){ $('#settings').classList.remove('open'); $('#backdrop').classList.remove('show'); }
+function collectSettings(noSave){
+  store.provider=$('#provider').value; store.model=$('#modelInput').value.trim()||PROVIDERS[store.provider].models[0];
+  store.ollamaUrl=$('#ollamaUrl').value.trim()||'http://localhost:11434';
+  store.groqKey=$('#groqKey').value.trim(); store.openrouterKey=$('#openrouterKey').value.trim();
+  store.hfToken=$('#hfToken').value.trim();
+  store.bridgeToken=$('#bridgeToken').value.trim();
+  if(!noSave)saveStore();
+}
+function syncSearchUI(){ $('#btnSearch').classList.toggle('on',store.search); $('#btnSearchSet').classList.toggle('on',store.search); }
+function syncPentestUI(){
+  $('#btnPentest').classList.toggle('on',store.pentest);
+  $('#pentestBanner').classList.toggle('show',store.pentest);
+  $('#chips').classList.toggle('show',store.pentest);
+}
+
+/* ---------- Chime de inicio (Web Audio, sin archivos) ---------- */
+function chime(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const t=ctx.currentTime;
+    [[523.25,0],[659.25,.12],[783.99,.24],[1046.5,.38]].forEach(([f,d])=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);
+      g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.16,t+d+.02);
+      g.gain.exponentialRampToValueAtTime(.001,t+d+.8);o.start(t+d);o.stop(t+d+.9);
+    });
+  }catch(_){}
+}
+
+/* ---------- Arranque ---------- */
+(function boot(){
+  loadStore();
+  let w=0; const bar=$('#bootBar');
+  const iv=setInterval(()=>{ w+=Math.random()*22; if(w>=100){w=100;clearInterval(iv);}
+    bar.style.width=w+'%'; },120);
+  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); termPing();
+  document.body.dataset.state='idle';
+  bind(); initRecog();
+  if(!store.model) store.model='hermes3';
+})();
+</script>
+</body>
+</html>

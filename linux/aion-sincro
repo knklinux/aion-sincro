@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# ============================================================
+# Aion Sincro — lanzador (Linux / macOS)
+# ============================================================
+# 1. Sirve la app en http://127.0.0.1:$PORT_APP  (necesario para
+#    el micrófono: Web Speech solo funciona en localhost/HTTPS).
+# 2. Arranca el puente de terminal en 127.0.0.1:$PORT_BRIDGE.
+# 3. Abre el navegador.
+#
+# Variables de entorno opcionales:
+#     AION_APP_PORT     puerto web (por defecto 8080)
+#     AION_BRIDGE_PORT  puerto del puente (por defecto 8765)
+set -euo pipefail
+
+APP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/aion-sincro"
+CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/aion-sincro"
+PORT_APP="${AION_APP_PORT:-8080}"
+PORT_BRIDGE="${AION_BRIDGE_PORT:-8765}"
+
+mkdir -p "$CONF_DIR"
+TOKEN="$(cat "$CONF_DIR/token" 2>/dev/null || echo '')"
+if [ -z "$TOKEN" ]; then
+  if command -v openssl >/dev/null 2>&1; then
+    TOKEN="$(openssl rand -hex 16)"
+  elif command -v python3 >/dev/null 2>&1; then
+    TOKEN="$(python3 -c "import secrets; print(secrets.token_hex(16))")"
+  else
+    TOKEN="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+  fi
+  printf '%s' "$TOKEN" > "$CONF_DIR/token"
+  chmod 600 "$CONF_DIR/token"
+fi
+
+cd "$APP_DIR" || { echo "Aion Sincro no está instalado. Ejecuta: linux/install.sh"; exit 1; }
+
+# --- 1) Servidor web (python3 preferido, node como respaldo) ---------
+if [ ! -f "$CONF_DIR/web.pid" ] || ! kill -0 "$(cat "$CONF_DIR/web.pid" 2>/dev/null)" 2>/dev/null; then
+  if command -v python3 >/dev/null 2>&1; then
+    nohup python3 -m http.server "$PORT_APP" --bind 127.0.0.1 >/dev/null 2>&1 &
+  elif command -v node >/dev/null 2>&1; then
+    nohup node -e "const http=require('http'),fs=require('fs'),path=require('path');const p=process.argv[1];http.createServer((q,r)=>{let f=q.url==='/'?'index.html':q.url.split('?')[0];f=path.normalize(path.join(process.cwd(),f));if(!f.startsWith(process.cwd())){r.writeHead(403);return r.end()}fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);return r.end()}r.writeHead(200);r.end(d)})}).listen(p,'127.0.0.1')" "$PORT_APP" >/dev/null 2>&1 &
+  else
+    echo "Se necesita python3 o node para servir la app."; exit 1
+  fi
+  echo $! > "$CONF_DIR/web.pid"
+fi
+
+# --- 2) Puente de terminal -------------------------------------------
+if [ ! -f "$CONF_DIR/bridge.pid" ] || ! kill -0 "$(cat "$CONF_DIR/bridge.pid" 2>/dev/null)" 2>/dev/null; then
+  if command -v python3 >/dev/null 2>&1; then
+    nohup python3 bridge.py --port "$PORT_BRIDGE" --token "$TOKEN" >"$CONF_DIR/bridge.log" 2>&1 &
+  elif command -v node >/dev/null 2>&1; then
+    nohup node bridge.mjs --port "$PORT_BRIDGE" --token "$TOKEN" >"$CONF_DIR/bridge.log" 2>&1 &
+  else
+    echo "Se necesita python3 o node para el puente."; exit 1
+  fi
+  echo $! > "$CONF_DIR/bridge.pid"
+fi
+
+sleep 1
+URL="http://127.0.0.1:$PORT_APP/"
+echo "Aion Sincro → $URL"
+echo "Token del puente: $TOKEN  (Ajustes → Terminal local)"
+( command -v xdg-open >/dev/null 2>&1 && xdg-open "$URL" >/dev/null 2>&1 ) || true

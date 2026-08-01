@@ -1,0 +1,20 @@
+# Entorno de desarrollo local (no subir)
+.freebuff/
+desktop-v2.db
+desktop-v2.db-shm
+desktop-v2.db-wal
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Archivos sensibles (no subir claves jamás)
+*.env
+.env.*
