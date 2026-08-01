@@ -195,7 +195,25 @@ body[data-state="thinking"] .orbit-2{animation-duration:4s}
 body[data-state="speaking"] .core{box-shadow:0 0 80px rgba(52,211,153,.6),0 0 170px rgba(52,211,153,.28),inset 0 0 46px rgba(255,255,255,.35)}
 body[data-state="speaking"] .orbit-1{border-color:rgba(52,211,153,.5)}
 body[data-state="error"] .core{filter:hue-rotate(340deg) saturate(1.3);box-shadow:0 0 60px rgba(251,113,133,.6)}
-
+/* Transición de seguridad del avatar: pulso rojo al bloquear, respiración verde al desbloquear */
+#core.sec-lock{animation:secLock 1.2s ease-in-out}
+#core.sec-lock .face{filter:drop-shadow(0 0 22px rgba(251,113,133,.9))}
+#core.sec-lock .v-delta{animation:secShake .5s ease-in-out}
+@keyframes secLock{
+  0%{transform:scale(1);box-shadow:0 0 55px rgba(251,191,36,.5),0 0 130px rgba(251,191,36,.22),inset 0 0 46px rgba(255,255,255,.3)}
+  28%{transform:scale(.86);box-shadow:0 0 90px rgba(251,113,133,.95),0 0 190px rgba(251,113,133,.45),inset 0 0 62px rgba(251,113,133,.55)}
+  46%{transform:scale(1.06);box-shadow:0 0 70px rgba(251,113,133,.8),0 0 150px rgba(251,113,133,.35)}
+  100%{transform:scale(1);box-shadow:0 0 60px rgba(251,113,133,.55),0 0 150px rgba(251,113,133,.25),inset 0 0 46px rgba(255,255,255,.3)}
+}
+@keyframes secShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-3px)}40%{transform:translateX(3px)}60%{transform:translateX(-2px)}80%{transform:translateX(2px)}}
+#core.sec-unlock{animation:secUnlock 1.6s ease-in-out}
+#core.sec-unlock .face{filter:drop-shadow(0 0 24px rgba(52,211,153,.95))}
+@keyframes secUnlock{
+  0%{transform:scale(1);box-shadow:0 0 55px rgba(251,191,36,.5),0 0 130px rgba(251,191,36,.22),inset 0 0 46px rgba(255,255,255,.3)}
+  22%{transform:scale(.92);box-shadow:0 0 44px rgba(52,211,153,.5)}
+  40%,62%{transform:scale(1.05);box-shadow:0 0 95px rgba(52,211,153,.95),0 0 200px rgba(52,211,153,.45),inset 0 0 60px rgba(52,211,153,.5)}
+  100%{transform:scale(1);box-shadow:0 0 70px rgba(52,211,153,.6),0 0 170px rgba(52,211,153,.3),inset 0 0 46px rgba(255,255,255,.35)}
+}
 #statusText{margin-top:26px;font-size:14px;letter-spacing:.5em;color:var(--cyan);font-weight:600;
   text-shadow:0 0 16px rgba(245,165,36,.6);text-transform:uppercase}
 body[data-state="thinking"] #statusText{color:var(--violet);text-shadow:0 0 16px rgba(16,185,129,.6)}
@@ -570,6 +588,13 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
 #btnCloseLearn{padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.1em;color:#1d1200;
   background:linear-gradient(135deg,#ffd166,#f5a524);box-shadow:0 0 24px rgba(245,165,36,.35);cursor:pointer;transition:.25s}
 #btnCloseLearn:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(245,165,36,.5)}
+/* Barra de sesión de práctica: temporizador, racha y tiempo medio */
+.prac-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 14px;border-radius:12px;margin-bottom:12px;
+  border:1px solid rgba(245,165,36,.2);background:linear-gradient(135deg,rgba(245,165,36,.07),rgba(245,165,36,.02))}
+.prac-stat{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dim)}
+.prac-stat b{color:#ffd166;font-size:13px}
+.prac-live{font-family:var(--mono);font-weight:700;color:#9fe8c9;letter-spacing:.06em}
+.prac-live.on{animation:twinkle 1.4s ease-in-out infinite}
 
 /* ---------- Herramienta de auditoría de cumplimiento (ISO) ---------- */
 #isoOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
@@ -673,6 +698,66 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
 .eval-banner{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;margin-bottom:14px;
   border:1px solid rgba(167,139,250,.3);background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(167,139,250,.04))}
 .eval-banner b{color:#c4b5fd}
+
+/* ---------- Certificación de la Ruta (informe de progreso exportable) ---------- */
+#certOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
+  background:radial-gradient(circle at 50% 30%,rgba(245,165,36,.08),rgba(2,6,12,.88) 70%);
+  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s}
+#certOverlay.show{opacity:1;visibility:visible;pointer-events:auto}
+.cert-card{width:min(880px,100%);max-height:92vh;display:flex;flex-direction:column;border-radius:20px;
+  border:1px solid rgba(245,165,36,.3);background:linear-gradient(180deg,rgba(26,18,8,.97),rgba(10,7,3,.98));
+  box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 60px rgba(245,165,36,.08);animation:winIn .6s cubic-bezier(.2,.8,.25,1)}
+.cert-body{flex:1;overflow-y:auto;padding:18px 26px 10px;scrollbar-width:thin;scrollbar-color:rgba(245,165,36,.3) transparent}
+.cert-body::-webkit-scrollbar{width:6px}
+.cert-body::-webkit-scrollbar-thumb{background:rgba(245,165,36,.28);border-radius:3px}
+.cert-doc{border:1px dashed rgba(245,165,36,.35);border-radius:14px;padding:18px 20px 8px;background:rgba(245,165,36,.03);margin-bottom:10px}
+.cert-seal{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.cert-seal .cs-hex{flex:none;width:48px;height:48px}
+.cert-seal h3{font-size:16px;letter-spacing:.06em;color:#ffd166;margin:0 0 2px}
+.cert-seal p{margin:0;font-size:10.5px;letter-spacing:.22em;color:var(--dim);text-transform:uppercase}
+.cert-name-row{display:flex;align-items:center;gap:10px;margin:10px 0 12px;flex-wrap:wrap}
+.cert-name-row label{font-size:11px;letter-spacing:.1em;color:var(--dim);font-weight:700;text-transform:uppercase}
+#certName{flex:1;min-width:200px;background:rgba(2,6,12,.7);border:1px solid rgba(245,165,36,.3);color:#ffe9c2;border-radius:10px;padding:9px 13px;font-size:13px;outline:none;transition:.2s}
+#certName:focus{border-color:rgba(245,165,36,.6);box-shadow:0 0 14px rgba(245,165,36,.15)}
+.cert-status{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:18px;font-size:12px;font-weight:700;letter-spacing:.05em}
+.cert-status.done{color:#9fe8c9;border:1px solid rgba(52,211,153,.45);background:rgba(16,185,129,.12)}
+.cert-status.pending{color:#fbbf24;border:1px solid rgba(245,185,66,.4);background:rgba(245,185,66,.1)}
+.cert-meta{display:flex;gap:18px;flex-wrap:wrap;margin:8px 0 14px;font-size:12px;color:var(--dim)}
+.cert-meta b{color:#ffe9c2}
+.cert-phase{display:flex;align-items:center;gap:12px;padding:9px 13px;border-radius:12px;margin-bottom:7px;
+  border:1px solid rgba(245,165,36,.16);background:rgba(245,165,36,.05)}
+.cert-phase .cp-ico{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px}
+.cert-phase .cp-txt{flex:1;min-width:0}
+.cert-phase .cp-txt b{display:block;font-size:12.8px;color:#ffe9c2;letter-spacing:.03em}
+.cert-phase .cp-txt small{font-size:11px;color:var(--dim)}
+.cert-phase .cp-bar{flex:none;width:110px}
+.cert-phase .cp-bar .bar{height:7px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:4px}
+.cert-phase .cp-bar .bar i{display:block;height:100%;border-radius:5px;transition:width .5s}
+.cert-phase .cp-bar small{font-size:10px;color:var(--dim);letter-spacing:.06em}
+.cert-sec{margin:14px 0 7px;font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.cert-sec::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(245,165,36,.3),transparent)}
+.cert-skills{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:7px;margin-bottom:4px}
+.cert-skill{display:flex;gap:8px;align-items:flex-start;padding:8px 11px;border-radius:10px;font-size:11.6px;line-height:1.5;color:#d8c9a8;
+  border:1px solid rgba(245,165,36,.14);background:rgba(245,165,36,.04)}
+.cert-skill b{color:var(--gold);flex:none}
+.cert-recs{margin-bottom:8px}
+.cert-rec{display:flex;gap:9px;padding:7px 12px;border-radius:10px;font-size:11.8px;line-height:1.55;color:#d8c9a8;
+  border-left:2px solid rgba(245,165,36,.5);background:rgba(245,165,36,.05);margin-bottom:6px}
+.cert-rec b{color:var(--gold);flex:none}
+.cert-sign{margin:10px 0 6px;padding:12px 14px;border-radius:10px;text-align:center;font-size:11.5px;color:var(--dim);line-height:1.6;
+  border-top:1px dashed rgba(245,165,36,.2);font-style:italic}
+.cert-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 24px;border-top:1px solid rgba(245,165,36,.15)}
+.cert-foot .cf-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cert-foot small{font-size:11px;color:var(--dim);letter-spacing:.05em}
+.cert-export{padding:9px 18px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:.2s;
+  color:#ffd166;border:1px solid rgba(245,165,36,.45);background:rgba(245,165,36,.1)}
+.cert-export:hover{background:rgba(245,165,36,.22);transform:translateY(-1px);box-shadow:0 0 16px rgba(245,165,36,.25)}
+#btnCloseCert{padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.1em;color:#1d1200;
+  background:linear-gradient(135deg,#ffd166,#f5a524);box-shadow:0 0 24px rgba(245,165,36,.35);cursor:pointer;transition:.25s}
+#btnCloseCert:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(245,165,36,.5)}
+#btnCert{border:1px solid rgba(245,165,36,.35);border-radius:18px;background:rgba(245,165,36,.08);color:#ffd166;font-size:11px;
+  padding:6px 14px;letter-spacing:.05em;transition:.2s;cursor:pointer}
+#btnCert:hover{background:rgba(245,165,36,.2)}
 </style>
 </head>
 <body>
@@ -1063,6 +1148,7 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
     <div class="learn-foot">
       <div class="lf-left">
         <small id="learnProgress">0/0 checkpoints</small>
+        <button id="btnCert" title="Genera tu certificado de la Ruta Red Team (informe de progreso exportable)">📜 Certificado</button>
         <button id="btnResetLearn" title="Reiniciar todo el progreso de la ruta">↺ Reiniciar progreso</button>
       </div>
       <button id="btnCloseLearn">ENTENDER · CERRAR</button>
@@ -1117,6 +1203,32 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
         <button class="eval-cta" id="evalRetake" title="Volver a hacer el examen desde cero">↺ Repetir</button>
       </div>
       <button id="btnCloseEval">ENTENDER · CERRAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- Certificación de la Ruta: informe de progreso exportable (CV / portafolio) -->
+<div id="certOverlay">
+  <div class="cert-card">
+    <div class="win-head">
+      <div class="wh-hex hex">
+        <svg viewBox="0 0 40 40">
+          <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#f5a524" stroke-width="1.5"/>
+          <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(245,165,36,.12)" stroke="#ffd166" stroke-width="1"/>
+          <text x="20" y="24" text-anchor="middle" font-size="12" font-weight="800" fill="#fff7e0" font-family="monospace">🏆</text>
+        </svg>
+      </div>
+      <h2 id="certTitle">📜 CERTIFICADO DE LA RUTA</h2>
+      <p class="wh-sub" id="certSub">Informe de progreso exportable · Ruta Red Team · Recon → Explotación → Informe</p>
+    </div>
+    <div class="cert-body" id="certBody"></div>
+    <div class="cert-foot">
+      <div class="cf-left">
+        <small id="certProgress"></small>
+        <button class="cert-export" id="certExportMd" title="Exportar el certificado en Markdown">📥 Markdown</button>
+        <button class="cert-export" id="certExportPdf" title="Exportar el certificado como PDF">📄 PDF</button>
+      </div>
+      <button id="btnCloseCert">ENTENDER · CERRAR</button>
     </div>
   </div>
 </div>
@@ -1293,12 +1405,23 @@ async function reEncryptSecrets(){
   store.encSecrets={v:1,salt:buf2b64(salt),iv:buf2b64(iv),data:buf2b64(data)};
 }
 function applySecrets(s){ store.mistralKey=s.mistralKey||''; store.groqKey=s.groqKey||''; store.openrouterKey=s.openrouterKey||''; store.hfToken=s.hfToken||''; store.bridgeToken=s.bridgeToken||''; store.piperToken=s.piperToken||''; store.proxyToken=s.proxyToken||''; }
+let secFxTimer=null;
+function avatarSecurityFx(type){
+  // Transición del avatar: 'lock' → pulso rojo, 'unlock' → respiración verde.
+  const c=$('#core'); if(!c) return;
+  c.classList.remove('sec-lock','sec-unlock');
+  void c.offsetWidth; // reinicia la animación si ya estaba activa
+  c.classList.add(type==='lock'?'sec-lock':'sec-unlock');
+  clearTimeout(secFxTimer);
+  secFxTimer=setTimeout(()=>{ c.classList.remove('sec-lock','sec-unlock'); },2000);
+}
 function lockSecrets(){
   // Bloquear SIN desactivar el cifrado: las claves cifradas siguen en el blob,
   // solo se purgan de la memoria y de los inputs de esta sesión.
   cryptoUnlocked=false; cryptoKey=null;
   ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(k=>{ store[k]=''; const el=$('#'+k); if(el) el.value=''; });
   saveStore(); syncCryptoUI();
+  avatarSecurityFx('lock');
   toast('🔒 Claves bloqueadas para esta sesión');
 }
 function syncCryptoUI(){
@@ -1816,6 +1939,51 @@ function learnDone(){ try{ return JSON.parse(localStorage.getItem('aion_ruta')||
 function learnSave(d){ try{ localStorage.setItem('aion_ruta',JSON.stringify(d)); }catch(_){} }
 function learnTotal(){ return RUTA_PENTEST.reduce((n,p)=>n+p.modules.reduce((m,x)=>m+x.cp.length,0),0); }
 function learnProgressText(){ const d=learnDone(); const t=learnTotal(); const n=Object.values(d).filter(v=>v).length; return n+'/'+t; }
+/* ---------- Temporizador de sesión de práctica (racha y tiempo medio) ---------- */
+function pracSession(){ try{ return JSON.parse(localStorage.getItem('aion_prac_session')||'null'); }catch(_){ return null; } }
+function pracStart(id){ try{ localStorage.setItem('aion_prac_session',JSON.stringify({id,start:Date.now()})); }catch(_){} toast(isEnglish()?'⏱️ Session started — complete the checkpoint to log your time.':'⏱️ Sesión iniciada — completa el checkpoint para registrar tu tiempo.',2600); }
+function pracLog(){ try{ return JSON.parse(localStorage.getItem('aion_prac_log')||'[]'); }catch(_){ return []; } }
+function pracSaveLog(l){ try{ localStorage.setItem('aion_prac_log',JSON.stringify(l.slice(-300))); }catch(_){} }
+const PRAC_STALE=12*3600*1000; // sesiones de práctica de más de 12h se descartan (sesión abandonada)
+function pracFinish(id){
+  const s=pracSession(); if(!s||s.id!==id) return null;
+  const ms=Math.max(0,Date.now()-(s.start||Date.now()));
+  try{ localStorage.removeItem('aion_prac_session'); }catch(_){}
+  if(ms>=1000&&ms<PRAC_STALE){ // ignora clics accidentales (<1s) y sesiones abandonadas (>12h)
+    const d=new Date();
+    const date=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const l=pracLog(); l.push({id,ms,date}); pracSaveLog(l);
+    return ms;
+  }
+  return null;
+}
+function pracCount(){ return pracLog().length; }
+function pracAvgMs(){ const l=pracLog(); if(!l.length) return null; return Math.round(l.reduce((n,e)=>n+e.ms,0)/l.length); }
+function pracStreak(){
+  const days=new Set(pracLog().map(e=>e.date));
+  if(!days.size) return 0;
+  let streak=0; const d=new Date();
+  const fmt=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
+  if(!days.has(fmt(d))) d.setDate(d.getDate()-1);
+  while(days.has(fmt(d))){ streak++; d.setDate(d.getDate()-1); }
+  return streak;
+}
+function fmtPrac(ms){
+  if(ms==null) return '—';
+  const s=Math.round(ms/1000); if(s<60) return s+'s';
+  const m=Math.floor(s/60); if(m<60) return m+'m '+String(s%60).padStart(2,'0')+'s';
+  const h=Math.floor(m/60); return h+'h '+String(m%60).padStart(2,'0')+'m';
+}
+let pracTick=null;
+function pracStatsHtml(){
+  const en=isEnglish(); const s=pracSession();
+  const liveMs=(s&&s.start&&Date.now()-s.start<PRAC_STALE)?Date.now()-s.start:null;
+  const live=liveMs?`<span class="prac-stat prac-live on">⏱️ ${en?'Live':'En vivo'} <span id="pracLive">${fmtPrac(liveMs)}</span></span>`:'';
+  const st=pracStreak();
+  return `<div class="prac-bar">${live}<span class="prac-stat">🔥 <b>${st}</b> ${en?(st===1?'day':'days'):(st===1?'día':'días')}</span><span class="prac-stat">⏳ <b>${fmtPrac(pracAvgMs())}</b> ${en?'avg':'media'}</span><span class="prac-stat">🗒️ <b>${pracCount()}</b> ${en?'sessions':'sesiones'}</span></div>`;
+}
+function pracTickStart(){ pracTickStop(); pracTick=setInterval(()=>{ const o=$('#learnOverlay'); if(!o||!o.classList.contains('show')){ pracTickStop(); return; } const el=$('#pracLive'); if(el){ const s=pracSession(); if(s&&s.start&&Date.now()-s.start<PRAC_STALE) el.textContent=fmtPrac(Date.now()-s.start); } },1000); }
+function pracTickStop(){ if(pracTick){ clearInterval(pracTick); pracTick=null; } }
 function renderLearn(){
   const body=$('#learnBody'); if(!body) return;
   const en=isEnglish(); const d=learnDone();
@@ -1844,17 +2012,23 @@ function renderLearn(){
       <div class="lp-mod">${rows}</div>
     </div>`;
   }).join('');
+  body.innerHTML=pracStatsHtml()+body.innerHTML;
   const dAll=Object.values(d).filter(v=>v).length, tAll=learnTotal();
   if(tAll>0&&dAll>=tAll){
-    body.innerHTML='<div class="eval-banner"><div><b>🏆 '+(en?'Route complete!':'¡Ruta completada!')+'</b> '+(en?'Take the final exam and earn your score.':'Haz el examen final y consigue tu puntuación.')+'</div><button class="eval-cta" id="learnEvalCta" style="margin-left:auto">🎓 '+(en?'FINAL EXAM':'EXAMEN FINAL')+'</button></div>'+body.innerHTML;
+    body.innerHTML='<div class="eval-banner"><div><b>🏆 '+(en?'Route complete!':'¡Ruta completada!')+'</b> '+(en?'Take the final exam and earn your certificate.':'Haz el examen final y consigue tu certificado.')+'</div><button class="eval-cta" id="learnCertCta" style="margin-left:auto">📜 '+(en?'CERTIFICATE':'CERTIFICADO')+'</button><button class="eval-cta" id="learnEvalCta">🎓 '+(en?'FINAL EXAM':'EXAMEN FINAL')+'</button></div>'+body.innerHTML;
     const lec=$('#learnEvalCta'); if(lec) lec.onclick=()=>{ const o=$('#learnOverlay'); if(o) o.classList.remove('show'); openEval(); };
+    const lcc=$('#learnCertCta'); if(lcc) lcc.onclick=()=>{ const o=$('#learnOverlay'); if(o) o.classList.remove('show'); openCert(); };
   }
   $('#learnProgress').textContent=learnProgressText()+' checkpoints';
 }
 function learnCheck(id,on){
+  const en=isEnglish();
   const d=learnDone(); d[id]=!!on; learnSave(d);
+  let ms=null;
+  if(on) ms=pracFinish(id);
   renderLearn();
-  toast(on?'✅ Checkpoint completado — sigues creciendo.':'↩️ Checkpoint desmarcado.',1800);
+  if(on&&ms) toast((en?'✅ Completed in ':'✅ Completado en ')+fmtPrac(ms)+(en?' · 🔥 Streak ':' · 🔥 Racha ')+pracStreak()+(en?' days':' días'),2600);
+  else toast(on?(en?'✅ Checkpoint completed — keep growing.':'✅ Checkpoint completado — sigues creciendo.'):(en?'↩️ Checkpoint unchecked.':'↩️ Checkpoint desmarcado.'),1800);
 }
 function learnPractice(id){
   const en=isEnglish();
@@ -1862,9 +2036,10 @@ function learnPractice(id){
   let phase=null,cp=null;
   for(const p of pr){ for(const m of p.modules){ const c=m.cp.find(x=>p.key+'-'+x.id===id); if(c){ phase=p; cp=c; break; } } if(cp) break; }
   if(!cp) return;
-  const d=learnDone(); d[id]=true; learnSave(d);
+  pracStart(id); // inicia el temporizador de la sesión de práctica
   const txt=esc(en?cp.t_en:cp.t).replace(/<\/?b>/g,'');
   const overlay=$('#learnOverlay'); if(overlay) overlay.classList.remove('show');
+  pracTickStop();
   switchTab('chat');
   handleUserText(`[MODO RUTA · ${en?'Red Team guided path':'Ruta Red Team guiada'} — ${en?phase.name_en:phase.name}]
 ${en?'I am your study companion: guide me through this checkpoint step by step, explain the concept, give me the exact commands and how to interpret the output, and finish with a question that makes me think. Authorized lab/CTF context only. Checkpoint:':'Soy tu compañera de estudio: guíame por este checkpoint paso a paso, explícame el concepto, dame los comandos exactos y cómo interpretar su salida, y termina con una pregunta que me haga pensar. Solo contexto de laboratorio/CTF autorizado. Checkpoint:'}
@@ -2001,6 +2176,131 @@ function openEval(){
   evalLoad();
   const o=$('#evalOverlay'); if(!o) return;
   renderEval();
+  o.classList.add('show');
+}
+/* ---------- Certificación de la Ruta: informe de progreso exportable (CV/portafolio) ---------- */
+function certStats(){
+  // Devuelve el progreso real por fase y los checkpoints completados a partir de learnDone().
+  const d=learnDone();
+  return RUTA_PENTEST.map(p=>({
+    key:p.key, ico:p.ico, color:p.color,
+    name:p.name, name_en:p.name_en,
+    tot:p.modules.reduce((m,x)=>m+x.cp.length,0),
+    done:p.modules.reduce((m,x)=>m+x.cp.filter(c=>d[p.key+'-'+c.id]).length,0),
+    cps:p.modules.flatMap(m=>m.cp.map(c=>({id:p.key+'-'+c.id,t:c.t,t_en:c.t_en})))
+  }));
+}
+function certSkillTexts(en){
+  // Habilidades reales: títulos de los checkpoints completados, sin etiquetas <b>.
+  const d=learnDone(); const out=[];
+  for(const p of RUTA_PENTEST) for(const m of p.modules) for(const c of m.cp){
+    const id=p.key+'-'+c.id;
+    if(d[id]) out.push(String(en?c.t_en:c.t).replace(/<\/?b>/g,''));
+  }
+  return out;
+}
+function certRecommendations(en){
+  // Recomendaciones de mejora (estáticas, profesionales) para el informe, en ambos idiomas.
+  return en?[
+    'Complete the final exam (🎓 Evaluation) to certify your level with a score.',
+    'Practice every checkpoint in authorized labs: HTB, VulnHub, DVWA or PortSwigger Academy.',
+    'Build a home Active Directory lab and practice real lateral movement.',
+    'Automate your recon with your own scripts and document every technique.',
+    'Write a complete pentest report (💼 Laboral mode) and export it as portfolio.'
+  ]:[
+    'Completa el examen final (🎓 Evaluación) para certificar tu nivel con una puntuación.',
+    'Practica cada checkpoint en laboratorios autorizados: HTB, VulnHub, DVWA o PortSwigger Academy.',
+    'Monta un laboratorio casero de Active Directory y practica el movimiento lateral real.',
+    'Automatiza tu reconocimiento con scripts propios y documenta cada técnica.',
+    'Escribe un informe de pentest completo (modo 💼 Laboral) y expórtalo como portafolio.'
+  ];
+}
+function certMarkdown(){
+  // Informe de progreso exportable: checkpoints hechos, habilidades y recomendaciones.
+  const en=isEnglish(); const st=certStats();
+  const dAll=st.reduce((n,p)=>n+p.done,0), tAll=st.reduce((n,p)=>n+p.tot,0);
+  const complete=tAll>0&&dAll>=tAll;
+  const name=(certNameInput()||(en?'[Your name]':'[Tu nombre]'));
+  const fecha=new Date().toLocaleDateString(en?'en-US':'es-ES',{year:'numeric',month:'long',day:'numeric'});
+  const L={
+    title:en?'Aion Sincro — Red Team Route Certificate':'Aion Sincro — Certificado de la Ruta Red Team',
+    issued:en?'Issued to':'Otorgado a',
+    date:en?'Date':'Fecha',
+    status:en?'Status':'Estado',
+    done:en?'Route completed — 18/18 checkpoints':'Ruta completada — 18/18 checkpoints',
+    prog:en?'In progress':'En progreso',
+    byPhase:en?'Progress by phase':'Progreso por fase',
+    skills:en?'Skills acquired (completed checkpoints)':'Habilidades adquiridas (checkpoints completados)',
+    recs:en?'Recommendations to keep growing':'Recomendaciones para seguir creciendo',
+    cert:en?'Aion certifies that the holder has completed the guided Red Team Route: reconnaissance, exploitation and professional reporting.':'Aion certifica que el titular ha completado la Ruta Red Team guiada: reconocimiento, explotación e informe profesional.',
+    sign:en?'Emitted by Aion Sincro · free & open-source · authorized labs only.':'Emitido por Aion Sincro · gratuito y de código abierto · solo laboratorios autorizados.'
+  };
+  const row=p=>`| ${p.ico} ${en?p.name_en:p.name} | ${p.done}/${p.tot} | ${p.tot&&p.done>=p.tot?'✅ 100%':(p.tot?Math.round(p.done/p.tot*100)+'%':'—')} |`;
+  const skills=certSkillTexts(en).map(s=>'- '+s).join('\n')||(en?'- No checkpoints completed yet.':'- Todavía no hay checkpoints completados.');
+  const recs=certRecommendations(en).map(s=>'- '+s).join('\n');
+  return `# ${L.title}\n\n**${L.issued}:** ${name}  \n**${L.date}:** ${fecha}  \n**${L.status}:** ${complete?('✅ '+L.done):('🟡 '+L.prog+' ('+dAll+'/'+tAll+')')}\n\n${L.cert}\n\n## ${L.byPhase}\n\n| ${en?'Phase':'Fase'} | ${en?'Checkpoints':'Checkpoints'} | % |\n|------|------|---|\n${st.map(row).join('\n')}\n\n## ${L.skills}\n\n${skills}\n\n## ${L.recs}\n\n${recs}\n\n---\n*${L.sign}*\n`;
+}
+function certNameInput(){
+  const el=$('#certName');
+  return el?el.value.trim():'';
+}
+function renderCert(){
+  const body=$('#certBody'); if(!body) return;
+  const en=isEnglish(); const st=certStats();
+  const dAll=st.reduce((n,p)=>n+p.done,0), tAll=st.reduce((n,p)=>n+p.tot,0);
+  const complete=tAll>0&&dAll>=tAll;
+  const fecha=new Date().toLocaleDateString(en?'en-US':'es-ES',{year:'numeric',month:'long',day:'numeric'});
+  const skills=certSkillTexts(en);
+  const recs=certRecommendations(en);
+  body.innerHTML=`
+  <div class="cert-doc">
+    <div class="cert-seal">
+      <svg class="cs-hex" viewBox="0 0 40 40">
+        <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#f5a524" stroke-width="1.5"/>
+        <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(245,165,36,.1)" stroke="#10b981" stroke-width="1"/>
+        <text x="20" y="24" text-anchor="middle" font-size="11" font-weight="800" fill="#ffd166" font-family="monospace">Δ</text>
+      </svg>
+      <div>
+        <h3>${en?'Aion Sincro · Red Team Route':'Aion Sincro · Ruta Red Team'}</h3>
+        <p>${en?'Progress certificate · Recon → Exploit → Report':'Certificado de progreso · Recon → Explotación → Informe'}</p>
+      </div>
+      <span class="cert-status ${complete?'done':'pending'}">${complete?'🏆 '+(en?'Completed':'Completada'):'🟡 '+(en?'In progress':'En progreso')}</span>
+    </div>
+    <div class="cert-name-row">
+      <label for="certName">${en?'Name (for your CV)':'Nombre (para tu CV)'}</label>
+      <input id="certName" maxlength="60" placeholder="${en?'Your full name':'Tu nombre completo'}" value="${esc(certNameSaved())}">
+    </div>
+    <div class="cert-meta">
+      <span>📅 <b>${fecha}</b></span>
+      <span>🎯 <b>${dAll}/${tAll}</b> ${en?'checkpoints':'checkpoints'}</span>
+      ${complete?'<span>🎓 <b>'+(en?'Exam ready':'Examen disponible')+'</b></span>':''}
+    </div>
+    ${st.map(p=>{
+      const pct=p.tot?Math.round(p.done/p.tot*100):0;
+      return `<div class="cert-phase">
+        <div class="cp-ico" style="background:${p.color}1f;border:1px solid ${p.color}55;color:${p.color}">${p.ico}</div>
+        <div class="cp-txt"><b>${esc(en?p.name_en:p.name)}</b><small>${en?'Checkpoints':'Checkpoints'} ${p.done}/${p.tot}</small></div>
+        <div class="cp-bar"><div class="bar"><i style="width:${pct}%;background:${p.color}"></i></div><small>${pct}%</small></div>
+      </div>`;
+    }).join('')}
+    <div class="cert-sec">🛠️ ${en?'Skills acquired':'Habilidades adquiridas'}</div>
+    ${skills.length?
+      `<div class="cert-skills">${skills.map(s=>`<div class="cert-skill"><b>▸</b><span>${esc(s)}</span></div>`).join('')}</div>`
+      :`<div class="cert-skill"><span style="color:var(--dim)">${en?'Complete checkpoints to build your skill list.':'Completa checkpoints para construir tu lista de habilidades.'}</span></div>`}
+    <div class="cert-sec">🎯 ${en?'Recommendations':'Recomendaciones'}</div>
+    <div class="cert-recs">${recs.map(r=>`<div class="cert-rec"><b>→</b><span>${esc(r)}</span></div>`).join('')}</div>
+    <div class="cert-sign">— ${en?'Aion Sincro · free & open-source · authorized labs only.':'Aion Sincro · gratuito y de código abierto · solo laboratorios autorizados.'} —</div>
+  </div>`;
+  const nameEl=$('#certName');
+  if(nameEl) nameEl.addEventListener('input',()=>{ try{ localStorage.setItem('aion_cert_name',nameEl.value); }catch(_){} });
+  $('#certProgress').textContent=learnProgressText()+' checkpoints';
+}
+function certNameSaved(){
+  try{ return String(localStorage.getItem('aion_cert_name')||''); }catch(_){ return ''; }
+}
+function openCert(){
+  renderCert();
+  const o=$('#certOverlay'); if(!o) return;
   o.classList.add('show');
 }
 /* ---------- Herramienta de auditoría de cumplimiento (ISO 27001:2022) ---------- */
@@ -2867,11 +3167,15 @@ function bind(){
     w.classList.add('show');
     markHistorySeen(); // ver la historia (aunque sea reabierta) marca memoria consistente
   };
-  $('#btnLearn').onclick=()=>{ renderLearn(); const o=$('#learnOverlay'); if(o) o.classList.add('show'); };
-  $('#btnCloseLearn').onclick=()=>{ const o=$('#learnOverlay'); if(o) o.classList.remove('show'); };
+  $('#btnLearn').onclick=()=>{ renderLearn(); const o=$('#learnOverlay'); if(o) o.classList.add('show'); pracTickStart(); };
+  $('#btnCloseLearn').onclick=()=>{ pracTickStop(); const o=$('#learnOverlay'); if(o) o.classList.remove('show'); };
   $('#btnEval').onclick=openEval;
   $('#btnCloseEval').onclick=()=>{ const o=$('#evalOverlay'); if(o) o.classList.remove('show'); };
   $('#evalRetake').onclick=()=>{ evalState.done=false; evalState.answers={}; evalSave(); renderEval(); };
+  $('#btnCert').onclick=openCert;
+  $('#btnCloseCert').onclick=()=>{ const o=$('#certOverlay'); if(o) o.classList.remove('show'); };
+  $('#certExportMd').onclick=()=>{ const md=certMarkdown(); downloadMarkdown(md,'certificado-ruta-red-team'); };
+  $('#certExportPdf').onclick=()=>{ const md=certMarkdown(); exportPdf(md,'Certificado Ruta Red Team'); };
   $('#btnISO').onclick=openISO;
   $('#btnCloseISO').onclick=()=>{ const o=$('#isoOverlay'); if(o) o.classList.remove('show'); };
   $('#isoExportMd').onclick=()=>{ const md=isoReportMd(); downloadMarkdown(md,'informe-auditoria-iso'); };
@@ -2939,7 +3243,7 @@ function bind(){
     applySecrets(s); cryptoUnlocked=true; cryptoKey=await deriveKey(pass,b642buf(store.encSecrets.salt));
     ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(id=>{ const el=$('#'+id); if(el) el.value=store[id]||''; });
     $('#lockPass').value=''; const pop=$('#lockPop'); if(pop) pop.classList.remove('show');
-    syncCryptoUI(); saveStore(); toast('🔓 Claves desbloqueadas para esta sesión');
+    syncCryptoUI(); saveStore(); avatarSecurityFx('unlock'); toast('🔓 Claves desbloqueadas para esta sesión');
   };
   $('#lockNowBtn').onclick=()=>{ const pop=$('#lockPop'); if(pop) pop.classList.remove('show'); lockSecrets(); };
   document.addEventListener('click',e=>{
@@ -2959,7 +3263,7 @@ function bind(){
       collectSettings(true);
       store.encSecrets=await encryptSecrets(pass);
       store.crypto=true; cryptoUnlocked=true; cryptoKey=await deriveKey(pass,b642buf(store.encSecrets.salt));
-      $('#cryptoPass').value=''; saveStore(); syncCryptoUI();
+      $('#cryptoPass').value=''; saveStore(); syncCryptoUI(); avatarSecurityFx('unlock');
       toast('🔐 Claves cifradas con AES-GCM 256 ✔');
     }else if(!cryptoUnlocked){
       const pass=$('#cryptoPass').value;
@@ -2968,7 +3272,7 @@ function bind(){
       if(!s){ toast('❌ Contraseña incorrecta'); $('#cryptoPass').value=''; return; }
       applySecrets(s); cryptoUnlocked=true; cryptoKey=await deriveKey(pass,b642buf(store.encSecrets.salt));
       ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(id=>{ const el=$('#'+id); if(el) el.value=store[id]||''; }); // rellenar inputs para que 'Guardar' no los vacíe
-      $('#cryptoPass').value=''; syncCryptoUI(); saveStore();
+      $('#cryptoPass').value=''; syncCryptoUI(); saveStore(); avatarSecurityFx('unlock');
       toast('🔓 Claves desbloqueadas para esta sesión');
     }else{
       if(!confirm('¿Desactivar el cifrado? Las claves volverán a guardarse en texto plano.')) return;

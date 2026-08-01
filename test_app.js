@@ -208,6 +208,35 @@ check("learnSave() escribe en localStorage (aion_ruta)", /function\s+learnSave\s
 check("renderLearn() al arranque", /renderLearn\(\);\s*\$\('#bootBtn'\)\.onclick/.test(script));
 check("btnLearn abre el overlay", /\$\('#btnLearn'\)\.onclick=\(\)=>\{ renderLearn\(\);[\s\S]*?classList\.add\('show'\)/.test(script));
 check("texto de checkpoints escapado con esc()", /<span class="cp-t">\$\{esc\(en\?c\.t_en:c\.t\)\}/.test(script));
+// Certificación de la Ruta: informe de progreso exportable (CV / portafolio)
+check("btnCert presente en el footer de la Ruta", html.includes('id="btnCert"'));
+check("overlay #certOverlay presente", html.includes('id="certOverlay"'));
+check("botones de export del certificado", html.includes('id="certExportMd"') && html.includes('id="certExportPdf"'));
+check("certStats() definida y lee de RUTA_PENTEST", /function\s+certStats\s*\([\s\S]*?learnDone\(\)[\s\S]*?RUTA_PENTEST\.map/.test(script));
+check("certSkillTexts() definida y extrae títulos", /function\s+certSkillTexts\s*\(/ .test(script));
+check("certMarkdown() genera informe con habilidades y recomendaciones", /function\s+certMarkdown\s*\([\s\S]*?## \$\{L\.skills\}[\s\S]*?## \$\{L\.recs\}/.test(script));
+check("certMarkdown() incluye el progreso por fase", /## \$\{L\.byPhase\}[\s\S]*?st\.map\(row\)/.test(script));
+check("renderCert() definida y dibuja nombre editable", /function\s+renderCert\s*\([\s\S]*?id=\"certName\"/.test(script));
+check("renderCert() escapa habilidades (XSS)", /cert-skill\"><b>▸<\/b><span>\$\{esc\(s\)\}<\/span>/.test(script));
+check("openCert() definida", /function\s+openCert\s*\([\s\S]*?classList\.add\('show'\)/.test(script));
+check("banner de Ruta completada incluye CTA de certificado", /id=\"learnCertCta\"[\s\S]*?openCert\(\);/.test(script));
+check("btnCert abre el overlay", /\$\('#btnCert'\)\.onclick=openCert;/.test(script));
+check("certExportMd/PDF usan certMarkdown()", script.includes("$('#certExportMd').onclick") && script.includes("$('#certExportPdf').onclick") && (script.match(/certMarkdown\(\)/g)||[]).length>=2);
+check("certRecommendations() definida", /function\s+certRecommendations\s*\(/.test(script));
+// Temporizador de sesión de práctica: racha y tiempo medio
+check("pracStart() inicia la sesión en localStorage", /function\s+pracStart\s*\([^)]*\)\{ try\{ localStorage\.setItem\('aion_prac_session'/.test(script));
+check("sesiones de práctica abandonadas >12h se descartan", /const PRAC_STALE=12\*3600\*1000;/.test(script) && /ms>=1000&&ms<PRAC_STALE/.test(script));
+check("tick en vivo se autodestruye al cerrar la Ruta", script.includes("if(!o||!o.classList.contains('show')){ pracTickStop(); return; }"));
+check("pracFinish() registra el tiempo y limpia la sesión", /function\s+pracFinish\s*\([^)]*\)\{[\s\S]*?localStorage\.removeItem\('aion_prac_session'\)[\s\S]*?pracSaveLog\(l\);/.test(script));
+check("pracStreak() cuenta días consecutivos", /function\s+pracStreak\s*\([^)]*\)\{[\s\S]*?new Set\(pracLog\(\)\.map\(e=>e\.date\)\)/.test(script));
+check("pracAvgMs() calcula la media", /function\s+pracAvgMs\s*\([^)]*\)\{.*pracLog\(\).*reduce/.test(script));
+check("fmtPrac() formatea m:ss y h:mm", /function\s+fmtPrac\s*\([^)]*\)\{[\s\S]*?return m\+'m '/.test(script));
+check("pracStatsHtml() dibuja la barra con racha/media/sesiones", /function\s+pracStatsHtml\s*\([^)]*\)\{[\s\S]*?pracStreak\(\)[\s\S]*?prac-bar[\s\S]*?pracAvgMs\(\)/.test(script));
+check("renderLearn() antepone la barra de práctica", /body\.innerHTML=pracStatsHtml\(\)\+body\.innerHTML;/.test(script));
+check("learnPractice() inicia el temporizador", /function\s+learnPractice\s*\([^)]*\)\{[\s\S]*?pracStart\(id\);/.test(script));
+check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\([^)]*\)\{[\s\S]*?pracFinish\(id\)/.test(script));
+check("toast muestra el tiempo y la racha", script.includes("'✅ Completado en ')+fmtPrac(ms)") && script.includes("pracStreak()"));
+check("tick en vivo arranca/para con la Ruta", /btnLearn'\)\.onclick=\(\)=>\{ renderLearn\(\);.*classList\.add\('show'\)[\s\S]*?pracTickStart\(\);/.test(script) && /btnCloseLearn'\)\.onclick=\(\)=>\{ pracTickStop\(\);[\s\S]*?classList\.remove\('show'\);/.test(script));
 // Modo Laboral: informes profesionales exportables en Markdown/PDF
 check("LABORAL_SYSTEM definido con anatomía de informe", /const LABORAL_SYSTEM=`[\s\S]*?## 3\. Hallazgos[\s\S]*?REPORTE EJECUTIVO/.test(script));
 check("store persiste laboral:false", /laboral:false,/.test(script));
@@ -257,6 +286,18 @@ for (const fn of REQUIRED_FNS) {
 // Candado de cifrado en el header: indicador visual + desbloqueo rápido sin Ajustes
 check("syncCryptoUI actualiza el candado del header", /function\s+syncCryptoUI\s*\([\s\S]*?lb\.classList\.toggle\('visible',on\);[\s\S]*?lb\.classList\.toggle\('locked',on&&!unlocked\);/.test(script));
 check("lockSecrets() purga claves sin desactivar cifrado", /function\s+lockSecrets\s*\([\s\S]*?cryptoUnlocked=false; cryptoKey=null;[\s\S]*?saveStore\(\); syncCryptoUI\(\);/.test(script));
+// Transición de seguridad del avatar: pulso rojo al bloquear, respiración verde al desbloquear
+check("avatarSecurityFx() definida", /function\s+avatarSecurityFx\s*\([^)]*\)/.test(script));
+check("avatarSecurityFx añade sec-lock/sec-unlock al núcleo", /c\.classList\.add\(type==='lock'\?'sec-lock':'sec-unlock'\);/.test(script));
+check("avatarSecurityFx limpia la animación al terminar", /secFxTimer=setTimeout\(\(\)=>\{ c\.classList\.remove\('sec-lock','sec-unlock'\); \},2000\)/.test(script));
+check("CSS keyframes secLock (pulso rojo)", /@keyframes secLock\s*\{[\s\S]*?rgba\(251,113,133/.test(html));
+check("CSS keyframes secUnlock (respiración verde)", /@keyframes secUnlock\s*\{[\s\S]*?rgba\(52,211,153/.test(html));
+check("CSS #core.sec-lock presente (especificidad alta)", /#core\.sec-lock\{animation:secLock/.test(html));
+check("CSS #core.sec-unlock presente (especificidad alta)", /#core\.sec-unlock\{animation:secUnlock/.test(html));
+check("lockSecrets() dispara el pulso rojo", /function\s+lockSecrets\s*\([\s\S]*?avatarSecurityFx\('lock'\);/.test(script));
+check("desbloqueo desde el popup dispara la respiración verde", /\$\('#lockUnlockBtn'\)\.onclick=async\(\)=>\{[\s\S]*?avatarSecurityFx\('unlock'\);/.test(script));
+check("activar cifrado dispara la respiración verde", /store\.crypto=true; cryptoUnlocked=true;[\s\S]*?avatarSecurityFx\('unlock'\);/.test(script));
+check("desbloqueo desde Ajustes dispara la respiración verde", /applySecrets\(s\); cryptoUnlocked=true;[\s\S]*?avatarSecurityFx\('unlock'\);/.test(script));
 check("desbloqueo rápido reutiliza decryptSecrets", /\$\('#lockUnlockBtn'\)\.onclick=async\(\)=>\{[\s\S]*?decryptSecrets\(pass,store\.encSecrets\)/.test(script));
 check("bloqueo rápido usa lockSecrets", /\$\('#lockNowBtn'\)\.onclick=\(\)=>\{[\s\S]*?lockSecrets\(\);/.test(script));
 check("popover se cierra al hacer clic fuera", /document\.addEventListener\('click',e=>\{[\s\S]*?w\.contains\(e\.target\)/ .test(script) || /document\.addEventListener\('click',e=>\{[\s\S]*?classList\.remove\('show'\)/.test(script));
