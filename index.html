@@ -1006,8 +1006,21 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
       <div class="field rangeRow"><label>Piper · Expresividad</label><input type="range" id="piperNoise" min="0.1" max="1.5" step="0.05" value="0.667"><output id="piperNoiseOut">0.67</output></div>
       <div class="hint">Variación/emoción de la voz Piper (noise_scale del servidor). El valor por defecto 0.667 es el natural de Piper.</div>
       <div class="field">
-        <button class="toggle" id="btnWakeSet" style="width:100%;justify-content:center"><span class="tk"></span> 🎙️ Activación por voz (di «Hola Aion»)</button>
-        <div class="hint">Aion queda a la escucha permanente: di <b>«Hola Aion»</b> (o «Aion») y te escuchará sin tocar el micrófono — el estado lo indicará (<b>DI «HOLA AION»</b>). Haz una breve pausa tras el wake word antes de decir tu petición. Requiere micrófono permitido.</div>
+        <button class="toggle" id="btnWakeSet" style="width:100%;justify-content:center"><span class="tk"></span> 🎙️ Activación por voz (di «Hola <b id="wakeWordBtn">Aion</b>»)</button>
+        <div class="hint">Aion queda a la escucha permanente: di <b>«Hola <span id="wakeWordHint">Aion</span>»</b> (o solo el wake word) y te escuchará sin tocar el micrófono — el estado lo indicará (<b id="wakeWordHintStatus">DI «HOLA AION»</b>). Dilo todo de una vez: <b>«Aion, abre el terminal»</b> ejecuta la petición directamente; o di solo el wake word y espera a que te escuche. Requiere micrófono permitido.</div>
+      </div>
+      <div class="field">
+        <label for="wakeWordSel">Palabra de activación (wake word)</label>
+        <select id="wakeWordSel">
+          <option value="aion">Aion</option>
+          <option value="aria">Aria</option>
+          <option value="nova">Nova</option>
+          <option value="aura">Aura</option>
+          <option value="iris">Iris</option>
+          <option value="luna">Luna</option>
+          <option value="vega">Vega</option>
+        </select>
+        <div class="hint">El wake word se usa en la escucha permanente y en el estado del micrófono. Cámbialo aquí y se aplica al instante (se persiste en aion_cfg). ⚠️ Prefiere palabras poco comunes: «luna», «iris», «aura» o «vega» pueden dispararse en una conversación normal.</div>
       </div>
       <div class="hint">El reconocimiento de voz requiere Chrome o Edge y acceso al micrófono (funciona en localhost o HTTPS). La respuesta por voz funciona offline con las voces de Windows, o con <b>🤖 Mistral Voxtral</b> (voz neural de IA real — necesita tu clave de Mistral; voces en inglés por ahora).</div>
     </div>
@@ -1251,7 +1264,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const store={
   provider:'demo', model:'hermes3', modelByProvider:{},
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
-  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, search:true, pentest:false, laboral:false, sincronia:false, wake:false,
+  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion',
   pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, autoLockMin:0, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
 };
 
@@ -2799,13 +2812,29 @@ function initRecog(){
     let interim='',final='';
     for(const r of e.results){ const t=r[0].transcript; if(r.isFinal)final+=t; else interim+=t; }
     const texto=(final||interim).toLowerCase();
-    /* Wake word: «hola aion» / «aion» — activa la escucha sin tocar el micrófono */
+    /* Wake word: «hola <word>» / «<word>» — dinámico según store.wakeWord.
+       Si va seguido de una petición en la misma frase («Aion, abre el terminal»),
+       la ejecuta directamente sin esperar a que termines. */
     if(wakeScan&&store.wake){
-      if(/(^|\s)(hola|oye|hey|ok)?\s*a[ií]on(\s|$)/.test(texto)){
-        wakeScan=false; clearTimeout(wakeTimer);
-        try{ recog.stop(); }catch(_){}
-        chime(); toast('🎙️ Te escucho. ¿Qué necesitas?');
-        setTimeout(()=>{ if(!streaming&&!speaking) setListening(true); },300);
+      const ww=wakeWord().replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      // Normalizamos tildes para que «aíon»/«aíon» etc. casen igual (y cualquier variante acentuada del wake word).
+      const tN=texto.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const m=new RegExp('(^|\\s)(hola|oye|hey|ok)?\\s*'+ww+'(?:([\\s,.;:!¿?]+.*)|$)').exec(tN);
+      if(m){
+        // Resultado provisional: seguimos escaneando hasta tener la frase final.
+        if(!final) return;
+        stopWakeScan(); // apaga el modo wake: botón, estado, timer y recog
+        const resto=(m[3]||'').replace(/^[\s,.;:!¿?]+/,'').trim();
+        if(resto.length>=2){
+          // Frase completa: «Aion, abre el terminal» → ejecuta la petición directamente.
+          chime(); toast('🎙️ Ejecutando: '+resto);
+          $('#textInput').value=resto;
+          setTimeout(()=>{ if(!streaming&&!speaking) handleUserText(resto); },400);
+        }else{
+          // Solo el wake word → queda a la escucha para la petición.
+          chime(); toast('🎙️ Te escucho. ¿Qué necesitas?');
+          setTimeout(()=>{ if(!streaming&&!speaking) setListening(true); },300);
+        }
       }
       return;
     }
@@ -2822,11 +2851,14 @@ function initRecog(){
   };
 }
 function maybeWake(){ if(store.wake&&recog) startWakeScan(); }
+function wakeWord(){ return (store.wakeWord||'aion').toLowerCase(); }
+function wakeLabel(){ const w=wakeWord(); return w.charAt(0).toUpperCase()+w.slice(1); }
+function syncWakeWordUI(){ const w=wakeLabel(); const bt=$('#wakeWordBtn'); if(bt)bt.textContent=w; const h=$('#wakeWordHint'); if(h)h.textContent=w; const st=$('#wakeWordHintStatus'); if(st)st.textContent='DI «HOLA '+wakeWord().toUpperCase()+'»'; }
 function startWakeScan(){
   if(!store.wake||!recog||wakeScan||listening||streaming||speaking||wakeDenied) return;
   wakeScan=true; setState('idle');
-  $('#statusText').textContent='DI «HOLA AION»';
-  $('#micBtn').classList.add('wake'); $('#micBtn').title='Escucha permanente — di «Hola Aion»';
+  $('#statusText').textContent='DI «HOLA '+wakeWord().toUpperCase()+'»';
+  $('#micBtn').classList.add('wake'); $('#micBtn').title='Escucha permanente — di «Hola '+wakeLabel()+'»';
   try{ recog.start(); }catch(_){ wakeScan=false; }
 }
 function stopWakeScan(){
@@ -3159,7 +3191,9 @@ function buildChips(){
     'Checklist de pentest web OWASP para una app de prueba propia',
     'Explica el CVE-2021-44228 (Log4Shell) y cómo detectarlo',
     'Plan de reconocimiento para mi laboratorio local autorizado',
-    'Redacta la plantilla de un informe de pentest profesional'
+    'Redacta la plantilla de un informe de pentest profesional',
+    '🕵️ OSINT: propón el comando para buscar cuentas asociadas a un usuario con el módulo local aion_osint.py (python aion_osint.py --user NOMBRE)',
+    '🕵️ OSINT: analiza robots.txt, contenido oculto y páginas borradas de un dominio con aion_osint.py (python aion_osint.py --domain DOMINIO)'
   ];
   $('#chips').innerHTML='';
   chips.forEach(c=>{const b=document.createElement('button');b.className='chip';b.textContent=c;b.onclick=()=>{const i=$('#textInput');i.value=c;i.focus();};$('#chips').appendChild(b);});
@@ -3361,6 +3395,7 @@ function openSettings(){
   $('#proxyToken').value=store.proxyToken||'';
   $('#piperToken').value=store.piperToken||'';
   $('#autoLockMin').value=store.autoLockMin||0;
+  $('#wakeWordSel').value=store.wakeWord||'aion';
   syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); refreshProviderUI();
   if(isPiperVoice()) piperPing(()=>syncPiperUI());
 }
@@ -3377,11 +3412,12 @@ function collectSettings(noSave){
   store.piperUrl=$('#piperUrl').value.trim()||'http://127.0.0.1:8766';
   store.piperToken=$('#piperToken').value.trim();
   store.autoLockMin=Math.max(0,parseInt($('#autoLockMin').value,10)||0);
+  store.wakeWord=($('#wakeWordSel').value||'aion').toLowerCase();
   if(store.crypto&&cryptoUnlocked) reEncryptSecrets().then(()=>saveStore()); // re-cifrar claves editadas
   if(!noSave)saveStore();
 }
 function syncSearchUI(){ $('#btnSearch').classList.toggle('on',store.search); $('#btnSearchSet').classList.toggle('on',store.search); }
-function syncWakeUI(){ const b=$('#btnWakeSet'); if(b)b.classList.toggle('on',store.wake); }
+function syncWakeUI(){ const b=$('#btnWakeSet'); if(b)b.classList.toggle('on',store.wake); syncWakeWordUI(); }
 function syncAutoLangUI(){ const b=$('#btnAutoLang'); if(b)b.classList.toggle('on',store.autoLang); }
 function refreshModelsViaProxy(){
   const p=store.provider, btn=$('#btnRefreshModels');

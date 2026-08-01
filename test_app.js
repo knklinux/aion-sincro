@@ -37,7 +37,10 @@ function check(name, cond, extra = "") {
 
 // ---------- 1) Sintaxis del <script> de index.html ----------
 console.log("\n[1] Sintaxis del JavaScript de index.html");
-const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+// AION_HTML permite apuntar la suite a una copia alternativa de index.html
+// (la usa test_mutacion.py para probar que los checks de regresión protegen).
+const html = fs.readFileSync(process.env.AION_HTML || path.join(ROOT, "index.html"), "utf8");
+check("test_app.js soporta AION_HTML (harness de mutación)", /AION_HTML/.test(fs.readFileSync(__filename, "utf8")));
 const match = html.match(/<script>([\s\S]*)<\/script>/);
 check("index.html contiene un <script>", !!match);
 if (!match) {
@@ -272,6 +275,23 @@ check(`marca 'historia_vista' solo en helpers`, (script.match(/'historia_vista'/
 check(`btnStory marca historia_vista`, /\$\('#btnStory'\)\.onclick=\(\)=>\{[\s\S]*?markHistorySeen\(\);/.test(script));
 check(`welcomeBtn marca historia_vista`, /\$\('#welcomeBtn'\)\.onclick=\(\)=>\{[\s\S]*?markHistorySeen\(\);/.test(script));
 check(`boot respeta historia_vista`, /if\(historySeen\(\)\)\{ chime\(\); maybeWake\(\); return; \}/.test(script));
+// Wake word personalizado: selector en Ajustes, persistencia y detección dinámica
+check("store persiste wakeWord:'aion' por defecto", /wake:false, wakeWord:'aion',/.test(script));
+check("selector #wakeWordSel presente en Ajustes", html.includes('id="wakeWordSel"'));
+check("opciones del wake word (aion/aria/nova/aura/iris/luna/vega)", html.includes('<option value="aion">') && html.includes('<option value="aria">') && html.includes('<option value="nova">') && html.includes('<option value="aura">') && html.includes('<option value="iris">') && html.includes('<option value="luna">') && html.includes('<option value="vega">'));
+check("openSettings rellena el selector", /\$\('#wakeWordSel'\)\.value=store\.wakeWord\|\|'aion';/.test(script));
+check("collectSettings persiste el wake word", /store\.wakeWord=\(\$\('#wakeWordSel'\)\.value\|\|'aion'\)\.toLowerCase\(\);/.test(script));
+check("wakeWord() helper definida", /function\s+wakeWord\s*\(\).*store\.wakeWord\|\|'aion'\)\.toLowerCase\(\)/.test(script));
+check("detección construye la regex desde store.wakeWord", script.includes("const ww=wakeWord().replace") && script.includes("new RegExp('(^|\\\\s)(hola|oye|hey|ok)?\\\\s*'+ww"));
+check("detección normaliza tildes (aíon → aion)", script.includes("texto.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'')"));
+check("startWakeScan muestra el wake word elegido", /statusText'\)\.textContent='DI «HOLA '\+wakeWord\(\)\.toUpperCase\(\)\+'»'/.test(script));
+check("syncWakeWordUI actualiza botón y hint", /function\s+syncWakeWordUI\s*\([\s\S]*?wakeWordBtn[\s\S]*?wakeWordHint/.test(script));
+// Frase completa: «Aion, abre el terminal» se ejecuta directamente sin esperar
+check("frase completa: captura la petición tras el wake word", script.includes("ww+'(?:([") && script.includes("+.*)|$)"));
+check("frase completa: no ejecuta con resultado provisional", /if\(!final\) return;/.test(script));
+check("frase completa: ejecuta handleUserText con la petición", script.includes("handleUserText(resto)"));
+check("frase completa: limpia separadores de la petición", script.includes("(m[3]||'').replace(/^[\\s,.;:!¿?]+/,'')"));
+check("frase completa: wake word solo sigue esperando petición", script.includes("Te escucho. ¿Qué necesitas?"));
 for (const id of REQUIRED_IDS) {
   check(`#${id} presente`, html.includes(`id="${id}"`));
 }
@@ -394,6 +414,50 @@ check("la contraseña nunca se persiste", !/cryptoPass[^\n]{0,40}(localStorage|s
       check("round-trip WebCrypto ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
     }
   }
+
+// Flujo completo de sesión: cifrar → reiniciar (solo sobrevive el blob) → desbloquear.
+// Simula un reinicio real de la app: tras recargar, las claves en claro NO existen en
+// memoria; solo queda store.encSecrets (lo que persistió saveStore en localStorage).
+// OJO: va con `await` porque es una IIFE anidada dentro del wrapper async — sin await,
+// el wrapper seguiría hasta process.exit y mataría esta IIFE suspendida en su primer await.
+await (async () => {
+  const names = ["buf2b64", "b642buf", "collectSecrets", "deriveKey", "encryptSecrets", "decryptSecrets"];
+  const srcs = names.map(n => [n, extractFn(script, n)]);
+  check("funciones de cifrado extraíbles para el flujo de sesión", srcs.every(([, s]) => !!s));
+  if (srcs.every(([, s]) => !!s)) {
+    try {
+      // 1) CIFRAR: sesión original con las claves en memoria.
+      const sesion1 = {
+        crypto: true, cryptoUnlocked: true, encSecrets: null,
+        mistralKey: "mk-flujo-abc", groqKey: "gk-flujo-xyz", bridgeToken: "bt-flujo-zzz",
+      };
+      const src = `"use strict"; const store=arguments[0]; ${srcs.map(([, s]) => s).join("\n")}; return {buf2b64,b642buf,collectSecrets,deriveKey,encryptSecrets,decryptSecrets};`;
+      const fns = new Function(src)(sesion1);
+      const blob = await fns.encryptSecrets("clave-de-sesion");
+      check("cifrar: genera el blob con los secretos", blob && blob.v === 1 && !!blob.data);
+
+      // 2) REINICIAR: el nuevo store solo tiene crypto + encSecrets (como loadStore
+      //    tras la recarga); las claves en claro ya no están en ninguna parte.
+      const sesion2 = { crypto: true, cryptoUnlocked: false, encSecrets: blob };
+      const fns2 = new Function(src)(sesion2);
+
+      // 3) DESBLOQUEAR con la contraseña correcta: las claves vuelven.
+      const restaurado = await fns2.decryptSecrets("clave-de-sesion", sesion2.encSecrets);
+      check("reinicio + contraseña correcta → las claves vuelven",
+        !!restaurado && restaurado.mistralKey === "mk-flujo-abc" && restaurado.bridgeToken === "bt-flujo-zzz");
+
+      // 4) DESBLOQUEAR con contraseña errónea: null y las claves NO vuelven.
+      const negado = await fns2.decryptSecrets("clave-equivocada", sesion2.encSecrets);
+      check("reinicio + contraseña errónea → null (claves bloqueadas)", negado === null);
+
+      // 5) Lo único que cruza el reinicio es el blob cifrado: sin claves en claro.
+      const raw = JSON.stringify(blob);
+      check("tras el reinicio solo viaja el blob cifrado", raw.indexOf("mk-flujo") < 0 && raw.indexOf("bt-flujo") < 0);
+    } catch (e) {
+      check("flujo de sesión ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
+    }
+  }
+})();
 
   // Regresión: saveStore NUNCA persiste claves en claro cuando crypto está activo.
   const saveSrc = extractFn(script, "saveStore");
