@@ -329,7 +329,8 @@ O en partes:
 | Comando | Qué valida |
 |---|---|
 | `python test_bridge.py` | **Puentes**: `/ping` del bridge, **Host forjado** (`localhost.evil.com` → 403), **Origin forjado** (`http://evil.com` → 403), **403 sin token**, `/run` ejecuta y devuelve salida + `exit:0`, `/kill`, y lo mismo para `piper_server.py` (token, slug malicioso path-traversal → 400) |
-| `node test_app.js` | **App**: sintaxis del `<script>` (`node --check`), **ausencia de secretos** en el código, funciones puras (`detectEmotion` por tono, `voxtralSlug`), presencia de elementos/funciones clave y sin `eval`/`document.write` |
+| `node test_app.js` | **App**: sintaxis del `<script>` (`node --check`), **ausencia de secretos** en el código, funciones puras (`detectEmotion` por tono, `voxtralSlug`, `detectLang`), presencia de elementos/funciones clave y sin `eval`/`document.write` |
+| **Cifrado WebCrypto** (dentro de `test_app.js`) | **Parámetros**: PBKDF2-SHA256 con 120 000 iteraciones, AES-GCM 256, clave no-extraíble, salt 16 B e IV 12 B aleatorios. **Round-trip real**: ejecuta `encryptSecrets`/`decryptSecrets` extraídas del `<script>` con `crypto.subtle` de Node — cifra y descifra, passphrase errónea → `null` (no lanza), salts aleatorios producen blobs distintos y el blob cifrado no contiene el secreto en claro |
 
 Ambas suites **fallan (exit ≠ 0)** si se rompe la seguridad (quitar la
 validación de Host, filtrar una clave, romper la sintaxis JS…).

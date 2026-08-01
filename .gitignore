@@ -26,3 +26,7 @@ Thumbs.db
 # Archivos sensibles (no subir claves jamás)
 *.env
 .env.*
+keys.json
+proxy_keys.json
+*.keys
+!keys.json.example

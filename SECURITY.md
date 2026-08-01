@@ -44,6 +44,24 @@ máquina). Sus componentes y superficie de ataque:
   La app guarda el token solo en tu navegador.
 - **Body limitado a 1 MB** en ambos puentes (Python y Node).
 
+### En el proxy de claves (proxy.py — opcional)
+- **Bind exclusivo a `127.0.0.1`** en el puerto 8797: las API keys viven SOLO
+  en el proceso local del proxy, nunca en el navegador.
+- **Las claves se cargan del lado del servidor** (variables de entorno
+  `MISTRAL_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `HF_TOKEN` o un
+  archivo local `keys.json` con permisos `chmod 600`) y se inyectan como
+  `Authorization: Bearer` antes de reenviar a Mistral/Groq/OpenRouter/HF.
+- **Validación EXACTA de `Host` y `Origin`** con las mismas regex que el puente
+  — bloquea DNS rebinding y CSRF desde webs externas.
+- **Token opcional** (`--token CLAVE`) vía cabecera `X-Proxy-Token` para
+  `/v1/chat/completions`, `/v1/audio/speech` y `/providers`; `/ping` es libre
+  por diseño y solo informa qué proveedores tienen clave (booleanos, nunca el
+  valor).
+- **El proxy NUNCA devuelve las claves al navegador**: la app no las almacena
+  ni las envía cuando el proxy está activo.
+- **Body limitado a 1 MB** y timeout de reenvío de 90 s. Streaming real por
+  chunks (SSE) para que el chat fluya token a token.
+
 ### En el servidor de voz local (piper_server.py)
 - **Bind exclusivo a `127.0.0.1`** en el puerto 8766: nunca expone la red.
 - **Validación EXACTA de `Host` y `Origin`** con las mismas regex que el puente
@@ -134,9 +152,12 @@ ejemplo, no una clave real.
    `--token` propio.
 2. **No sirvas la app por HTTP en una red local**: el micrófono solo funciona
    en `localhost`/HTTPS; si la expones en LAN, hazlo con HTTPS.
-3. **Proxy de claves**: si la app llega a un dominio público, mueve las
-   llamadas a los proveedores (Groq, OpenRouter…) a un backend proxy para no
-   exponer API keys en el cliente. En uso local, `localStorage` es aceptable.
+3. **Proxy de claves — ya implementado** (`proxy.py`): mueve las llamadas a los
+   proveedores a un backend local para que las API keys nunca viajen al
+   navegador. **Mejoras pendientes**: (a) reenvío por streams con backpressure
+   ya activo; (b) añadir un `/v1/models` proxy para listar modelos sin exponer
+   el catálogo; (c) cifrado en reposo de `keys.json` (p. ej. con `age` o la
+   passphrase WebCrypto) si quieres proteger el archivo en disco.
 4. **Puente con mínimo privilegio**: ejecútalo con el menor privilegio posible
    y en una carpeta dedicada (el cwd del puente es el directorio desde el que
    se lanzan los comandos). Considera un usuario separado o `systemd` en Linux.

@@ -86,10 +86,11 @@ def stop(p):
         pass
 
 
-def raw_http(port, path, method="GET", host=None, origin=None, body=None, timeout=6):
+def raw_http(port, path, method="GET", host=None, origin=None, body=None, timeout=6, extra_headers=None):
     """Petición HTTP por socket con cabeceras controladas (Host/Origin forjados).
 
     Devuelve (status_code, body_bytes). El Host por defecto es 127.0.0.1:port.
+    extra_headers: lista opcional de "Nombre: valor" para añadir (p. ej. X-Proxy-Token).
     """
     host = host or f"127.0.0.1:{port}"
     sock = socket.create_connection(("127.0.0.1", port), timeout=timeout)
@@ -102,6 +103,8 @@ def raw_http(port, path, method="GET", host=None, origin=None, body=None, timeou
     ]
     if origin is not None:
         lines.append(f"Origin: {origin}")
+    for h in (extra_headers or []):
+        lines.append(h)
     if body_b:
         lines.append("Content-Type: application/json")
         lines.append(f"Content-Length: {len(body_b)}")
@@ -221,6 +224,64 @@ def test_piper():
         stop(p)
 
 
+def test_proxy():
+    print("\n[4] Proxy de claves (proxy.py — las claves nunca viajan al navegador)")
+    port = free_port()
+    token = "proxy-token-789"
+    p = start_server("proxy.py", port, token)
+    try:
+        # 4.1 /ping es libre (por diseño) → 200 + ok:true + providers booleanos
+        st, body = raw_http(port, "/ping")
+        check("/ping libre → 200", st == 200, f"got {st}")
+        check("/ping → ok:true + providers", st == 200 and b'"ok": true' in body and b'"providers"' in body)
+        # 4.2 Host forjado en /ping → 403
+        st, _ = raw_http(port, "/ping", host="localhost.evil.com")
+        check("/ping Host forjado → 403", st == 403, f"got {st}")
+        # 4.3 Origin forjado en /ping → 403
+        st, _ = raw_http(port, "/ping", origin="http://evil.com")
+        check("/ping Origin forjado → 403", st == 403, f"got {st}")
+        # 4.4 /providers sin token → 403
+        st, _ = raw_http(port, "/providers")
+        check("/providers sin token → 403", st == 403, f"got {st}")
+        # 4.5 /v1/chat/completions sin token → 403
+        st, _ = raw_http(port, "/v1/chat/completions", method="POST",
+                         body='{"provider":"mistral","model":"x","messages":[]}')
+        check("/v1/chat/completions sin token → 403", st == 403, f"got {st}")
+        # 4.6 /v1/audio/speech sin token → 403
+        st, _ = raw_http(port, "/v1/audio/speech", method="POST", body='{"input":"hola"}')
+        check("/v1/audio/speech sin token → 403", st == 403, f"got {st}")
+        # 4.7 Ruta desconocida → 403
+        st, _ = raw_http(port, "/nada")
+        check("ruta desconocida → 403", st == 403, f"got {st}")
+        # 4.8 /providers con token (sin claves configuradas) → 200 con booleanos false
+        st, body = raw_http(port, "/providers", method="GET",
+                            extra_headers=[f"X-Proxy-Token: {token}"])
+        check("/providers con token → 200", st == 200, f"got {st}")
+        check("/providers → booleanos sin exponer claves", st == 200 and b'"mistral": false' in body and b"sk-" not in body)
+        # 4.9 /v1/chat/completions con token pero sin clave configurada → 502 limpio
+        st, body = raw_http(port, "/v1/chat/completions", method="POST",
+                            extra_headers=[f"X-Proxy-Token: {token}"],
+                            body='{"provider":"mistral","model":"x","messages":[{"role":"user","content":"hola"}],"stream":false}')
+        check("/v1 con token sin clave → 502", st == 502, f"got {st}")
+        check("error claro sin clave", st == 502 and b"no hay clave" in body, f"got {body[:80]}")
+        # 4.10 Body malformado → 400
+        st, _ = raw_http(port, "/v1/chat/completions", method="POST",
+                         extra_headers=[f"X-Proxy-Token: {token}"], body="esto-no-es-json")
+        check("JSON inválido → 400", st == 400, f"got {st}")
+        # 4.11 Proveedor desconocido → 400
+        st, _ = raw_http(port, "/v1/chat/completions", method="POST",
+                         extra_headers=[f"X-Proxy-Token: {token}"],
+                         body='{"provider":"nasa","model":"x","messages":[]}')
+        check("proveedor desconocido → 400", st == 400, f"got {st}")
+        # 4.12 Body demasiado grande (> 1 MB) → 400
+        big = '{"provider":"mistral","model":"x","messages":[{"role":"user","content":"' + "a" * 1_100_000 + '"}]}'
+        st, _ = raw_http(port, "/v1/chat/completions", method="POST",
+                         extra_headers=[f"X-Proxy-Token: {token}"], body=big, timeout=10)
+        check("body > 1 MB → 400", st == 400, f"got {st}")
+    finally:
+        stop(p)
+
+
 def main():
     print("=" * 60)
     print("Aion Sincro — Suite de pruebas de seguridad (puentes)")
@@ -228,6 +289,7 @@ def main():
     test_pure_functions()
     test_bridge()
     test_piper()
+    test_proxy()
     print("\n" + "=" * 60)
     print(f"RESULTADO: {PASS} ok · {FAIL} fallos")
     if FAILURES:

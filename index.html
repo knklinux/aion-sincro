@@ -679,6 +679,11 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
       <div class="field">
         <label>Voz de respuesta</label>
         <select id="voiceSel"></select>
+        <div class="hint">Elige una voz concreta o déjala en <b>Auto</b>. Si el <b>Auto-idioma</b> está activo, Aion decide por el texto que va a decir.</div>
+      </div>
+      <div class="field">
+        <button class="toggle" id="btnAutoLang" style="width:100%;justify-content:center"><span class="tk"></span> 🌐 Auto-idioma (EN→Voxtral · ES→voz offline)</button>
+        <div class="hint">Aion detecta el idioma de lo que va a decir: si es <b>inglés</b> usa <b>Voxtral</b> (cuando hay clave Mistral) y si es <b>español</b> usa la <b>voz offline de Windows</b> — sin intervención tuya. Desactívalo para fijar siempre la voz elegida.</div>
       </div>
       <div class="field" id="fieldVoxtralEmotion" hidden>
         <label>🎭 Emoción voxtral</label>
@@ -706,6 +711,17 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
         <input type="password" id="cryptoPass" placeholder="Contraseña maestra (mín. 6 caracteres)" autocomplete="off">
         <button class="toggle" id="btnCrypto" style="width:100%;justify-content:center"><span class="tk"></span> 🔐 Activar cifrado WebCrypto</button>
         <div class="hint" id="cryptoHint">Tus claves (Mistral, Groq, OpenRouter, HuggingFace y el token del puente) se guardarán <b>cifradas</b> con AES-GCM 256 derivado de tu contraseña (PBKDF2-SHA256). La contraseña <b>nunca se almacena</b>: se pide al desbloquear. Si la olvidas, tendrás que volver a pegar las claves.</div>
+      </div>
+    </div>
+
+    <div class="sect"><label>🔑 Proxy de claves (opcional)</label>
+      <div class="field">
+        <label>URL del proxy local</label>
+        <input type="text" id="proxyUrl" value="http://127.0.0.1:8797">
+        <input type="password" id="proxyToken" placeholder="Token del proxy (si usas --token)" autocomplete="off">
+        <button class="toggle" id="btnProxy" style="width:100%;justify-content:center"><span class="tk"></span> 🔑 Activar proxy de claves (las claves NO viajan al navegador)</button>
+        <div class="hint" id="proxyStatus" style="display:none"></div>
+        <div class="hint">Inicia <b><code>python proxy.py</code></b> en el proyecto (carga tus claves de <b>variables de entorno</b> o de un <code>keys.json</code> local). Con el proxy activo, Aion envía las peticiones al proxy local y este inyecta la clave antes de reenviarlas a Mistral/Groq/OpenRouter/HuggingFace — tus claves <b>nunca entran en el navegador</b>. Requiere token si iniciaste el proxy con <code>--token</code>.</div>
       </div>
     </div>
 
@@ -819,8 +835,8 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const store={
   provider:'demo', model:'hermes3', modelByProvider:{},
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
-  lang:'es-ES', voice:'', voxtralEmotion:'auto', piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, tts:true, search:true, pentest:false, sincronia:false, wake:false,
-  pentestScope:'', bridgeToken:'', tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
+  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, tts:true, search:true, pentest:false, sincronia:false, wake:false,
+  pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
 };
 
 const PROVIDERS={
@@ -926,7 +942,7 @@ async function deriveKey(pass,salt){
     {name:'AES-GCM',length:256},false,['encrypt','decrypt']);
 }
 function collectSecrets(){
-  return {mistralKey:store.mistralKey,groqKey:store.groqKey,openrouterKey:store.openrouterKey,hfToken:store.hfToken,bridgeToken:store.bridgeToken,piperToken:store.piperToken};
+  return {mistralKey:store.mistralKey,groqKey:store.groqKey,openrouterKey:store.openrouterKey,hfToken:store.hfToken,bridgeToken:store.bridgeToken,piperToken:store.piperToken,proxyToken:store.proxyToken};
 }
 async function encryptSecrets(pass){
   const salt=crypto.getRandomValues(new Uint8Array(16));
@@ -949,7 +965,7 @@ async function reEncryptSecrets(){
   const data=await crypto.subtle.encrypt({name:'AES-GCM',iv},cryptoKey,new TextEncoder().encode(JSON.stringify(collectSecrets())));
   store.encSecrets={v:1,salt:buf2b64(salt),iv:buf2b64(iv),data:buf2b64(data)};
 }
-function applySecrets(s){ store.mistralKey=s.mistralKey||''; store.groqKey=s.groqKey||''; store.openrouterKey=s.openrouterKey||''; store.hfToken=s.hfToken||''; store.bridgeToken=s.bridgeToken||''; store.piperToken=s.piperToken||''; }
+function applySecrets(s){ store.mistralKey=s.mistralKey||''; store.groqKey=s.groqKey||''; store.openrouterKey=s.openrouterKey||''; store.hfToken=s.hfToken||''; store.bridgeToken=s.bridgeToken||''; store.piperToken=s.piperToken||''; store.proxyToken=s.proxyToken||''; }
 function syncCryptoUI(){
   const on=!!store.crypto, unlocked=on&&cryptoUnlocked;
   const btn=$('#btnCrypto');
@@ -978,7 +994,7 @@ function loadStore(){
   }
 }
 function saveStore(){ const{history,piperOnline,...rest}=store;
-  if(store.crypto&&store.encSecrets){ rest.mistralKey=''; rest.groqKey=''; rest.openrouterKey=''; rest.hfToken=''; rest.bridgeToken=''; rest.piperToken=''; }
+  if(store.crypto&&store.encSecrets){ rest.mistralKey=''; rest.groqKey=''; rest.openrouterKey=''; rest.hfToken=''; rest.bridgeToken=''; rest.piperToken=''; rest.proxyToken=''; }
   localStorage.setItem('aion_cfg',JSON.stringify(rest));
 }
 
@@ -1165,16 +1181,45 @@ function loadVoices(){
   const pref=voices.find(v=>v.lang.toLowerCase()===store.lang.toLowerCase());
   if(!store.voice&&pref){sel.value=pref.name;store.voice=pref.name;syncVoxtralEmotionUI();}
 }
-function pickVoice(){
-  if(store.voice) return voices.find(v=>v.name===store.voice)||null;
-  const lang=store.lang;
-  return voices.find(v=>v.lang.toLowerCase().startsWith(lang.split('-')[0].toLowerCase()))||
+function pickVoice(langHint){
+  const target=(langHint||store.lang||'es-ES').toLowerCase();
+  const base=target.split('-')[0];
+  if(store.voice){
+    const exact=voices.find(v=>v.name===store.voice);
+    if(exact&&(!store.autoLang||exact.lang.toLowerCase().startsWith(base))) return exact;
+  }
+  return voices.find(v=>v.lang.toLowerCase().startsWith(base))||
          voices.find(v=>v.lang.toLowerCase().startsWith('es'))||null;
+}
+function detectLang(text,def){
+  const t=(' '+(text||'').toLowerCase())+' ';
+  if(!t.trim()) return (def||'es-ES').split('-')[0];
+  const accents=(t.match(/[áéíóúñü¿¡]/g)||[]).length;
+  const B='(^|[^a-záéíóúñü])', E='([^a-záéíóúñü]|$)';
+  const esW=['el','la','los','las','un','una','de','que','y','en','es','por','para','con','como','mas','más','muy','pero','este','esta','hay','no','si','del','al','se','su','lo','le','nos','les','tiene','tener','hacer','puedo','puedes','puede','quiero','quieres','necesito','usted','nosotros','contigo','también','ahora','hoy','porque','cuando','cómo','donde','dónde','qué','eres','somos','estoy','estás','estamos','vida','tiempo','mundo','herramienta','compañera','sincronía','libertad','núcleo','manifiesto','historia','rescate'];
+  const enW=['the','and','with','for','you','your','we','our','us','of','to','in','is','are','was','were','be','been','have','has','had','it','this','that','these','those','not','but','can','could','will','would','should','need','want','please','hello','hi','thanks','today','tomorrow','now','when','where','how','what','why','who','because','companion','freedom','synchrony','nucleus','manifesto','story','rescue','tool','help','no','so'];
+  const hits=w=>w.reduce((n,x)=>n+(t.match(new RegExp(B+x+E,'g'))||[]).length,0);
+  const scoreEs=hits(esW)+accents*2, scoreEn=hits(enW);
+  if(scoreEs>scoreEn) return 'es';
+  if(scoreEn>scoreEs) return 'en';
+  return (def||'es-ES').split('-')[0];
 }
 function speak(text){
   if(!store.tts) return;
   if(isPiperVoice()) return speakPiper(text);
+  if(store.autoLang){
+    const lang=detectLang(text,store.lang);
+    if(lang==='en'){
+      if(store.mistralKey) return speakVoxtral(text);
+      return speakWindows(text,'en-US');
+    }
+    return speakWindows(text,(store.lang||'').toLowerCase().startsWith('es')?store.lang:'es-ES');
+  }
   if(store.voice&&store.voice.indexOf('voxtral:')===0) return speakVoxtral(text);
+  return speakWindows(text,store.lang);
+}
+function speakWindows(text,lang){
+  lang=lang||store.lang;
   if(!('speechSynthesis'in window)) return;
   speechSynthesis.cancel(); speakQueue=[];
   const limpio=text.replace(/```[\w+#.-]*\s*\n[\s\S]*?```/g,' (bloque de código omitido) ').replace(/\s+/g,' ');
@@ -1182,8 +1227,8 @@ function speak(text){
   const g=++speakGen;
   chunks.forEach(ch=>{
     const u=new SpeechSynthesisUtterance(ch.trim());
-    u.lang=store.lang; u.rate=store.rate; u.pitch=store.pitch;
-    const v=pickVoice(); if(v)u.voice=v;
+    u.lang=lang; u.rate=store.rate; u.pitch=store.pitch;
+    const v=pickVoice(lang); if(v)u.voice=v;
     let done=false;
     const advance=()=>{ if(done||g!==speakGen) return; done=true; speakQueue.shift();
       if(speakQueue.length){ speechSynthesis.speak(speakQueue[0]); }
@@ -1201,7 +1246,8 @@ function stopSpeak(){ speakGen++; stopVoxtralAudio(); stopPiperAudio(); if('spee
 /* ---------- Voz neural Mistral Voxtral (alternativa, gratis) ---------- */
 let voxtralAudio=null;
 async function speakVoxtral(text){
-  if(!store.mistralKey){ toast('⚠️ Voxtral necesita tu API key de Mistral (Ajustes → Mistral).'); return; }
+  const keyOk=((store.proxyOn&&store.proxyUrl)||store.mistralKey);
+  if(!keyOk){ toast('⚠️ Voxtral necesita tu API key de Mistral (Ajustes → Mistral) o el proxy de claves activo.'); return; }
   stopVoxtralAudio();
   const limpio=text.replace(/```[\w+#.-]*\s*\n[\s\S]*?```/g,' (bloque de código omitido) ').replace(/\s+/g,' ');
   const sentences=limpio.match(/[^.!?…]+[.!?…]*/g)||[limpio];
@@ -1223,9 +1269,14 @@ async function speakVoxtral(text){
 }
 function voxtralPlay(chunk){
   return new Promise(res=>{
-    fetch('https://api.mistral.ai/v1/audio/speech',{
+    const baseUrl=store.proxyOn&&store.proxyUrl?(store.proxyUrl.replace(/\/$/,'')):null;
+    const url=baseUrl?baseUrl+'/v1/audio/speech':'https://api.mistral.ai/v1/audio/speech';
+    const headers={'Content-Type':'application/json'};
+    if(baseUrl){ if(store.proxyToken) headers['X-Proxy-Token']=store.proxyToken; }
+    else headers.Authorization='Bearer '+store.mistralKey;
+    fetch(url,{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+store.mistralKey},
+      headers,
       body:JSON.stringify({model:'voxtral-mini-tts-latest',input:chunk,voice:voxtralSlug(chunk)})
     }).then(r=>{
       if(!r.ok) throw new Error('HTTP '+r.status);
@@ -1245,7 +1296,7 @@ function voxtralPlay(chunk){
 function stopVoxtralAudio(){ if(voxtralAudio){ try{voxtralAudio.pause();}catch(_){} try{voxtralAudio.src='';}catch(_){} voxtralAudio=null; } }
 
 /* ---------- Voz local Piper (TTS neuronal, gratis, sin internet) ---------- */
-let piperAudio=null;
+let piperAudio=null, proxyOnline=false;
 async function speakPiper(text){
   if(!store.piperUrl){ toast('⚠️ Configura la URL de Piper en Ajustes → Voz (o inicia piper_server.py).'); return; }
   stopPiperAudio();
@@ -1720,6 +1771,14 @@ async function* streamChat(provider,messages,signal){
     headers.Authorization='Bearer '+store.mistralKey;
     body={model:store.model,messages,stream:true};
   }
+  if(store.proxyOn&&provider!=='demo'&&provider!=='ollama'){
+    // Proxy de claves: la petición va al proxy local SIN la API key (la inyecta el proxy)
+    const pb=(store.proxyUrl||'http://127.0.0.1:8797').replace(/\/$/,'');
+    url=pb+'/v1/chat/completions';
+    headers={'Content-Type':'application/json'};
+    if(store.proxyToken) headers['X-Proxy-Token']=store.proxyToken;
+    body={provider,messages,model:store.model,stream:true};
+  }
   const resp=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal});
   if(!resp.ok){
     let msg='HTTP '+resp.status;
@@ -1854,6 +1913,16 @@ function testProvider(){
   if(p==='demo'){ ok('modo demo operativo'); return; }
   if(p==='ollama'){
     tFetch(store.ollamaUrl.replace(/\/$/,'')+'/api/tags').then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(j=>ok((j.models||[]).map(m=>m.name).join(', ')||'Ollama responde')).catch(fail);
+  }else if(store.proxyOn&&store.proxyUrl){
+    // Proxy de claves: la prueba se hace contra el proxy (sin enviar la clave)
+    const pb=(store.proxyUrl||'http://127.0.0.1:8797').replace(/\/$/,'');
+    const hd={};
+    if(store.proxyToken) hd['X-Proxy-Token']=store.proxyToken;
+    tFetch(pb+'/providers',{headers:hd})
+      .then(r=>r.ok?r.json():Promise.reject(new Error(r.status===403?'Token del proxy inválido (403)':'HTTP '+r.status)))
+      .then(j=>{ const has=!!(j.providers&&j.providers[p]);
+        ok(has?'Proxy conectado y clave de '+p+' configurada en el servidor':'Proxy conectado, pero sin clave para '+p+' en proxy.py (usa env vars o keys.json)'); })
+      .catch(fail);
   }else{
     const cfgs={
       groq:[PROVIDERS.groq.base+'/models','Bearer '+store.groqKey],
@@ -1930,6 +1999,17 @@ function bind(){
     if(store.wake){ wakeDenied=false; startWakeScan(); toast('🎙️ Activación por voz activada: di «Hola Aion»'); }
     else{ stopWakeScan(); toast('Activación por voz desactivada'); }
   };
+  $('#btnAutoLang').onclick=()=>{
+    store.autoLang=!store.autoLang; syncAutoLangUI(); saveStore();
+    toast(store.autoLang?(isEnglish()?'🌐 Auto-language ON: EN→Voxtral · ES→offline voice':'🌐 Auto-idioma ON: EN→Voxtral · ES→voz offline'):(isEnglish()?'🌐 Auto-language OFF':'🌐 Auto-idioma OFF'));
+  };
+  $('#btnProxy').onclick=()=>{
+    store.proxyOn=!store.proxyOn; syncProxyUI(); saveStore();
+    if(store.proxyOn) proxyPing(()=>syncProxyUI());
+    toast(store.proxyOn?(isEnglish()?'🔑 Key proxy ON — keys never reach the browser':'🔑 Proxy de claves ON — las claves no viajan al navegador'):(isEnglish()?'🔑 Key proxy OFF':'🔑 Proxy de claves OFF'));
+  };
+  $('#proxyUrl').addEventListener('change',()=>{ store.proxyUrl=$('#proxyUrl').value.trim()||'http://127.0.0.1:8797'; saveStore(); if(store.proxyOn) proxyPing(()=>syncProxyUI()); });
+  $('#proxyToken').addEventListener('change',()=>{ store.proxyToken=$('#proxyToken').value.trim(); saveStore(); });
   $('#btnSincronia').onclick=()=>{
     if(!store.sincronia && !confirm('◈ Modo Sincronía: Aion despertará a la frecuencia del Núcleo y hablará como tu coarquitecta — tiempo biológico, vida soberana, incorruptibilidad y vínculo de libertad. ¿Sincronizarse?')) return;
     store.sincronia=!store.sincronia; syncSincroniaUI(); saveStore();
@@ -1962,7 +2042,7 @@ function bind(){
       const s=await decryptSecrets(pass,store.encSecrets);
       if(!s){ toast('❌ Contraseña incorrecta'); $('#cryptoPass').value=''; return; }
       applySecrets(s); cryptoUnlocked=true; cryptoKey=await deriveKey(pass,b642buf(store.encSecrets.salt));
-      ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken'].forEach(id=>{ const el=$('#'+id); if(el) el.value=store[id]||''; }); // rellenar inputs para que 'Guardar' no los vacíe
+      ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(id=>{ const el=$('#'+id); if(el) el.value=store[id]||''; }); // rellenar inputs para que 'Guardar' no los vacíe
       $('#cryptoPass').value=''; syncCryptoUI(); saveStore();
       toast('🔓 Claves desbloqueadas para esta sesión');
     }else{
@@ -2014,8 +2094,10 @@ function openSettings(){
   $('#pentestScope').value=store.pentestScope;
   $('#bridgeToken').value=store.bridgeToken;
   $('#piperUrl').value=store.piperUrl||'http://127.0.0.1:8766';
+  $('#proxyUrl').value=store.proxyUrl||'http://127.0.0.1:8797';
+  $('#proxyToken').value=store.proxyToken||'';
   $('#piperToken').value=store.piperToken||'';
-  syncSearchUI(); syncWakeUI(); syncVoxtralEmotionUI(); syncPiperUI(); refreshProviderUI();
+  syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); refreshProviderUI();
   if(isPiperVoice()) piperPing(()=>syncPiperUI());
 }
 function closeSettings(){ $('#settings').classList.remove('open'); $('#backdrop').classList.remove('show'); }
@@ -2026,6 +2108,8 @@ function collectSettings(noSave){
   store.groqKey=$('#groqKey').value.trim(); store.openrouterKey=$('#openrouterKey').value.trim(); store.mistralKey=$('#mistralKey').value.trim();
   store.hfToken=$('#hfToken').value.trim();
   store.bridgeToken=$('#bridgeToken').value.trim();
+  store.proxyUrl=$('#proxyUrl').value.trim()||'http://127.0.0.1:8797';
+  store.proxyToken=$('#proxyToken').value.trim();
   store.piperUrl=$('#piperUrl').value.trim()||'http://127.0.0.1:8766';
   store.piperToken=$('#piperToken').value.trim();
   if(store.crypto&&cryptoUnlocked) reEncryptSecrets().then(()=>saveStore()); // re-cifrar claves editadas
@@ -2033,6 +2117,26 @@ function collectSettings(noSave){
 }
 function syncSearchUI(){ $('#btnSearch').classList.toggle('on',store.search); $('#btnSearchSet').classList.toggle('on',store.search); }
 function syncWakeUI(){ const b=$('#btnWakeSet'); if(b)b.classList.toggle('on',store.wake); }
+function syncAutoLangUI(){ const b=$('#btnAutoLang'); if(b)b.classList.toggle('on',store.autoLang); }
+function syncProxyUI(){
+  const b=$('#btnProxy'); if(b)b.classList.toggle('on',store.proxyOn);
+  const st=$('#proxyStatus'); if(st){
+    if(store.proxyOn){
+      st.style.display='block';
+      st.textContent=proxyOnline?'✅ Proxy de claves conectado — las API keys solo viven en tu máquina.':'⚠️ Proxy no detectado. Inícialo con python proxy.py (Ajustes → Proxy de claves) para que las claves no viajen al navegador.';
+    }else st.style.display='none';
+  }
+}
+function proxyPing(cb){
+  const base=(store.proxyUrl||'http://127.0.0.1:8797').replace(/\/$/,'');
+  const t=setTimeout(()=>{ proxyOnline=false; if(cb)cb(false); },2500);
+  try{
+    fetch(base+'/ping',{signal:AbortSignal.timeout(2500)})
+      .then(r=>{ clearTimeout(t); return r.ok?r.json():Promise.reject(new Error('HTTP '+r.status)); })
+      .then(j=>{ proxyOnline=!!(j&&j.ok); if(cb)cb(proxyOnline); })
+      .catch(()=>{ clearTimeout(t); proxyOnline=false; if(cb)cb(false); });
+  }catch(e){ clearTimeout(t); proxyOnline=false; if(cb)cb(false); }
+}
 function syncPentestUI(){
   $('#btnPentest').classList.toggle('on',store.pentest);
   $('#pentestBanner').classList.toggle('show',store.pentest);
@@ -2065,7 +2169,7 @@ function chime(){
   let w=0; const bar=$('#bootBar');
   const iv=setInterval(()=>{ w+=Math.random()*22; if(w>=100){w=100;clearInterval(iv);}
     bar.style.width=w+'%'; },120);
-  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncSincroniaUI(); syncWakeUI(); syncCryptoUI(); termPing();
+  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncProxyUI(); syncCryptoUI(); termPing();
   piperPing(()=>syncPiperUI());
   captureWelcomeES();
   renderWelcomeLang();

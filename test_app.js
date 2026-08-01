@@ -74,7 +74,7 @@ const KNOWN_LEAKS = [
 ];
 // Solo archivos de CÓDIGO real (los tests referencian las claves conocidas por diseño)
 const CODE_FILES = [
-  "index.html", "bridge.py", "bridge.mjs", "piper_server.py",
+  "index.html", "bridge.py", "bridge.mjs", "piper_server.py", "proxy.py",
   "windows/install.cmd", "windows/uninstall.cmd", "windows/aion-sincro.cmd",
   "windows/crear-acceso-directo.ps1", "linux/install.sh", "linux/uninstall.sh",
 ];
@@ -98,9 +98,10 @@ check("sin token de puente hardcodeado", !/token\s*[:=]\s*['"][A-Za-z0-9]{16,}['
 console.log("\n[3] Funciones puras de la app (tono de voz y slugs)");
 
 function extractFn(src, name) {
-  // Extrae "function <name>(){...}" con balanceo de llaves
-  const idx = src.indexOf(`function ${name}(`);
+  // Extrae "function <name>(){...}" (preservando el prefijo async si existe) con balanceo de llaves
+  let idx = src.indexOf(`function ${name}(`);
   if (idx < 0) return null;
+  if (src.slice(idx - 6, idx) === "async ") idx -= 6;
   let i = src.indexOf("{", idx);
   if (i < 0) return null;
   let depth = 0;
@@ -157,14 +158,45 @@ if (voxtralSlugSrc) {
   check("Jane fija → gb_jane_sarcasm", voxtralSlug("x") === "gb_jane_sarcasm");
 }
 
+// detectLang (auto-idioma: en→voxtral, es→voz offline)
+const detectLangSrc = extractFn(script, "detectLang");
+check("detectLang presente", !!detectLangSrc);
+if (detectLangSrc) {
+  const detectLang = new Function(`"use strict"; ${detectLangSrc}; return detectLang;`)();
+  const cases = [
+    ["es frase simple", detectLang("Hola, ¿cómo estás hoy?", "es-ES"), "es"],
+    ["es texto técnico", detectLang("analiza este ataque de fuerza bruta", "es-ES"), "es"],
+    ["es manifiesto", detectLang("El manifiesto habla de la vida y la libertad", "es-ES"), "es"],
+    ["en frase simple", detectLang("Hello, how are you today?", "es-ES"), "en"],
+    ["en texto técnico", detectLang("scan the network with nmap and gobuster", "es-ES"), "en"],
+    ["en manifiesto", detectLang("The manifesto is about life and freedom", "es-ES"), "en"],
+    ["mixto dominado por es", detectLang("el test with nmap fue un éxito", "es-ES"), "es"],
+    ["vacío usa fallback en", detectLang("", "en-US"), "en"],
+  ];
+  for (const [name, got, want] of cases) {
+    check(`detectLang: ${name} → ${want}`, got === want);
+  }
+}
+
+// Router de speak(): auto-idioma enruta EN→Voxtral y ES→voz offline
+check("speak() enruta por detectLang con autoLang", /function\s+speak\s*\([^)]*\)\{[\s\S]*?if\(store\.autoLang\)\{[\s\S]*?detectLang\(text,store\.lang\)/.test(script));
+check("EN sin clave → speakWindows('en-US')", /if\(store\.mistralKey\) return speakVoxtral\(text\);\s*return speakWindows\(text,'en-US'\);/.test(script));
+check("ES → speakWindows con idioma español", /return speakWindows\(text,\(store\.lang[\s\S]*?'es-ES'\);/.test(script));
+check("pickVoice respeta voz explícita si idioma coincide", /if\(exact&&\(!store\.autoLang[\s\S]*?\)\) return exact;/.test(script));
+
 // ---------- 4) Elementos y funciones clave de la app ----------
 console.log("\n[4] Integridad de la app (elementos y funciones clave)");
 const REQUIRED_IDS = [
   "bootBtn", "textInput", "sendBtn", "voiceSel", "provider", "modelInput",
   "btnCrypto", "cryptoPass", "piperUrl", "piperToken", "voxtralEmotion",
   "bridgeToken", "termInput", "termRunBtn",
-  "welcome", "welcomeBtn", "welcomeNarrateBtn", "btnStory",
+  "welcome", "welcomeBtn", "welcomeNarrateBtn", "btnStory", "btnAutoLang",
+  "proxyUrl", "proxyToken", "btnProxy",
 ];
+// Proxy de claves: las claves nunca viajan al navegador cuando está activo
+check("streamChat enruta por proxy cuando proxyOn", /if\(store\.proxyOn&&provider!=='demo'&&provider!=='ollama'\)\{[\s\S]*?url=pb\+'\/v1\/chat\/completions'/.test(script));
+check("proxy no envía Authorization desde el navegador", /if\(store\.proxyOn&&provider!=='demo'&&provider!=='ollama'\)\{[\s\S]*?headers=\{'Content-Type':'application\/json'\}[\s\S]*?headers\['X-Proxy-Token'\]/.test(script));
+check("voxtralPlay enruta TTS por proxy", /function voxtralPlay\(chunk\)\{[\s\S]*?store\.proxyOn&&store\.proxyUrl/.test(script));
 // Memoria consistente de la historia: helpers centralizados y marca persistente
 check(`historySeen() definida`, /function\s+historySeen\s*\(/.test(script));
 check(`markHistorySeen() definida`, /function\s+markHistorySeen\s*\(/.test(script));
@@ -178,7 +210,7 @@ for (const id of REQUIRED_IDS) {
 }
 const REQUIRED_FNS = [
   "loadStore", "saveStore", "encryptSecrets", "decryptSecrets", "speakPiper",
-  "speakVoxtral", "piperPing", "collectSettings", "openSettings", "testProvider",
+  "speakVoxtral", "speakWindows", "detectLang", "piperPing", "proxyPing", "syncProxyUI", "collectSettings", "openSettings", "testProvider",
   "handleUserText", "termPing", "streamChat",
 ];
 for (const fn of REQUIRED_FNS) {
@@ -191,15 +223,52 @@ check("sin document.write", !/document\.write/.test(script));
 check("el texto de usuario se escapa con esc()", /addMsg\('user',esc\(/.test(script));
 check("sin interpolación directa de variables de usuario en innerHTML", !/innerHTML\s*=.*\$\{(text|msg|input|q)\b/.test(script));
 
-// ---------- Resumen ----------
-console.log("\n" + "=".repeat(60));
-console.log(`RESULTADO: ${PASS} ok · ${FAIL} fallos`);
-if (FAILURES.length) {
-  console.log("Fallos:");
-  for (const f of FAILURES) console.log(`  - ${f}`);
+// ---------- 5) Cifrado WebCrypto de claves ----------
+console.log("\n[5] Cifrado WebCrypto de claves (AES-GCM 256 + PBKDF2)");
+// Estático: parámetros criptográficos correctos y claves nunca en claro
+check("PBKDF2-SHA256 con 120000 iteraciones", /iterations:120000,hash:'SHA-256'/.test(script));
+check("AES-GCM de 256 bits no-extraíble", /\{name:'AES-GCM',length:256\},false,\['encrypt','decrypt'\]/.test(script));
+check("salt aleatorio de 16 bytes", /getRandomValues\(new Uint8Array\(16\)\)/.test(script));
+check("iv aleatorio de 12 bytes", /getRandomValues\(new Uint8Array\(12\)\)/.test(script));
+check("clave no-extraíble en importKey", /importKey\('raw'[\s\S]*?'PBKDF2',false,\['deriveKey'\]\)/.test(script));
+check("saveStore limpia claves si cifrado activo", /if\(store\.crypto&&store\.encSecrets\)\{ rest\.mistralKey=''; rest\.groqKey='';/.test(script));
+check("decryptSecrets devuelve null si passphrase errónea", /\}catch\(e\)\{ return null; \} \/\/ contraseña incorrecta o blob corrupto/.test(script));
+check("la contraseña nunca se persiste", !/cryptoPass[^\n]{0,40}(localStorage|setItem)/.test(script));
+
+// Dinámico: round-trip REAL ejecutando las funciones extraídas con crypto.subtle de Node
+(async () => {
+  const names = ["buf2b64", "b642buf", "collectSecrets", "deriveKey", "encryptSecrets", "decryptSecrets"];
+  const srcs = names.map(n => [n, extractFn(script, n)]);
+  check("funciones de cifrado extraíbles del <script>", srcs.every(([, s]) => !!s));
+  if (srcs.every(([, s]) => !!s)) {
+    try {
+      const fakeStore = { mistralKey: "mk-test-abc123", groqKey: "gk-test", openrouterKey: "", hfToken: "", bridgeToken: "bt-secreto", piperToken: "" };
+      const src = `"use strict"; const store=arguments[0]; ${srcs.map(([, s]) => s).join("\n")}; return {buf2b64,b642buf,collectSecrets,deriveKey,encryptSecrets,decryptSecrets};`;
+      const fns = new Function(src)(fakeStore);
+      const enc = await fns.encryptSecrets("pass-super-secreta");
+      check("blob cifrado con v/salt/iv/data", enc && enc.v === 1 && !!enc.salt && !!enc.iv && !!enc.data);
+      const dec = await fns.decryptSecrets("pass-super-secreta", enc);
+      check("round-trip: descifra el mismo blob", dec && dec.mistralKey === "mk-test-abc123" && dec.bridgeToken === "bt-secreto");
+      const bad = await fns.decryptSecrets("pass-equivocada", enc);
+      check("passphrase errónea → null (no lanza)", bad === null);
+      const enc2 = await fns.encryptSecrets("otra-pass");
+      check("salt aleatorio: blobs distintos", enc.salt !== enc2.salt && enc.data !== enc2.data);
+      check("el blob no contiene el secreto en claro", enc.data.indexOf("mk-test") < 0 && enc.data.indexOf("bt-secreto") < 0);
+    } catch (e) {
+      check("round-trip WebCrypto ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
+    }
+  }
+
+  // ---------- Resumen ----------
+  console.log("\n" + "=".repeat(60));
+  console.log(`RESULTADO: ${PASS} ok · ${FAIL} fallos`);
+  if (FAILURES.length) {
+    console.log("Fallos:");
+    for (const f of FAILURES) console.log(`  - ${f}`);
+    console.log("=".repeat(60));
+    process.exit(1);
+  }
+  console.log("TODO EN VERDE ✔");
   console.log("=".repeat(60));
-  process.exit(1);
-}
-console.log("TODO EN VERDE ✔");
-console.log("=".repeat(60));
-process.exit(0);
+  process.exit(0);
+})();
