@@ -14,16 +14,21 @@ echo "  AION SINCRÓ — SUITE DE PRUEBAS"
 echo "============================================================"
 echo
 
-echo "[1/2] test_bridge.py  (seguridad de puentes y servidores)"
+echo "[1/3] test_bridge.py  (seguridad de puentes y servidores)"
 echo "------------------------------------------------------------"
 # Respetar PYTHON si el proyecto corre en un venv (p.ej. .venv-piper/bin/python)
 PY="${PYTHON:-python3}"
 $PY test_bridge.py
 
 echo
-echo "[2/2] test_app.js  (sintaxis JS, secretos y funciones)"
+echo "[2/3] test_app.js  (sintaxis JS, secretos y funciones)"
 echo "------------------------------------------------------------"
 node test_app.js
+
+echo
+echo "[3/3] test_mutacion.py  (test de mutación: la regresión WebCrypto protege)"
+echo "------------------------------------------------------------"
+$PY test_mutacion.py
 
 echo
 echo "============================================================"
