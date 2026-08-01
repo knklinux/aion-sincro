@@ -205,7 +205,7 @@ check("learnPractice() definida y cierra overlay", /function\s+learnPractice\s*\
 check("learnCheck() guarda y re-renderiza", /function\s+learnCheck\s*\([\s\S]*?learnSave\(d\);[\s\S]*?renderLearn\(\);/.test(script));
 check("learnDone() lee de localStorage (aion_ruta)", /function\s+learnDone\s*\(\).*localStorage\.getItem\('aion_ruta'/.test(script));
 check("learnSave() escribe en localStorage (aion_ruta)", /function\s+learnSave\s*\([^)]*\)\{.*localStorage\.setItem\('aion_ruta'/.test(script));
-check("renderLearn() al arranque", /renderLearn\(\);\s*\$\('#bootBtn'\)\.onclick/.test(script));
+check("renderLearn() al arranque", /function\s+bind\(\)\{\s*renderLearn\(\);[\s\S]*?startAutoLock\(\);[\s\S]*?\$\('#bootBtn'\)\.onclick/.test(script));
 check("btnLearn abre el overlay", /\$\('#btnLearn'\)\.onclick=\(\)=>\{ renderLearn\(\);[\s\S]*?classList\.add\('show'\)/.test(script));
 check("texto de checkpoints escapado con esc()", /<span class="cp-t">\$\{esc\(en\?c\.t_en:c\.t\)\}/.test(script));
 // Certificación de la Ruta: informe de progreso exportable (CV / portafolio)
@@ -298,6 +298,20 @@ check("lockSecrets() dispara el pulso rojo", /function\s+lockSecrets\s*\([\s\S]*
 check("desbloqueo desde el popup dispara la respiración verde", /\$\('#lockUnlockBtn'\)\.onclick=async\(\)=>\{[\s\S]*?avatarSecurityFx\('unlock'\);/.test(script));
 check("activar cifrado dispara la respiración verde", /store\.crypto=true; cryptoUnlocked=true;[\s\S]*?avatarSecurityFx\('unlock'\);/.test(script));
 check("desbloqueo desde Ajustes dispara la respiración verde", /applySecrets\(s\); cryptoUnlocked=true;[\s\S]*?avatarSecurityFx\('unlock'\);/.test(script));
+// Bloqueo automático por inactividad
+check("store persiste autoLockMin:0 por defecto", /autoLockMin:0,/.test(script));
+check("campo autoLockMin en Ajustes", html.includes('id="autoLockMin"'));
+check("collectSettings lee autoLockMin", /store\.autoLockMin=Math\.max\(0,parseInt\(\$\('#autoLockMin'\)\.value,10\)\|\|0\);/.test(script));
+check("openSettings rellena autoLockMin", /\$\('#autoLockMin'\)\.value=store\.autoLockMin\|\|0;/.test(script));
+check("markActivity() definida", /function\s+markActivity\s*\([^)]*\)\{ lastActivity=Date\.now\(\); \}/.test(script));
+check("maybeAutoLock() bloquea tras la inactividad", /function\s+maybeAutoLock\s*\([^)]*\)\{[\s\S]*?Date\.now\(\)-lastActivity>=min\*60000[\s\S]*?lockSecrets\(\);/.test(script));
+check("maybeAutoLock ignora si no hay claves desbloqueadas", /if\(!\(store\.crypto&&cryptoUnlocked\)\) return;/.test(script));
+check("maybeAutoLock ignora autoLockMin=0", /min<=0\).*return;/.test(script));
+check("startAutoLock() escucha actividad y tic cada 30s", /function\s+startAutoLock\s*\([^)]*\)\{[\s\S]*?\['mousemove','keydown','mousedown','touchstart','scroll','wheel'\][\s\S]*?setInterval\(maybeAutoLock,30000\);/.test(script));
+check("startAutoLock() no duplica el intervalo", /if\(autoLockTick\) return;/.test(script));
+
+check("bind() arranca el auto-bloqueo", /function\s+bind\(\)\{\s*renderLearn\(\);\s*startAutoLock\(\);/.test(script));
+check("desbloqueos resetean la actividad", /avatarSecurityFx\('unlock'\); markActivity\(\);/ .test(script) && (script.match(/markActivity\(\);/g)||[]).length>=4);
 check("desbloqueo rápido reutiliza decryptSecrets", /\$\('#lockUnlockBtn'\)\.onclick=async\(\)=>\{[\s\S]*?decryptSecrets\(pass,store\.encSecrets\)/.test(script));
 check("bloqueo rápido usa lockSecrets", /\$\('#lockNowBtn'\)\.onclick=\(\)=>\{[\s\S]*?lockSecrets\(\);/.test(script));
 check("popover se cierra al hacer clic fuera", /document\.addEventListener\('click',e=>\{[\s\S]*?w\.contains\(e\.target\)/ .test(script) || /document\.addEventListener\('click',e=>\{[\s\S]*?classList\.remove\('show'\)/.test(script));

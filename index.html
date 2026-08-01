@@ -1017,6 +1017,12 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
         <input type="password" id="cryptoPass" placeholder="Contraseña maestra (mín. 6 caracteres)" autocomplete="off">
         <button class="toggle" id="btnCrypto" style="width:100%;justify-content:center"><span class="tk"></span> 🔐 Activar cifrado WebCrypto</button>
         <div class="hint" id="cryptoHint">Tus claves (Mistral, Groq, OpenRouter, HuggingFace y el token del puente) se guardarán <b>cifradas</b> con AES-GCM 256 derivado de tu contraseña (PBKDF2-SHA256). La contraseña <b>nunca se almacena</b>: se pide al desbloquear. Si la olvidas, tendrás que volver a pegar las claves.</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+          <label for="autoLockMin" style="font-size:12px;color:var(--dim);flex:1">⏳ Bloqueo automático por inactividad</label>
+          <input type="number" id="autoLockMin" min="0" max="480" step="1" style="width:74px;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:13px;outline:none" title="Minutos sin usar la app antes de bloquear las claves (0 = desactivado)">
+          <span style="font-size:11px;color:var(--dim)">min</span>
+        </div>
+        <div class="hint">Si no usas Aion durante ese tiempo con las claves desbloqueadas, <b>se bloquean solas</b> y el candado vuelve a rojo (0 = desactivado).</div>
       </div>
     </div>
 
@@ -1246,7 +1252,7 @@ const store={
   provider:'demo', model:'hermes3', modelByProvider:{},
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
   lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, search:true, pentest:false, laboral:false, sincronia:false, wake:false,
-  pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
+  pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, autoLockMin:0, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
 };
 
 const PROVIDERS={
@@ -1423,6 +1429,28 @@ function lockSecrets(){
   saveStore(); syncCryptoUI();
   avatarSecurityFx('lock');
   toast('🔒 Claves bloqueadas para esta sesión');
+}
+/* ---------- Bloqueo automático por inactividad ---------- */
+let lastActivity=Date.now();
+function markActivity(){ lastActivity=Date.now(); }
+function maybeAutoLock(){
+  // Si hay cifrado activo con claves desbloqueadas y autoLockMin>0, y llevamos
+  // más de ese tiempo sin usar la app, las claves se bloquean solas.
+  if(!(store.crypto&&cryptoUnlocked)) return;
+  const min=parseInt(store.autoLockMin,10)||0;
+  if(min<=0) return;
+  if(Date.now()-lastActivity>=min*60000){
+    lockSecrets();
+    toast('⏳ Bloqueo automático por inactividad — vuelve a desbloquear para usar las claves',3200);
+  }
+}
+let autoLockTick=null;
+function startAutoLock(){
+  if(autoLockTick) return;
+  const ev=['mousemove','keydown','mousedown','touchstart','scroll','wheel'];
+  ev.forEach(t=>document.addEventListener(t,markActivity,{passive:true}));
+  autoLockTick=setInterval(maybeAutoLock,30000);
+  markActivity();
 }
 function syncCryptoUI(){
   const on=!!store.crypto, unlocked=on&&cryptoUnlocked;
@@ -3144,6 +3172,7 @@ function buildChips(){
 /* ---------- Eventos ---------- */
 function bind(){
   renderLearn();
+  startAutoLock(); // bloqueo automático por inactividad (claves se bloquean solas)
   $('#bootBtn').onclick=()=>{
     $('#boot').classList.add('gone');
     setTimeout(()=>{
@@ -3243,7 +3272,7 @@ function bind(){
     applySecrets(s); cryptoUnlocked=true; cryptoKey=await deriveKey(pass,b642buf(store.encSecrets.salt));
     ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(id=>{ const el=$('#'+id); if(el) el.value=store[id]||''; });
     $('#lockPass').value=''; const pop=$('#lockPop'); if(pop) pop.classList.remove('show');
-    syncCryptoUI(); saveStore(); avatarSecurityFx('unlock'); toast('🔓 Claves desbloqueadas para esta sesión');
+    syncCryptoUI(); saveStore(); avatarSecurityFx('unlock'); markActivity(); toast('🔓 Claves desbloqueadas para esta sesión');
   };
   $('#lockNowBtn').onclick=()=>{ const pop=$('#lockPop'); if(pop) pop.classList.remove('show'); lockSecrets(); };
   document.addEventListener('click',e=>{
@@ -3263,7 +3292,7 @@ function bind(){
       collectSettings(true);
       store.encSecrets=await encryptSecrets(pass);
       store.crypto=true; cryptoUnlocked=true; cryptoKey=await deriveKey(pass,b642buf(store.encSecrets.salt));
-      $('#cryptoPass').value=''; saveStore(); syncCryptoUI(); avatarSecurityFx('unlock');
+      $('#cryptoPass').value=''; saveStore(); syncCryptoUI(); avatarSecurityFx('unlock'); markActivity();
       toast('🔐 Claves cifradas con AES-GCM 256 ✔');
     }else if(!cryptoUnlocked){
       const pass=$('#cryptoPass').value;
@@ -3272,7 +3301,7 @@ function bind(){
       if(!s){ toast('❌ Contraseña incorrecta'); $('#cryptoPass').value=''; return; }
       applySecrets(s); cryptoUnlocked=true; cryptoKey=await deriveKey(pass,b642buf(store.encSecrets.salt));
       ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(id=>{ const el=$('#'+id); if(el) el.value=store[id]||''; }); // rellenar inputs para que 'Guardar' no los vacíe
-      $('#cryptoPass').value=''; syncCryptoUI(); saveStore(); avatarSecurityFx('unlock');
+      $('#cryptoPass').value=''; syncCryptoUI(); saveStore(); avatarSecurityFx('unlock'); markActivity();
       toast('🔓 Claves desbloqueadas para esta sesión');
     }else{
       if(!confirm('¿Desactivar el cifrado? Las claves volverán a guardarse en texto plano.')) return;
@@ -3331,6 +3360,7 @@ function openSettings(){
   $('#proxyUrl').value=store.proxyUrl||'http://127.0.0.1:8797';
   $('#proxyToken').value=store.proxyToken||'';
   $('#piperToken').value=store.piperToken||'';
+  $('#autoLockMin').value=store.autoLockMin||0;
   syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); refreshProviderUI();
   if(isPiperVoice()) piperPing(()=>syncPiperUI());
 }
@@ -3346,6 +3376,7 @@ function collectSettings(noSave){
   store.proxyToken=$('#proxyToken').value.trim();
   store.piperUrl=$('#piperUrl').value.trim()||'http://127.0.0.1:8766';
   store.piperToken=$('#piperToken').value.trim();
+  store.autoLockMin=Math.max(0,parseInt($('#autoLockMin').value,10)||0);
   if(store.crypto&&cryptoUnlocked) reEncryptSecrets().then(()=>saveStore()); // re-cifrar claves editadas
   if(!noSave)saveStore();
 }
