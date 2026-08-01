@@ -195,6 +195,7 @@ const REQUIRED_IDS = [
   "proxyUrl", "proxyToken", "btnProxy", "btnRefreshModels", "piperLength", "piperNoise",
   "btnLearn", "learnOverlay", "learnBody", "learnProgress", "btnResetLearn", "btnCloseLearn",
   "btnLock", "lockPop", "lockPass", "lockUnlockBtn", "lockNowBtn", "lockWrap",
+  "btnLaboral", "laboralBanner",
 ];
 // Módulo de aprendizaje guiado: Ruta Red Team (recon → explotación → informe)
 check("RUTA_PENTEST con 3 fases", /RUTA_PENTEST=\[\s*\{[\s\S]*?key:'recon'[\s\S]*?key:'exploit'[\s\S]*?key:'informe'/.test(script));
@@ -207,6 +208,25 @@ check("learnSave() escribe en localStorage (aion_ruta)", /function\s+learnSave\s
 check("renderLearn() al arranque", /renderLearn\(\);\s*\$\('#bootBtn'\)\.onclick/.test(script));
 check("btnLearn abre el overlay", /\$\('#btnLearn'\)\.onclick=\(\)=>\{ renderLearn\(\);[\s\S]*?classList\.add\('show'\)/.test(script));
 check("texto de checkpoints escapado con esc()", /<span class="cp-t">\$\{esc\(en\?c\.t_en:c\.t\)\}/.test(script));
+// Modo Laboral: informes profesionales exportables en Markdown/PDF
+check("LABORAL_SYSTEM definido con anatomía de informe", /const LABORAL_SYSTEM=`[\s\S]*?## 3\. Hallazgos[\s\S]*?REPORTE EJECUTIVO/.test(script));
+check("store persiste laboral:false", /laboral:false,/.test(script));
+check("systemPrompt() prioriza Laboral tras Sincronía", /else if\(store\.laboral\) base=LABORAL_SYSTEM;/.test(script));
+check("btnLaboral presente en header", html.includes('id="btnLaboral"'));
+check("laboralBanner presente", html.includes('id="laboralBanner"'));
+check("syncLaboralUI() definida", /function\s+syncLaboralUI\s*\(/.test(script));
+check("chips laboral: reconocimiento, pentest y ejecutivo", /Informe de reconocimiento[\s\S]*?Informe de pentest[\s\S]*?Reporte ejecutivo/.test(script));
+check("chips visibles con store.laboral", /\$\(\'#chips\'\)\.classList\.toggle\('show',store\.pentest\|\|store\.laboral\);/.test(script));
+check("downloadMarkdown() definida", /function\s+downloadMarkdown\s*\(/.test(script));
+check("exportPdf() definida con ventana imprimible", /function\s+exportPdf\s*\([\s\S]*?window\.open|print\(/.test(script));
+check("mdToHtml() definida", /function\s+mdToHtml\s*\(/.test(script));
+check("barra de exportación solo con modo Laboral", /store\.laboral&&looksReport&&!bodyEl\.querySelector\('\.exportBar'\)[\s\S]*?textContent='📥 Markdown'[\s\S]*?textContent='📄 PDF'/.test(script));
+check("CSS exportBar presente", /\.exportBar\{/.test(html));
+check("exportPdf sin document.write (barrera de seguridad)", !/w\.document\.write/.test(script) && !/document\.write\(html\)/.test(script));
+check("PDF_CSS separado como constante", /const PDF_CSS='body\{/.test(script));
+check("exportPdf construye popup con DOM APIs", /w\.document\.open\(\); w\.document\.close\(\);[\s\S]*?w\.document\.body\.innerHTML=mdToHtml\(text\);/.test(script));
+check("mdToHtml escapa HTML en párrafos (XSS)", /return '<p>'\+b\(escH\(blk\)/.test(script));
+check("mdToHtml escapa HTML en celdas de tabla (XSS)", /b\(escH\(c\)\)/.test(script));
 // Piper: velocidad y expresividad configurables (length_scale/noise_scale)
 check("piperPlay envía length_scale", /p\.length_scale=store\.piperLength\|\|1\.0;/.test(script));
 check("piperPlay envía noise_scale", /p\.noise_scale=store\.piperNoise\|\|0\.667;/.test(script));
@@ -240,6 +260,43 @@ check("lockSecrets() purga claves sin desactivar cifrado", /function\s+lockSecre
 check("desbloqueo rápido reutiliza decryptSecrets", /\$\('#lockUnlockBtn'\)\.onclick=async\(\)=>\{[\s\S]*?decryptSecrets\(pass,store\.encSecrets\)/.test(script));
 check("bloqueo rápido usa lockSecrets", /\$\('#lockNowBtn'\)\.onclick=\(\)=>\{[\s\S]*?lockSecrets\(\);/.test(script));
 check("popover se cierra al hacer clic fuera", /document\.addEventListener\('click',e=>\{[\s\S]*?w\.contains\(e\.target\)/ .test(script) || /document\.addEventListener\('click',e=>\{[\s\S]*?classList\.remove\('show'\)/.test(script));
+// Modo Evaluación: examen práctico de la Ruta Red Team
+check("EVAL_EXAM con las 3 fases de la Ruta", /EVAL_EXAM=\[[\s\S]*?key:'recon'[\s\S]*?key:'exploit'[\s\S]*?key:'informe'[\s\S]*?\];/.test(script));
+check("EVAL_EXAM con 14 preguntas (a: índice correcto)", (script.match(/\{t:'[^']*', o:\[/g)||[]).length>=14);
+check("cada pregunta EVAL enlaza un checkpoint (cp:)", (script.match(/cp:'recon-|cp:'exploit-|cp:'informe-/g)||[]).length>=14);
+check("evalState persiste en localStorage (aion_eval)", /localStorage\.getItem\('aion_eval'/.test(script) && /localStorage\.setItem\('aion_eval'/.test(script));
+check("renderEval() dibuja opciones con data-q/data-oi", script.includes("data-q=\"'+id+'\"") && script.includes("data-oi=\"'+oi+'\"") && /function\s+renderEval\s*\(/.test(script));
+check("el examen NO revela la respuesta correcta al seleccionar", !script.includes("on-'+(oi===q.a?'ok':'no')") && script.includes("class=\"eval-opt'+(sel?' sel':'')+"));
+check("recomendaciones usan el título real del checkpoint", /esc\(evalCheckpointTitle\(r\.cp\)\)/.test(script));
+check("evalCheckpointTitle resuelve por c.id o p.key+'-'+c.id", /x\.id===cpId\|\|p\.key\+'-'\+x\.id===cpId/.test(script));
+check("banner de examen final en la Ruta al completar 18/18", /if\(tAll>0&&dAll>=tAll\)\{[\s\S]*?learnEvalCta[\s\S]*?openEval\(\);/.test(script));
+check("los cp: de EVAL_EXAM existen como checkpoints de la Ruta", (()=>{ const cpIds=[...script.matchAll(/cp:'([a-z0-9-]+)'/g)].map(m=>m[1]); if(!cpIds.length) return false; const rt=[...script.matchAll(/id:'((?:recon|exploit|informe)-[a-z0-9-]+)'/g)].map(m=>m[1]); return cpIds.every(id=>rt.includes(id)); })());
+check("evalGrade() puntúa por fase y global", /function\s+evalGrade\s*\([\s\S]*?byPhase\[p\.key\]=\{pct:pt\?Math\.round\(po\/pt\*100\):0/.test(script));
+check("evalGrade() genera recomendaciones de repaso", /function\s+evalGrade\s*\([\s\S]*?review\.push\(\{cp:q\.cp[\s\S]*?\).*renderEval\(\);/.test(script));
+check("récord de puntuación se guarda (best)", /if\(evalState\.best===null\|\|pct>evalState\.best\) evalState\.best=pct;/.test(script));
+check("openEval() muestra el overlay", /function\s+openEval\s*\([\s\S]*?classList\.add\('show'\)/.test(script));
+check("botón btnEval en header", html.includes('id="btnEval"'));
+check("overlay evalOverlay presente", html.includes('id="evalOverlay"'));
+check("evalRetake reinicia el examen", /\$\('#evalRetake'\)\.onclick=\(\)=>\{ evalState\.done=false; evalState\.answers=\{\};/.test(script));
+check("EVAL_EXAM es un dataset válido (3 fases, preguntas estructuradas)", (()=>{ const m=script.match(/const EVAL_EXAM=(\[[\s\S]*?\]);/); if(!m) return false; try{ const arr=new Function('return '+m[1]+';')(); return Array.isArray(arr)&&arr.length===3&&arr.every(p=>p.q&&p.q.length>=4&&p.q.every(q=>Array.isArray(q.o)&&q.o.length>=3&&typeof q.a==='number'&&q.cp)); }catch(_){ return false; } })());
+// Herramienta de auditoría de cumplimiento ISO 27001:2022
+check("ISO_NORMS con los 4 temas del Anexo A", /ISO_NORMS=\[[\s\S]*?key:'org'[\s\S]*?key:'people'[\s\S]*?key:'phys'[\s\S]*?key:'tech'/.test(script));
+check("controles ISO con los 4 prefijos A.5/A.6/A.7/A.8", (script.match(/{id:'A\.5\./g)||[]).length>=15 && (script.match(/{id:'A\.6\./g)||[]).length>=8 && (script.match(/{id:'A\.7\./g)||[]).length>=10 && (script.match(/{id:'A\.8\./g)||[]).length>=15);
+check("cada control ISO lleva acción de cumplimiento (need)", /{id:'A\.5\.1'[\s\S]*?need:'[\s\S]*?'/.test(script) && (script.match(/need:'/g)||[]).length>=40);
+check("ISO_WEIGHTS con pesos del Anexo A", /ISO_WEIGHTS=\{org:\.37, people:\.08, phys:\.14, tech:\.34\}/.test(script));
+check("store de la auditoría en localStorage (aion_iso)", /localStorage\.getItem\('aion_iso'/.test(script) && /localStorage\.setItem\('aion_iso'/.test(script));
+check("renderISO() definida y dibuja el cuestionario", /function\s+renderISO\s*\([\s\S]*?iso-opt'\+/.test(script));
+check("isoScoreByTheme() puntúa Cumple=100 Parcial=50", /v==='ok'\?100:\(v==='part'\?50:0\)/.test(script));
+check("isoGaps() excluye ok y na", /if\(v==='ok'\|\|v==='na'\|\|!v\) continue;/.test(script));
+check("isoReportMd() genera informe con resumen y brechas", /function\s+isoReportMd\s*\([\s\S]*?## 3\. Plan de cumplimiento/.test(script));
+check("isoReportMd() escapa pipes en acciones", script.includes(".need.replace(/\\|/g,'/')") && script.includes("|\\n"));
+check("openISO() muestra el overlay", /function\s+openISO\s*\([\s\S]*?classList\.add\('show'\)/.test(script));
+check("botón btnISO en header", html.includes('id="btnISO"'));
+check("overlay isoOverlay presente", html.includes('id="isoOverlay"'));
+check("exportación ISO reutiliza downloadMarkdown/exportPdf", /\$\('#isoExportMd'\)\.onclick=\(\)=>\{[\s\S]*?downloadMarkdown\(md,'informe-auditoria-iso'\);[\s\S]*?\$\('#isoExportPdf'\)\.onclick=\(\)=>\{[\s\S]*?exportPdf\(md,'Informe Auditoría ISO'\);/.test(script));
+check("Escape cierra el overlay ISO", /e\.key==='Escape'\)\{\s*const o=\$\('#isoOverlay'\); if\(o&&o\.classList\.contains\('show'\)\) o\.classList\.remove\('show'\);/.test(script));
+check("comando 'iso/auditoría' abre la herramienta", /\/\\biso\\b\|27001\|auditor\[ií\]a\|normativa\|normativo\|cumplimiento\|sgs\[ií\]\/\.test\(q\)\)\{ openISO\(\);/.test(script));
+check("ISO_NORMS es un dataset válido (4 temas, controles estructurados)", (()=>{ const m=script.match(/const ISO_NORMS=(\[[\s\S]*?\]);\s*const ISO_WEIGHTS/); if(!m) return false; try{ const arr=new Function('return '+m[1]+';')(); return Array.isArray(arr)&&arr[0]&&arr[0].themes&&arr[0].themes.length===4&&arr[0].themes.every(t=>t.controls&&t.controls.length>=8); }catch(_){ return false; } })());
 // Barreras de seguridad: sin eval(), sin document.write, y el texto del usuario
 // siempre se escapa con esc() antes de entrar al DOM (nunca ${text} directo).
 check("sin eval(", !/\beval\s*\(/.test(script));

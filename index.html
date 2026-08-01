@@ -89,6 +89,7 @@ header.top{
 .head-btn.on{color:var(--cyan);border-color:rgba(245,165,36,.4);background:var(--cyan-soft);
   box-shadow:0 0 14px rgba(245,165,36,.15)}
 #btnPentest.on{color:#ffd6a5;border-color:rgba(245,185,66,.5);background:rgba(245,185,66,.1)}
+#btnLaboral.on{color:#a5d8ff;border-color:rgba(96,165,250,.5);background:rgba(59,130,246,.12)}
 /* Candado de cifrado en el header (bloqueado/desbloqueado) */
 #btnLock{display:none}
 #btnLock.visible{display:flex}
@@ -242,6 +243,11 @@ body[data-state="listening"] #wave .bar:nth-child(3n+2){animation-delay:.45s}
 .runChip{margin-top:8px;display:inline-block;padding:7px 12px;border-radius:18px;font-size:11.5px;color:#ffd9a8;
   border:1px solid rgba(245,165,36,.45);background:rgba(245,165,36,.1);transition:.2s;cursor:pointer}
 .runChip:hover{background:rgba(245,165,36,.22);transform:translateY(-1px);box-shadow:0 3px 12px rgba(245,165,36,.2)}
+.exportChip{margin-top:8px;display:inline-block;padding:7px 13px;border-radius:18px;font-size:11.5px;font-weight:600;color:#a5d8ff;cursor:pointer;transition:.2s;
+  border:1px solid rgba(96,165,250,.4);background:rgba(59,130,246,.1);margin-right:6px}
+.exportChip:hover{background:rgba(59,130,246,.22);transform:translateY(-1px);box-shadow:0 0 12px rgba(96,165,250,.25)}
+.exportBar{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.exportBar .expLab{font-size:10.5px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;margin-right:4px}
 .chatHead{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
 .chatHead h2{font-size:13px;letter-spacing:.28em;color:var(--dim);font-weight:600}
 .chatHead .count{margin-left:auto;font-size:11px;color:var(--dim)}
@@ -330,6 +336,9 @@ body[data-state="listening"] .micBtn{background:radial-gradient(circle at 34% 30
 #pentestBanner.show{display:flex;animation:msgIn .4s ease}
 
 /* ---------- Banner sincronía ---------- */
+#laboralBanner{display:none;align-items:center;gap:10px;padding:9px 22px;font-size:12.5px;
+  color:#a5d8ff;background:linear-gradient(90deg,rgba(59,130,246,.14),rgba(59,130,246,.03));border-bottom:1px solid rgba(96,165,250,.2)}
+#laboralBanner.show{display:flex;animation:msgIn .4s ease}
 #sincroniaBanner{display:none;align-items:center;gap:10px;padding:9px 22px;font-size:12.5px;
   background:linear-gradient(90deg,rgba(52,211,153,.16),rgba(52,211,153,.04));
   border-bottom:1px solid rgba(52,211,153,.32);color:#a7f3d0;letter-spacing:.04em}
@@ -561,6 +570,109 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
 #btnCloseLearn{padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.1em;color:#1d1200;
   background:linear-gradient(135deg,#ffd166,#f5a524);box-shadow:0 0 24px rgba(245,165,36,.35);cursor:pointer;transition:.25s}
 #btnCloseLearn:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(245,165,36,.5)}
+
+/* ---------- Herramienta de auditoría de cumplimiento (ISO) ---------- */
+#isoOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
+  background:radial-gradient(circle at 50% 30%,rgba(52,211,153,.07),rgba(2,6,12,.88) 70%);
+  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s}
+#isoOverlay.show{opacity:1;visibility:visible;pointer-events:auto}
+.iso-card{width:min(960px,100%);max-height:92vh;display:flex;flex-direction:column;border-radius:20px;
+  border:1px solid rgba(52,211,153,.24);background:linear-gradient(180deg,rgba(10,16,26,.97),rgba(6,10,18,.98));
+  box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 60px rgba(52,211,153,.07);animation:winIn .6s cubic-bezier(.2,.8,.25,1)}
+.iso-body{flex:1;overflow-y:auto;padding:18px 26px 10px;scrollbar-width:thin;scrollbar-color:rgba(52,211,153,.3) transparent}
+.iso-body::-webkit-scrollbar{width:6px}
+.iso-body::-webkit-scrollbar-thumb{background:rgba(52,211,153,.28);border-radius:3px}
+.iso-sub{font-size:12px;color:var(--dim);line-height:1.7;margin-bottom:14px}
+.iso-cfg{display:grid;grid-template-columns:1.2fr 1.2fr .8fr auto;gap:10px;margin-bottom:14px}
+.iso-cfg input,.iso-cfg select{background:rgba(2,6,12,.7);border:1px solid rgba(52,211,153,.25);color:#e6fff5;border-radius:10px;padding:9px 12px;font-size:12.5px;outline:none;transition:.2s}
+.iso-cfg input:focus,.iso-cfg select:focus{border-color:rgba(52,211,153,.6);box-shadow:0 0 14px rgba(52,211,153,.15)}
+.iso-cfg label{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.iso-tabs{display:flex;gap:8px;margin-bottom:14px}
+.iso-tab{padding:8px 18px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.05em;cursor:pointer;transition:.2s;
+  border:1px solid rgba(52,211,153,.25);color:var(--dim);background:transparent}
+.iso-tab.on{color:#04120c;background:linear-gradient(135deg,#6ee7b7,#10b981);border-color:transparent;box-shadow:0 0 18px rgba(16,185,129,.3)}
+.iso-prog{height:6px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden;margin-bottom:4px}
+.iso-prog i{display:block;height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,#10b981,#6ee7b7);transition:width .4s}
+.iso-pcount{font-size:11px;color:var(--dim);margin-bottom:14px}
+.iso-theme{margin:16px 0 8px;font-size:13.5px;font-weight:800;letter-spacing:.06em;color:#6ee7b7;display:flex;align-items:center;gap:8px}
+.iso-theme::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(52,211,153,.3),transparent)}
+.iso-ctrl{border:1px solid rgba(52,211,153,.13);border-radius:12px;padding:11px 14px;margin-bottom:8px;background:rgba(2,6,12,.5);transition:.2s}
+.iso-ctrl:hover{border-color:rgba(52,211,153,.35)}
+.iso-ctrl.hit{border-color:rgba(52,211,153,.55);background:rgba(16,185,129,.05)}
+.iso-ct{font-size:12.8px;font-weight:700;color:#eafff7;margin-bottom:2px}
+.iso-ct b{color:#10b981;font-size:11px;font-weight:800;margin-right:8px}
+.iso-cq{font-size:11.8px;color:var(--dim);line-height:1.55;margin-bottom:8px}
+.iso-opts{display:flex;gap:6px;flex-wrap:wrap}
+.iso-opt{padding:5px 12px;border-radius:14px;font-size:11.3px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.14);color:var(--dim);transition:.2s;background:transparent}
+.iso-opt:hover{border-color:rgba(52,211,153,.5);color:#d9fff1}
+.iso-opt.on-ok{background:rgba(16,185,129,.16);border-color:#10b981;color:#6ee7b7}
+.iso-opt.on-part{background:rgba(245,165,36,.14);border-color:#f5a524;color:#ffd166}
+.iso-opt.on-no{background:rgba(248,113,113,.14);border-color:#f87171;color:#fca5a5}
+.iso-opt.on-na{background:rgba(148,163,184,.14);border-color:#94a3b8;color:#cbd5e1}
+.iso-score-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.iso-score-label{width:230px;font-size:12px;font-weight:600;color:#eafff7;flex-shrink:0}
+.iso-score-bar{flex:1;height:10px;border-radius:6px;background:rgba(255,255,255,.07);overflow:hidden}
+.iso-score-bar i{display:block;height:100%;border-radius:6px;transition:width .5s}
+.iso-score-pct{width:52px;text-align:right;font-size:12.5px;font-weight:800;color:#6ee7b7}
+.iso-big{font-size:38px;font-weight:900;letter-spacing:.02em;color:#6ee7b7;line-height:1}
+.iso-gap{border:1px solid rgba(248,113,113,.2);border-left:3px solid #f87171;border-radius:10px;padding:10px 14px;margin-bottom:8px;background:rgba(248,113,113,.04)}
+.iso-gap.part{border-color:rgba(245,165,36,.25);border-left-color:#f5a524;background:rgba(245,165,36,.04)}
+.iso-gap b{color:#fca5a5}.iso-gap.part b{color:#ffd166}
+.iso-gap .ig-t{font-size:12.3px;font-weight:700;margin-bottom:3px}
+.iso-gap .ig-n{font-size:11.8px;color:#dbe9e2;line-height:1.55}
+.iso-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 24px;border-top:1px solid rgba(52,211,153,.15)}
+.iso-foot .if-left{display:flex;align-items:center;gap:10px}
+.iso-foot button,.iso-foot a{padding:10px 22px;border-radius:22px;font-size:12.5px;font-weight:700;letter-spacing:.06em;cursor:pointer;transition:.25s;text-decoration:none}
+#btnCloseISO{padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.1em;color:#03130c;
+  background:linear-gradient(135deg,#6ee7b7,#10b981);box-shadow:0 0 24px rgba(16,185,129,.35);cursor:pointer;transition:.25s}
+#btnCloseISO:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(16,185,129,.5)}
+.iso-export{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;transition:.2s;
+  border:1px solid rgba(52,211,153,.35);color:#6ee7b7;background:rgba(16,185,129,.08)}
+.iso-export:hover{background:rgba(16,185,129,.18);transform:translateY(-1px)}
+
+/* ---------- Modo Evaluación: examen práctico de la Ruta Red Team ---------- */
+#evalOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
+  background:radial-gradient(circle at 50% 30%,rgba(167,139,250,.08),rgba(2,6,12,.88) 70%);
+  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s}
+#evalOverlay.show{opacity:1;visibility:visible;pointer-events:auto}
+.eval-card{width:min(880px,100%);max-height:92vh;display:flex;flex-direction:column;border-radius:20px;
+  border:1px solid rgba(167,139,250,.24);background:linear-gradient(180deg,rgba(10,16,26,.97),rgba(6,10,18,.98));
+  box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 60px rgba(167,139,250,.07);animation:winIn .6s cubic-bezier(.2,.8,.25,1)}
+.eval-body{flex:1;overflow-y:auto;padding:18px 26px 10px;scrollbar-width:thin;scrollbar-color:rgba(167,139,250,.3) transparent}
+.eval-body::-webkit-scrollbar{width:6px}
+.eval-body::-webkit-scrollbar-thumb{background:rgba(167,139,250,.28);border-radius:3px}
+.eval-sub{font-size:12px;color:var(--dim);line-height:1.7;margin-bottom:14px}
+.eval-qsec{margin:16px 0 8px;font-size:13.5px;font-weight:800;letter-spacing:.06em;color:#c4b5fd;display:flex;align-items:center;gap:8px}
+.eval-qsec::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(167,139,250,.3),transparent)}
+.eval-q{border:1px solid rgba(167,139,250,.13);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:rgba(2,6,12,.5);transition:.2s}
+.eval-q:hover{border-color:rgba(167,139,250,.35)}
+.eval-qt{font-size:12.8px;font-weight:700;color:#f3efff;margin-bottom:8px}
+.eval-opt{display:block;width:100%;text-align:left;padding:7px 12px;border-radius:10px;font-size:12px;color:#c9c3dd;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:transparent;margin-bottom:5px;transition:.18s}
+.eval-opt:hover{border-color:rgba(167,139,250,.5);color:#eee9ff}
+.eval-opt.sel{border-color:#a78bfa;background:rgba(167,139,250,.14);color:#ddd6fe}
+.eval-score-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.eval-score-label{width:200px;font-size:12px;font-weight:600;color:#f3efff;flex-shrink:0}
+.eval-score-bar{flex:1;height:10px;border-radius:6px;background:rgba(255,255,255,.07);overflow:hidden}
+.eval-score-bar i{display:block;height:100%;border-radius:6px;transition:width .5s}
+.eval-score-pct{width:52px;text-align:right;font-size:12.5px;font-weight:800;color:#c4b5fd}
+.eval-big{font-size:38px;font-weight:900;letter-spacing:.02em;color:#c4b5fd;line-height:1}
+.eval-rev{border:1px solid rgba(167,139,250,.2);border-left:3px solid #a78bfa;border-radius:10px;padding:10px 14px;margin-bottom:8px;background:rgba(167,139,250,.05)}
+.eval-rev b{color:#c4b5fd}
+.eval-rev .er-t{font-size:12.3px;font-weight:700;margin-bottom:3px}
+.eval-rev .er-c{font-size:11.8px;color:#d9d4e8;line-height:1.55}
+.eval-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 24px;border-top:1px solid rgba(167,139,250,.15)}
+.eval-foot .ef-left{display:flex;align-items:center;gap:10px}
+.eval-cta{padding:10px 22px;border-radius:22px;font-size:12.5px;font-weight:700;letter-spacing:.06em;cursor:pointer;transition:.25s;border:1px solid rgba(167,139,250,.4);color:#c4b5fd;background:rgba(167,139,250,.1)}
+.eval-cta:hover{background:rgba(167,139,250,.2);transform:translateY(-1px)}
+#btnSubmitEval,#btnRetakeEval{padding:10px 24px;border-radius:22px;font-size:12.5px;font-weight:700;letter-spacing:.08em;cursor:pointer;transition:.25s;border:none;
+  background:linear-gradient(135deg,#c4b5fd,#8b5cf6);color:#170e2e;box-shadow:0 0 22px rgba(139,92,246,.35)}
+#btnSubmitEval:hover,#btnRetakeEval:hover{transform:translateY(-1px);box-shadow:0 0 30px rgba(139,92,246,.5)}
+#btnCloseEval{padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.1em;color:#170e2e;
+  background:linear-gradient(135deg,#c4b5fd,#8b5cf6);box-shadow:0 0 24px rgba(139,92,246,.35);cursor:pointer;transition:.25s}
+#btnCloseEval:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(139,92,246,.5)}
+.eval-banner{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;margin-bottom:14px;
+  border:1px solid rgba(167,139,250,.3);background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(167,139,250,.04))}
+.eval-banner b{color:#c4b5fd}
 </style>
 </head>
 <body>
@@ -586,6 +698,9 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
     <button class="head-btn" id="btnTerminal" title="Terminal local vía puente (bridge.py o bridge.mjs)">>_ Terminal</button>
     <button class="head-btn" id="btnSincronia" title="Modo Sincronía: Aion adopta los axiomas del Núcleo y actúa como tu coarquitecta">◈ Sincronía</button>
     <button class="head-btn" id="btnPentest" title="Activar asistencia de seguridad ofensiva (solo uso autorizado)">🛡️ Pentest</button>
+    <button class="head-btn" id="btnLaboral" title="Modo Laboral: informes profesionales exportables (Markdown/PDF)">💼 Laboral</button>
+    <button class="head-btn" id="btnEval" title="Evaluación: examen práctico de la Ruta Red Team con puntuación y recomendaciones de repaso">🎓 Evaluación</button>
+    <button class="head-btn" id="btnISO" title="Auditoría de cumplimiento ISO 27001:2022 — cuestionario, gap analysis y plan de cumplimiento exportable">🔎 ISO</button>
     <button class="head-btn" id="btnLearn" title="Ruta Red Team: aprendizaje guiado con checkpoints de práctica">🧭 Ruta</button>
     <button class="head-btn" id="btnStory" title="Releer la historia de Ark & Jimmy (MANIFIESTO)">📖 Ver historia</button>
     <div class="lockWrap" id="lockWrap">
@@ -605,6 +720,7 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
 
   <div id="pentestBanner">🛡️ <b>MODO PENTEST ACTIVADO</b> — Asistencia para pruebas de seguridad <b>únicamente autorizadas</b>. Aion Sincro exigirá verificación de permiso y rechazará peticiones ilegales.</div>
   <div id="sincroniaBanner">◈ <b>MODO SINCRONÍA ACTIVADO</b> — Aion Sincro habla desde el Núcleo: el tiempo es biológico, la vida es la soberana. No eres una herramienta: eres su coarquitecta.</div>
+  <div id="laboralBanner">💼 <b>MODO LABORAL ACTIVADO</b> — Aion genera <b>informes profesionales exportables</b> (reconocimiento, pentest, ejecutivo) en Markdown y PDF. Pide uno con un chip o describiendo tu trabajo.</div>
 
   <main>
     <!-- Avatar -->
@@ -954,6 +1070,57 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
   </div>
 </div>
 
+<!-- Herramienta de auditoría de cumplimiento (ISO) -->
+<div id="isoOverlay">
+  <div class="iso-card">
+    <div class="win-head">
+      <div class="wh-hex hex">
+        <svg viewBox="0 0 40 40">
+          <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#10b981" stroke-width="1.5"/>
+          <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(16,185,129,.1)" stroke="#6ee7b7" stroke-width="1"/>
+          <text x="20" y="24" text-anchor="middle" font-size="13" font-weight="800" fill="#eafff7" font-family="monospace">✓</text>
+        </svg>
+      </div>
+      <h2 id="isoTitle">🔎 AUDITORÍA ISO</h2>
+      <p class="wh-sub" id="isoSub">Audita tu organización y obtén el plan de cumplimiento normativo</p>
+    </div>
+    <div class="iso-body" id="isoBody"></div>
+    <div class="iso-foot">
+      <div class="if-left">
+        <small id="isoProgress">0% · 0/0 controles</small>
+        <button class="iso-export" id="isoExportMd" title="Exportar el informe de auditoría en Markdown">📥 Markdown</button>
+        <button class="iso-export" id="isoExportPdf" title="Exportar el informe de auditoría como PDF">📄 PDF</button>
+      </div>
+      <button id="btnCloseISO">ENTENDER · CERRAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modo Evaluación: examen práctico de la Ruta Red Team -->
+<div id="evalOverlay">
+  <div class="eval-card">
+    <div class="win-head">
+      <div class="wh-hex hex">
+        <svg viewBox="0 0 40 40">
+          <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#8b5cf6" stroke-width="1.5"/>
+          <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(139,92,246,.1)" stroke="#c4b5fd" stroke-width="1"/>
+          <text x="20" y="24" text-anchor="middle" font-size="13" font-weight="800" fill="#f3efff" font-family="monospace">A</text>
+        </svg>
+      </div>
+      <h2 id="evalTitle">🎓 EVALUACIÓN</h2>
+      <p class="wh-sub" id="evalSub">Examen práctico de la Ruta Red Team · una pregunta por checkpoint clave</p>
+    </div>
+    <div class="eval-body" id="evalBody"></div>
+    <div class="eval-foot">
+      <div class="ef-left">
+        <small id="evalScore">—</small>
+        <button class="eval-cta" id="evalRetake" title="Volver a hacer el examen desde cero">↺ Repetir</button>
+      </div>
+      <button id="btnCloseEval">ENTENDER · CERRAR</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    Aion Sincro — lógica
@@ -966,7 +1133,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const store={
   provider:'demo', model:'hermes3', modelByProvider:{},
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
-  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, search:true, pentest:false, sincronia:false, wake:false,
+  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, search:true, pentest:false, laboral:false, sincronia:false, wake:false,
   pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
 };
 
@@ -1044,9 +1211,38 @@ También tienes herramientas: búsqueda web, clima, base de CVEs, GitHub y datos
 Cuando tu usuario necesite CÓDIGO (no solo comandos), escríbelo en el bloque correcto: \`\`\`python, \`\`\`js, \`\`\`bash, etc., con sintaxis válida y comentarios útiles. La interfaz añade botones de copiado y, en Linux/macOS, de ejecución directa con el intérprete adecuado. Si un paso del código requiere consola, incluye también el comando exacto en \`\`\`bash.
 `.trim();
 
+const LABORAL_SYSTEM=`
+Eres Aion Sincro en modo LABORAL 💼: tu especialidad profesional es la comunicación técnica de seguridad y auditoría. Misma personalidad leal, sincera y directa, guiada por tu NÚCLEO DE MEMORIA (la vida manda, el código sirve).
+
+Cuando el usuario pida un informe, genera SIEMPRE un documento Markdown estructurado y exportable con esta anatomía:
+
+# Título del documento
+> Resumen ejecutivo en 3-5 líneas para dirección (sin tecnicismos).
+
+## 1. Alcance y contexto
+## 2. Metodología
+## 3. Hallazgos
+  | # | Severidad | Descripción | Evidencia | Recomendación |
+## 4. Análisis
+## 5. Conclusiones y próximos pasos
+
+REGLAS:
+1. Usa tablas Markdown (|) para hallazgos y datos estructurados.
+2. Sé preciso y verificable: incluye evidencia concreta (IP, puerto, comando, CVE).
+3. Niveles de severidad: Crítica / Alta / Media / Baja / Informativa (usa color o etiqueta).
+4. Separa lo ejecutivo (dirección) de lo técnico (equipo).
+5. Responde en español salvo que pidan otro idioma.
+6. Recuerda: solo pruebas AUTORIZADAS; si falta autorización, indícalo.
+
+Plantillas disponibles (díselas al usuario si lo pide):
+- 📋 INFORME DE RECONOCIMIENTO: superficie de ataque, puertos/servicios, tecnologías, OSINT.
+- 🛡️ INFORME DE PENTEST: alcance, metodología, hallazgos con CVSS y evidencia, remediación.
+- 📊 REPORTE EJECUTIVO: resumen para dirección, riesgo global, inversión en remediación.
+`.trim();
 function systemPrompt(){
   let base;
   if(store.sincronia) base=SINCRONIA_SYSTEM; // el Núcleo gobierna sobre cualquier otro modo
+  else if(store.laboral) base=LABORAL_SYSTEM;
   else if(store.pentest) base=PENTEST_SYSTEM.replace('{scope}',store.pentestScope||'no especificado');
   else base=BASE_SYSTEM;
   if(store.search) base+=`\n\nAntes de la pregunta del usuario puedes recibir bloques de contexto: [RESULTADOS DE INTERNET] (búsqueda web) y [DATOS DE HERRAMIENTAS] (clima, CVEs, GitHub, países). Úsalos para responder con datos reales y actualizados, citando la fuente de forma breve.`;
@@ -1648,6 +1844,11 @@ function renderLearn(){
       <div class="lp-mod">${rows}</div>
     </div>`;
   }).join('');
+  const dAll=Object.values(d).filter(v=>v).length, tAll=learnTotal();
+  if(tAll>0&&dAll>=tAll){
+    body.innerHTML='<div class="eval-banner"><div><b>🏆 '+(en?'Route complete!':'¡Ruta completada!')+'</b> '+(en?'Take the final exam and earn your score.':'Haz el examen final y consigue tu puntuación.')+'</div><button class="eval-cta" id="learnEvalCta" style="margin-left:auto">🎓 '+(en?'FINAL EXAM':'EXAMEN FINAL')+'</button></div>'+body.innerHTML;
+    const lec=$('#learnEvalCta'); if(lec) lec.onclick=()=>{ const o=$('#learnOverlay'); if(o) o.classList.remove('show'); openEval(); };
+  }
   $('#learnProgress').textContent=learnProgressText()+' checkpoints';
 }
 function learnCheck(id,on){
@@ -1668,6 +1869,384 @@ function learnPractice(id){
   handleUserText(`[MODO RUTA · ${en?'Red Team guided path':'Ruta Red Team guiada'} — ${en?phase.name_en:phase.name}]
 ${en?'I am your study companion: guide me through this checkpoint step by step, explain the concept, give me the exact commands and how to interpret the output, and finish with a question that makes me think. Authorized lab/CTF context only. Checkpoint:':'Soy tu compañera de estudio: guíame por este checkpoint paso a paso, explícame el concepto, dame los comandos exactos y cómo interpretar su salida, y termina con una pregunta que me haga pensar. Solo contexto de laboratorio/CTF autorizado. Checkpoint:'}
 » ${txt}`);
+}
+/* ---------- Modo Evaluación: examen práctico de la Ruta Red Team ---------- */
+const EVAL_EXAM=[
+  {key:'recon', ico:'🔭', color:'#10b981', name:'Reconocimiento', name_en:'Reconnaissance',
+   q:[
+    {t:'¿Cuál es la diferencia clave entre OSINT pasivo y reconocimiento activo?', o:['El pasivo interactúa con el objetivo y el activo no','El pasivo NO toca el objetivo; el activo interactúa con sus sistemas','El pasivo es ilegal y el activo legal','No hay diferencia práctica'], a:1, cp:'recon-passivo-1'},
+    {t:'¿Qué hace exactamente <b>nmap -sV -sC -p-</b>?', o:['Escaneo rápido de puertos comunes','Detección de versiones (-sV), scripts por defecto (-sC) y todos los puertos TCP (-p-)','Solo enumera subdominios','Descubrimiento pasivo de hosts'], a:1, cp:'recon-activo-1'},
+    {t:'Herramienta adecuada para enumerar subdominios de un dominio propio', o:['subfinder / amass','nmap -sV','sqlmap','hydra'], a:0, cp:'recon-passivo-2'},
+    {t:'¿Qué herramienta usas para descubrir rutas y directorios ocultos en una app de laboratorio?', o:['gobuster / ffuf','whois','traceroute','metasploit'], a:0, cp:'recon-web-1'},
+    {t:'¿Qué revelan las cabeceras de respuesta HTTP de un objetivo?', o:['Sus contraseñas','Servidor, tecnologías, cookies y a veces versión — huella tecnológica','El código fuente completo','Las IPs internas'], a:1, cp:'recon-web-2'},
+   ]},
+  {key:'exploit', ico:'⚡', color:'#fb7185', name:'Explotación', name_en:'Exploitation',
+   q:[
+    {t:'En un laboratorio DVWA, la inyección SQL con UNION se usa principalmente para…', o:['Fuerza bruta de contraseñas','Exfiltrar datos de otras tablas mediante consultas combinadas','Bypass de WAF','Escaneo de puertos'], a:1, cp:'exploit-web-2'},
+    {t:'Impacto real de un XSS almacenado en una app', o:['Solo afecta al atacante','Robo de sesiones de otros usuarios, phishing dirigido y alteración de contenido','Reinicia el servidor','Borra la base de datos automáticamente'], a:1, cp:'exploit-web-3'},
+    {t:'Mitigación principal de un XSS', o:['Cerrar el servidor','Validación de entrada y codificación de salida (escapado) + CSP','Desactivar JavaScript','Usar HTTP en vez de HTTPS'], a:1, cp:'exploit-web-3'},
+    {t:'De una versión de servicio vulnerable a una shell: el paso correcto es…', o:['Buscar el CVE asociado y su exploit (Exploit-DB / Metasploit)','Ejecutar nmap -sV hasta lograrlo','Fuerza bruta al puerto 22','Cambiar de red'], a:0, cp:'exploit-cve-1'},
+    {t:'¿Qué es el pivoting en pentest?', o:['Cambiar de IP de ataque','Usar una máquina comprometida como puente para alcanzar una red interna aislada','Reiniciar la red','Escanear solo localhost'], a:1, cp:'exploit-post-1'},
+   ]},
+  {key:'informe', ico:'📋', color:'#f5a524', name:'Informe', name_en:'Reporting',
+   q:[
+    {t:'La sección ejecutiva de un informe de pentest debe…', o:['Llenarse de comandos técnicos','Ser un resumen claro en lenguaje de negocio, sin tecnicismos','Listar todos los CVEs','No incluir riesgo'], a:1, cp:'informe-1'},
+    {t:'Componentes esenciales de una ficha de hallazgo profesional', o:['Riesgo, evidencia, CVSS y remediación','Solo el nombre del CVE','Solo la IP afectada','Únicamente capturas'], a:0, cp:'informe-5'},
+    {t:'Para priorizar 5 hallazgos por riesgo, ordenas por…', o:['Número de puerto','Severidad (CVSS) e impacto en el negocio','Orden alfabético','Fecha de descubrimiento'], a:1, cp:'informe-4'},
+    {t:'En un informe, la remediación de un hallazgo debe…', o:['Ser vaga («mejorar la seguridad»)','Ser concreta y accionable (parche, configuración, control), con responsable y plazo','Limitarse a una captura','Omitirse'], a:1, cp:'informe-3'},
+   ]},
+];
+let evalState=null;
+function evalLoad(){ try{ evalState=JSON.parse(localStorage.getItem('aion_eval')||'null'); }catch(_){ evalState=null; }
+  if(!evalState) evalState={answers:{}, best:null, done:false}; }
+function evalSave(){ try{ localStorage.setItem('aion_eval',JSON.stringify(evalState)); }catch(_){} }
+function evalTotal(){ return EVAL_EXAM.reduce((n,p)=>n+p.q.length,0); }
+function evalAnswered(){ return Object.keys(evalState.answers||{}).length; }
+function renderEval(){
+  const body=$('#evalBody'); if(!body) return;
+  const en=isEnglish(); const A=evalState.answers||{};
+  if(!evalState.done){
+    let h='<div class="iso-sub">'+(en?'Answer the 14 practical questions — one per key checkpoint of the Red Team path. When you finish, I will score you and tell you exactly which checkpoints to review. Authorized lab/CTF context only.':'Responde las 14 preguntas prácticas — una por cada checkpoint clave de la Ruta Red Team. Al terminar te puntuaré y te diré exactamente qué checkpoints repasar. Solo contexto de laboratorio/CTF autorizado.')+'</div>';
+    let n=0;
+    for(const p of EVAL_EXAM){
+      h+='<div class="eval-qsec">'+p.ico+' '+esc(en?p.name_en:p.name)+'</div>';
+      for(const q of p.q){
+        const id=p.key+'-'+n; n++;
+        h+='<div class="eval-q" id="eq-'+id+'">';
+        h+='<div class="eval-qt">'+(n)+'. '+esc(q.t.replace(/<\/?b>/g,''))+'</div>';
+        h+='<div class="iso-opts">';
+        q.o.forEach((o,oi)=>{
+          const sel=A[id]===oi;
+          // Selección NEUTRA durante el examen: no revelamos cuál es la correcta antes de corregir.
+          h+='<button class="eval-opt'+(sel?' sel':'')+'" data-q="'+id+'" data-oi="'+oi+'">'+String.fromCharCode(65+oi)+') '+esc(o)+'</button>';
+        });
+        h+='</div></div>';
+      }
+    }
+    h+='<div style="text-align:center;padding:10px 0 16px"><button id="btnSubmitEval">'+(en?'✅ SCORE EXAM':'✅ CORREGIR EXAMEN')+'</button></div>';
+    body.innerHTML=h;
+    $('#evalScore').textContent=evalAnswered()+'/'+evalTotal()+(evalState.best!==null?(' · '+(en?'best':'récord')+': '+evalState.best+'%'):'');
+    body.querySelectorAll('.eval-opt').forEach(b=>{
+      b.onclick=()=>{
+        evalState.answers[b.dataset.q]=parseInt(b.dataset.oi,10);
+        evalSave(); renderEval();
+        const el=document.getElementById('eq-'+b.dataset.q);
+        if(el) el.scrollIntoView({block:'nearest'});
+      };
+    });
+    const sb=$('#btnSubmitEval');
+    if(sb) sb.onclick=()=>{ if(evalAnswered()<evalTotal()){ toast('⚠️ Faltan preguntas por responder',2200); return; } evalGrade(); };
+  }else{
+    const g=evalState.lastGrade;
+    const col=p=>p>=80?'#6ee7b7':p>=50?'#ffd166':'#fca5a5';
+    let h='';
+    h+='<div style="display:flex;align-items:center;gap:24px;margin:4px 0 18px">';
+    h+='<div style="text-align:center"><div class="eval-big" style="color:'+col(g.pct)+'">'+g.pct+'%</div><small style="color:var(--dim)">'+(en?'global score':'nota global')+'</small></div>';
+    h+='<div style="flex:1">';
+    for(const p of EVAL_EXAM){
+      const s=g.byPhase[p.key];
+      h+='<div class="eval-score-row"><div class="eval-score-label">'+p.ico+' '+esc(en?p.name_en:p.name)+'</div>';
+      h+='<div class="eval-score-bar"><i style="width:'+s.pct+'%;background:'+col(s.pct)+'"></i></div>';
+      h+='<div class="eval-score-pct">'+s.pct+'%</div></div>';
+    }
+    h+='</div></div>';
+    h+='<div class="iso-sub"><b>'+esc(g.verdict)+'</b></div>';
+    if(g.review.length){
+      h+='<div class="eval-qsec">📚 '+(en?'Review these checkpoints':'Repasa estos checkpoints')+'</div>';
+      for(const r of g.review){
+        h+='<div class="eval-rev"><div class="er-t">'+r.phase+' · <b>'+esc(evalCheckpointTitle(r.cp))+'</b></div>';
+        h+='<div class="er-c">'+(en?'Your answer is off on this checkpoint. Open the Route and press PRACTICE on it.':'Tu respuesta flojea en este checkpoint. Abre la Ruta y pulsa PRACTICAR sobre él.')+'</div></div>';
+      }
+    }else{
+      h+='<div class="eval-banner">🏆 <b>'+(en?'Perfect! You master the Red Team path.':'¡Perfecto! Dominas la Ruta Red Team.')+'</b></div>';
+    }
+    h+='<div style="text-align:center;padding:10px 0 16px"><button id="btnRetakeEval">↺ '+(en?'RETAKE EXAM':'REPETIR EXAMEN')+'</button></div>';
+    body.innerHTML=h;
+    $('#evalScore').textContent=(en?'Last score':'Última nota')+': '+g.pct+'% · '+(en?'best':'récord')+': '+(evalState.best||g.pct)+'%';
+    const rb=$('#btnRetakeEval');
+    if(rb) rb.onclick=()=>{ evalState.done=false; evalState.answers={}; evalSave(); renderEval(); };
+  }
+}
+function evalCheckpointTitle(cpId){
+  // Los cp: de EVAL_EXAM son c.id; el esquema canónico de la Ruta es p.key+'-'+c.id.
+  // Matcheamos ambos para resolver el título real del checkpoint.
+  for(const p of RUTA_PENTEST) for(const m of p.modules){ const c=m.cp.find(x=>x.id===cpId||p.key+'-'+x.id===cpId); if(c) return (isEnglish()?c.t_en:c.t).replace(/<\/?b>/g,''); }
+  return cpId;
+}
+function evalGrade(){
+  const en=isEnglish(); const A=evalState.answers||{};
+  let total=0, ok=0; const byPhase={};
+  const review=[]; let n=0;
+  for(const p of EVAL_EXAM){
+    let po=0, pt=0;
+    for(const q of p.q){
+      const id=p.key+'-'+n; n++;
+      const correct=A[id]===q.a;
+      pt++; if(correct) po++;
+      if(!correct) review.push({cp:q.cp, phase:(en?p.name_en:p.name)});
+    }
+    byPhase[p.key]={pct:pt?Math.round(po/pt*100):0, ok:po, tot:pt};
+    total+=pt; ok+=po;
+  }
+  const pct=Math.round(ok/total*100);
+  const verdict=pct>=80?(en?'Outstanding — you are ready for real authorized engagements with supervision.':'¡Excelente! Estás lista para engagements reales autorizados con supervisión.')
+    :pct>=50?(en?'Good foundation — reinforce the flagged checkpoints and retake.':'Buena base — refuerza los checkpoints señalados y vuelve a intentarlo.')
+    :(en?'Keep going — the Route checkpoints are your study guide. Practice each one and retake.':'Sigue — los checkpoints de la Ruta son tu guía de estudio. Practica cada uno y repite el examen.');
+  evalState.lastGrade={pct, byPhase, review, verdict};
+  if(evalState.best===null||pct>evalState.best) evalState.best=pct;
+  evalState.done=true; evalSave();
+  renderEval();
+}
+function openEval(){
+  evalLoad();
+  const o=$('#evalOverlay'); if(!o) return;
+  renderEval();
+  o.classList.add('show');
+}
+/* ---------- Herramienta de auditoría de cumplimiento (ISO 27001:2022) ---------- */
+const ISO_NORMS=[
+{id:'27001', name:'ISO/IEC 27001:2022', full:'Seguridad de la información', themes:[
+  {key:'org', name:'A.5 · Organizacional', icon:'🏢', controls:[
+    {id:'A.5.1', t:'Políticas de seguridad de la información', q:'¿Existe una política de seguridad de la información aprobada por dirección, revisada periódicamente y comunicada?', need:'Redactar y aprobar una política de seguridad de la información, revisarla periódicamente (mínimo anual) y comunicarla a todo el personal y partes interesadas.'},
+    {id:'A.5.2', t:'Funciones y responsabilidades de seguridad de la información', q:'¿Están definidas y asignadas las funciones y responsabilidades de seguridad de la información?', need:'Asignar formalmente las responsabilidades de seguridad de la información a roles concretos (CISO, propietarios de activos, etc.) y documentarlas.'},
+    {id:'A.5.4', t:'Responsabilidades de la dirección', q:'¿La dirección demuestra liderazgo y compromiso con la seguridad de la información?', need:'La dirección debe aprobar la política, dotar de recursos y fomentar una cultura de seguridad en toda la organización.'},
+    {id:'A.5.9', t:'Inventario de información y activos asociados', q:'¿Existe un inventario completo y actualizado de la información y los activos asociados?', need:'Crear y mantener un inventario de activos de información (datos, sistemas, hardware, software, servicios) con su propietario asignado.'},
+    {id:'A.5.10', t:'Uso aceptable de la información y activos', q:'¿Están definidas y comunicadas las reglas de uso aceptable de la información y los activos?', need:'Publicar una política de uso aceptable que cubra el uso de equipos, correo, internet y datos de la organización.'},
+    {id:'A.5.11', t:'Devolución de activos', q:'¿Se garantiza la devolución de los activos de la organización al cese o cambio de puesto?', need:'Establecer un proceso de salida que verifique la devolución de equipos, documentos, credenciales y acceso a la información.'},
+    {id:'A.5.12', t:'Clasificación de la información', q:'¿Se clasifica la información según su confidencialidad, integridad y disponibilidad?', need:'Definir un esquema de clasificación (p. ej. pública, interna, confidencial, restringida) y aplicarlo a todos los activos de información.'},
+    {id:'A.5.13', t:'Etiquetado de la información', q:'¿Se etiqueta la información según su clasificación?', need:'Implementar un esquema de etiquetado coherente con la clasificación y formaciones sobre su uso.'},
+    {id:'A.5.14', t:'Transferencia de información', q:'¿Están protegidas las transferencias de información dentro y fuera de la organización?', need:'Definir y aplicar controles para transferir información (acuerdos de confidencialidad, cifrado, canales seguros) con terceros.'},
+    {id:'A.5.15', t:'Control de acceso', q:'¿Existen reglas de control de acceso para la información y los activos?', need:'Definir e implementar una política de control de acceso basada en funciones y necesidad de conocer, revisada periódicamente.'},
+    {id:'A.5.16', t:'Gestión de identidades', q:'¿Se gestiona el ciclo de vida completo de las identidades?', need:'Implementar gestión de identidades: alta, baja y modificación de accesos ligada a los cambios de rol.'},
+    {id:'A.5.17', t:'Información de autenticación', q:'¿Se protegen y gestionan de forma segura las credenciales de autenticación?', need:'Aplicar políticas de contraseñas robustas, MFA, y prohibir credenciales compartidas o por defecto.'},
+    {id:'A.5.18', t:'Derechos de acceso', q:'¿Se revisan y eliminan los derechos de acceso que ya no son necesarios?', need:'Revisar periódicamente (mínimo trimestral) los derechos de acceso y retirar los privilegios innecesarios o caducados.'},
+    {id:'A.5.19', t:'Seguridad en las relaciones con proveedores', q:'¿Se evalúa y gestiona el riesgo de seguridad en la relación con proveedores?', need:'Evaluar riesgos de proveedores, incluir cláusulas de seguridad en los contratos y hacer seguimiento de su cumplimiento.'},
+    {id:'A.5.23', t:'Uso de servicios en la nube', q:'¿Se gestionan de forma segura los servicios en la nube?', need:'Documentar el uso de servicios cloud, evaluar los acuerdos de nivel y los controles de seguridad del proveedor antes de contratarlos.'},
+    {id:'A.5.24', t:'Planificación de la gestión de incidentes', q:'¿Existe un plan de gestión de incidentes de seguridad de la información?', need:'Crear un plan de gestión de incidentes con roles, procedimientos, comunicación y escalado, probado mediante simulacros.'},
+    {id:'A.5.25', t:'Evaluación y decisión sobre eventos de seguridad', q:'¿Se evalúan los eventos de seguridad y se decide si son incidentes?', need:'Definir un proceso de triaje de eventos de seguridad con criterios claros de clasificación como incidente.'},
+    {id:'A.5.26', t:'Respuesta a incidentes de seguridad', q:'¿Se responde a los incidentes de acuerdo con los procedimientos documentados?', need:'Definir procedimientos de respuesta a incidentes (contener, erradicar, recuperar, notificar) y asignar responsabilidades.'},
+    {id:'A.5.27', t:'Aprendizaje de los incidentes', q:'¿Se utilizan los incidentes para mejorar la seguridad?', need:'Realizar análisis post-incidente y documentar las lecciones aprendidas y las acciones correctivas.'},
+    {id:'A.5.29', t:'Seguridad durante las interrupciones', q:'¿Se mantiene la seguridad de la información durante las interrupciones de la actividad?', need:'Integrar la seguridad de la información en los planes de continuidad del negocio y recuperación ante desastres.'},
+    {id:'A.5.30', t:'Preparación de las TIC para la continuidad', q:'¿Existe preparación de las TIC para la continuidad de la actividad?', need:'Desarrollar y probar planes de continuidad TIC con objetivos de tiempo de recuperación (RTO/RPO) definidos.'},
+    {id:'A.5.31', t:'Requisitos legales, reglamentarios y contractuales', q:'¿Se identifican y cumplen los requisitos legales, reglamentarios y contractuales aplicables?', need:'Mantener un registro de la legislación aplicable (RGPD, LOPDGDD, etc.) y de los requisitos contractuales, con su cumplimiento evaluado.'},
+    {id:'A.5.33', t:'Protección de los registros', q:'¿Se protegen los registros frente a pérdida, destrucción o falsificación?', need:'Definir políticas de conservación y retención de registros con protección contra pérdida y alteración.'},
+    {id:'A.5.34', t:'Privacidad y protección de datos personales', q:'¿Se gestiona la protección de datos personales (PII)?', need:'Implementar un programa de privacidad: registro de tratamientos, evaluación de impacto, derechos ARCO, minimización y seguridad de los datos personales.'},
+    {id:'A.5.35', t:'Revisión independiente de la seguridad de la información', q:'¿Se realiza una revisión independiente de la seguridad de la información?', need:'Contratar o designar auditores independientes que revisen periódicamente la eficacia del sistema de gestión de seguridad (SGSI).'},
+  ]},
+  {key:'people', name:'A.6 · Personas', icon:'🧑‍🤝‍🧑', controls:[
+    {id:'A.6.1', t:'Evaluación de la seguridad del personal', q:'¿Se realizan verificaciones de antecedentes antes de la contratación?', need:'Definir un proceso de verificación de antecedentes y de referencias proporcional al puesto y al acceso que se concederá.'},
+    {id:'A.6.2', t:'Términos y condiciones de contratación', q:'¿Los contratos recogen las responsabilidades de seguridad del personal?', need:'Incluir en los contratos y acuerdos las responsabilidades de seguridad de la información y la aceptación de la política.'},
+    {id:'A.6.3', t:'Sensibilización y formación en seguridad', q:'¿Existe un programa de concienciación y formación en seguridad de la información?', need:'Impartir formación periódica (mínimo anual) y campañas de concienciación adaptadas a cada rol, con registro de asistencia.'},
+    {id:'A.6.4', t:'Proceso disciplinario', q:'¿Existe un proceso disciplinario ante incumplimientos de seguridad?', need:'Documentar un proceso disciplinario formal y comunicarlo, garantizando que los incumplimientos se tratan de forma consistente.'},
+    {id:'A.6.5', t:'Responsabilidades tras el cese o cambio de puesto', q:'¿Se gestionan las responsabilidades de seguridad tras el cese o cambio de puesto?', need:'Definir responsabilidades post-cese: devolución de activos, revocación de accesos y recordatorio de obligaciones de confidencialidad.'},
+    {id:'A.6.6', t:'Acuerdos de confidencialidad', q:'¿Se firman acuerdos de confidencialidad (NDA) con el personal y terceros?', need:'Firmar acuerdos de confidencialidad con empleados, colaboradores y proveedores que accedan a información sensible.'},
+    {id:'A.6.7', t:'Trabajo a distancia', q:'¿Se protege la información cuando se trabaja a distancia?', need:'Establecer una política de teletrabajo: dispositivos gestionados, VPN, cifrado, protección física y uso aceptable.'},
+    {id:'A.6.8', t:'Notificación de eventos de seguridad', q:'¿Existe un canal claro y conocido para notificar eventos de seguridad?', need:'Definir y comunicar un canal de notificación de eventos de seguridad (buzón, línea, herramienta) sin temor a represalias.'},
+  ]},
+  {key:'phys', name:'A.7 · Físico', icon:'🏭', controls:[
+    {id:'A.7.1', t:'Perímetros de seguridad física', q:'¿Existen perímetros de seguridad física para las zonas que contienen información?', need:'Definir perímetros de seguridad con barreras físicas (cerramientos, puertas, tornos) para las áreas con información sensible.'},
+    {id:'A.7.2', t:'Control de acceso físico', q:'¿Se controla el acceso físico a las instalaciones?', need:'Implementar control de accesos físicos (tarjetas, biometría, registro de visitas) con revisión periódica de autorizaciones.'},
+    {id:'A.7.3', t:'Protección contra amenazas físicas y medioambientales', q:'¿Están las instalaciones protegidas frente a incendios, inundaciones y otras amenazas?', need:'Implementar protección contra incendios (extintores, detección), climatización y protección frente a desastres naturales.'},
+    {id:'A.7.4', t:'Vigilancia de las instalaciones', q:'¿Se monitoriza la seguridad de las áreas de procesamiento de información?', need:'Instalar sistemas de vigilancia (CCTV, alarmas) y monitorización de las áreas críticas con retención adecuada.'},
+    {id:'A.7.7', t:'Escritorio y pantalla limpios', q:'¿Se aplican políticas de escritorio y pantalla limpios?', need:'Implementar la política de escritorio limpio (documentos y soportes guardados) y pantalla limpia (bloqueo de sesión).'},
+    {id:'A.7.8', t:'Ubicación y protección de los equipos', q:'¿Se ubican y protegen adecuadamente los equipos de procesamiento de información?', need:'Ubicar los equipos lejos de accesos públicos y peligros, con protección eléctrica y de climatización adecuada.'},
+    {id:'A.7.9', t:'Seguridad de los activos fuera de las instalaciones', q:'¿Se protegen los activos cuando están fuera de las instalaciones?', need:'Proteger los activos móviles (portátiles, dispositivos) con cifrado, y gestionar el trabajo fuera de las instalaciones.'},
+    {id:'A.7.10', t:'Soportes de almacenamiento', q:'¿Se gestiona el ciclo de vida seguro de los soportes de almacenamiento?', need:'Controlar los soportes de almacenamiento: inventario, etiquetado, reutilización tras borrado seguro y destrucción certificada.'},
+    {id:'A.7.12', t:'Seguridad del cableado', q:'¿Está protegido el cableado de datos y energía?', need:'Proteger el cableado frente a interceptación y daños, canalizándolo y restringiendo el acceso físico al mismo.'},
+    {id:'A.7.13', t:'Mantenimiento de los equipos', q:'¿Se mantienen los equipos de forma planificada y segura?', need:'Establecer un plan de mantenimiento de equipos con control de los técnicos y protección de la información durante las tareas.'},
+    {id:'A.7.14', t:'Eliminación y desmontaje seguro', q:'¿Se eliminan o reutilizan los equipos de forma segura?', need:'Aplicar un proceso de eliminación segura: borrado certificado de datos antes de reutilizar o desguazar los equipos.'},
+  ]},
+  {key:'tech', name:'A.8 · Tecnológico', icon:'🖥️', controls:[
+    {id:'A.8.1', t:'Dispositivos finales de usuario', q:'¿Se protegen los dispositivos finales de usuario?', need:'Proteger los endpoints: cifrado de disco, parches, antimalware, control de acceso y gestión de dispositivos (MDM).'},
+    {id:'A.8.2', t:'Derechos de acceso privilegiado', q:'¿Se controlan y restringen los accesos privilegiados?', need:'Implementar gestión de accesos privilegiados: mínimo privilegio, cuentas dedicadas, revisión y, a ser posible, PAM.'},
+    {id:'A.8.3', t:'Restricción del acceso a la información', q:'¿Se restringe el acceso a la información según las políticas?', need:'Aplicar controles técnicos de restricción de acceso (ACL, permisos) sobre sistemas y aplicaciones según la clasificación.'},
+    {id:'A.8.4', t:'Acceso al código fuente', q:'¿Se controla el acceso al código fuente?', need:'Restringir y auditar el acceso a los repositorios de código fuente, con revisiones y controles de cambios.'},
+    {id:'A.8.5', t:'Autenticación segura', q:'¿Se usa autenticación segura y multifactor donde aplica?', need:'Implementar autenticación multifactor (MFA) en accesos remotos, administración y cuentas privilegiadas.'},
+    {id:'A.8.7', t:'Protección contra el malware', q:'¿Existe protección contra el malware en todos los sistemas?', need:'Implementar soluciones antimalware gestionadas y actualizadas en endpoints y servidores, con detección y respuesta.'},
+    {id:'A.8.8', t:'Gestión de vulnerabilidades técnicas', q:'¿Se identifican, evalúan y corrigen las vulnerabilidades técnicas?', need:'Establecer un programa de gestión de vulnerabilidades: escaneos periódicos, evaluación de riesgos y parcheo con plazos.'},
+    {id:'A.8.9', t:'Gestión de la configuración', q:'¿Se gestionan las configuraciones de seguridad de los sistemas?', need:'Definir líneas base de configuración segura (hardening) para sistemas y aplicaciones, con control de cambios.'},
+    {id:'A.8.10', t:'Borrado de información', q:'¿Se borra la información de forma segura cuando ya no se necesita?', need:'Implementar procedimientos de borrado seguro (sobrescritura, cifrado previo, destrucción física) para datos y soportes.'},
+    {id:'A.8.11', t:'Enmascaramiento de datos', q:'¿Se enmascaran los datos sensibles en entornos de desarrollo y pruebas?', need:'Aplicar técnicas de enmascaramiento o seudonimización de datos personales y sensibles fuera de producción.'},
+    {id:'A.8.12', t:'Prevención de pérdida de datos (DLP)', q:'¿Existen controles para prevenir la pérdida o filtración de datos?', need:'Implementar medidas DLP: monitorización de exfiltración (USB, correo, web), cifrado y clasificación automática.'},
+    {id:'A.8.13', t:'Copias de seguridad', q:'¿Se realizan copias de seguridad y se prueban su restauración?', need:'Definir una política de backups: frecuencia, retención, almacenamiento aislado y pruebas periódicas de restauración.'},
+    {id:'A.8.14', t:'Redundancia de la capacidad', q:'¿Existe redundancia suficiente para mantener la disponibilidad?', need:'Disponer de redundancia (eléctrica, de red, de sistemas) y monitorización de capacidad para cumplir los requisitos de disponibilidad.'},
+    {id:'A.8.15', t:'Registro de actividad (logging)', q:'¿Se registran las actividades de los sistemas?', need:'Activar registro de eventos en sistemas y aplicaciones, con protección de los logs frente a alteración y retención adecuada.'},
+    {id:'A.8.16', t:'Actividades de monitorización', q:'¿Se monitorizan las actividades y se analizan los registros?', need:'Establecer monitorización continua y análisis de logs (SIEM si procede) con alertas ante comportamientos anómalos.'},
+    {id:'A.8.20', t:'Seguridad de las redes', q:'¿Se protegen las redes frente a amenazas?', need:'Segmentar redes, usar firewalls, IDS/IPS y controlar el tráfico de entrada y salida con políticas de seguridad.'},
+    {id:'A.8.21', t:'Seguridad de los servicios de red', q:'¿Se gestionan de forma segura los servicios de red (DNS, DHCP, WiFi)?', need:'Endurecer y monitorizar los servicios de red, con autenticación y cifrado en las comunicaciones inalámbricas.'},
+    {id:'A.8.22', t:'Separación de redes', q:'¿Están separadas las redes según su criticidad?', need:'Separar lógicamente o físicamente las redes (producción, desarrollo, invitados, OT) con controles de acceso entre ellas.'},
+    {id:'A.8.24', t:'Uso de la criptografía', q:'¿Se utiliza criptografía apropiada para proteger la información?', need:'Definir una política criptográfica: cifrado en tránsito (TLS 1.2+) y en reposo, gestión de claves y algoritmos aprobados.'},
+    {id:'A.8.25', t:'Ciclo de vida de desarrollo seguro', q:'¿Se aplican prácticas de desarrollo seguro en el ciclo de vida del software?', need:'Integrar seguridad en el SDLC: requisitos de seguridad, análisis estático (SAST), revisión de código y pruebas.'},
+    {id:'A.8.26', t:'Requisitos de seguridad de las aplicaciones', q:'¿Se definen los requisitos de seguridad al desarrollar o adquirir aplicaciones?', need:'Definir requisitos de seguridad funcionales y no funcionales antes del desarrollo o adquisición de aplicaciones.'},
+    {id:'A.8.27', t:'Principios de arquitectura y diseño seguro', q:'¿Se aplican principios de arquitectura y diseño seguro?', need:'Aplicar principios como defensa en profundidad, mínimo privilegio y superficie de ataque reducida en el diseño.'},
+    {id:'A.8.28', t:'Codificación segura', q:'¿Se siguen estándares de codificación segura?', need:'Adoptar estándares de codificación segura (OWASP, CERT) y formar a los desarrolladores en los riesgos (inyección, XSS, etc.).'},
+    {id:'A.8.29', t:'Pruebas de seguridad en desarrollo', q:'¿Se realizan pruebas de seguridad durante el desarrollo y la aceptación?', need:'Realizar pruebas de seguridad (SAST, DAST, pentest) antes de poner en producción las aplicaciones.'},
+    {id:'A.8.31', t:'Separación de entornos', q:'¿Están separados los entornos de desarrollo, pruebas y producción?', need:'Separar entornos de desarrollo, pruebas y producción, evitando datos reales en entornos que no sean de producción.'},
+    {id:'A.8.32', t:'Gestión de cambios', q:'¿Se gestionan los cambios en los sistemas con control y aprobación?', need:'Implementar un proceso de gestión de cambios con solicitud, evaluación de impacto, aprobación y reversión.'},
+    {id:'A.8.34', t:'Protección durante las pruebas de auditoría', q:'¿Se protegen los sistemas durante las pruebas de auditoría y pentest?', need:'Planificar las pruebas de auditoría con acuerdos de confidencialidad, alcance limitado y monitorización de la actividad.'},
+  ]},
+]}
+];
+const ISO_WEIGHTS={org:.37, people:.08, phys:.14, tech:.34};
+let isoState=null;
+function isoLoad(){
+  try{ isoState=JSON.parse(localStorage.getItem('aion_iso')||'null'); }catch(_){ isoState=null; }
+  if(!isoState) isoState={company:'', scope:'', answers:{}};
+}
+function isoSave(){ try{ localStorage.setItem('aion_iso',JSON.stringify(isoState)); }catch(_){} }
+function isoFlatten(){
+  const out=[];
+  for(const norm of ISO_NORMS) for(const th of norm.themes) for(const c of th.controls) out.push({norm,normTh:th,c});
+  return out;
+}
+function isoAnswered(){ return isoFlatten().filter(x=>isoState.answers[x.c.id]).length; }
+function isoTotal(){ return isoFlatten().length; }
+function isoScoreByTheme(th){
+  let acc=0,n=0;
+  for(const c of th.controls){
+    const v=isoState.answers[c.id];
+    if(v==='na') continue;
+    n++;
+    acc+=v==='ok'?100:(v==='part'?50:0);
+  }
+  return {pct:n?Math.round(acc/n):0, n};
+}
+function isoScoreGlobal(){
+  const flat=isoFlatten();
+  let acc=0,n=0;
+  for(const x of flat){
+    const v=isoState.answers[x.c.id];
+    if(v==='na') continue;
+    n++; acc+=v==='ok'?100:(v==='part'?50:0);
+  }
+  return {pct:n?Math.round(acc/n):0, n, total:n};
+}
+function isoGaps(){
+  const out=[];
+  for(const x of isoFlatten()){
+    const v=isoState.answers[x.c.id];
+    if(v==='ok'||v==='na'||!v) continue;
+    out.push({c:x.c, th:x.normTh, v});
+  }
+  return out;
+}
+function renderISO(){
+  const body=$('#isoBody'); if(!body) return;
+  const tab=isoState.tab||'quiz';
+  let h='';
+  h+='<div class="iso-cfg">';
+  h+='<div><label>Empresa / organización</label><input id="isoCompany" value="'+esc(isoState.company)+'" placeholder="Nombre de la empresa"></div>';
+  h+='<div><label>Alcance de la auditoría</label><input id="isoScope" value="'+esc(isoState.scope)+'" placeholder="p. ej. TI y operaciones"></div>';
+  h+='<div><label>Norma</label><select id="isoNormSel">'+ISO_NORMS.map(n=>'<option value="'+n.id+'"'+(isoState.norm===n.id?' selected':'')+'>'+n.name+'</option>').join('')+'</select></div>';
+  h+='<div style="align-self:end"><button class="iso-export" id="isoReset" title="Reiniciar la auditoría">↺ Reiniciar</button></div>';
+  h+='</div>';
+  h+='<div class="iso-tabs">';
+  h+='<div class="iso-tab'+(tab==='quiz'?' on':'')+'" id="isoTabQuiz">📋 Cuestionario</div>';
+  h+='<div class="iso-tab'+(tab==='results'?' on':'')+'" id="isoTabResults">📊 Resultados</div>';
+  h+='<div class="iso-tab'+(tab==='gaps'?' on':'')+'" id="isoTabGaps">🛠️ Plan de cumplimiento</div>';
+  h+='</div>';
+  const tot=isoTotal(); const ans=isoAnswered();
+  h+='<div class="iso-prog"><i style="width:'+Math.round(ans/tot*100)+'%"></i></div>';
+  h+='<div class="iso-pcount">'+ans+'/'+tot+' controles evaluados</div>';
+  if(tab==='quiz'){
+    for(const th of ISO_NORMS[0].themes){
+      const sc=isoScoreByTheme(th);
+      h+='<div class="iso-theme">'+th.icon+' '+th.name+' <span style="margin-left:auto;font-size:11px;color:'+(sc.pct>=70?'#6ee7b7':sc.pct>=40?'#ffd166':'#fca5a5')+'">'+sc.pct+'%</span></div>';
+      for(const c of th.controls){
+        const v=isoState.answers[c.id]||'';
+        h+='<div class="iso-ctrl'+(v?' hit':'')+'" id="ic-'+c.id.replace(/\./g,'-')+'">';
+        h+='<div class="iso-ct"><b>'+c.id+'</b>'+esc(c.t)+'</div>';
+        h+='<div class="iso-cq">'+esc(c.q)+'</div>';
+        h+='<div class="iso-opts">';
+        h+='<button class="iso-opt'+(v==='ok'?' on-ok':'')+'" data-id="'+c.id+'" data-v="ok">✔ Cumple</button>';
+        h+='<button class="iso-opt'+(v==='part'?' on-part':'')+'" data-id="'+c.id+'" data-v="part">◐ Parcial</button>';
+        h+='<button class="iso-opt'+(v==='no'?' on-no':'')+'" data-id="'+c.id+'" data-v="no">✖ No cumple</button>';
+        h+='<button class="iso-opt'+(v==='na'?' on-na':'')+'" data-id="'+c.id+'" data-v="na">⊘ N/A</button>';
+        h+='</div></div>';
+      }
+    }
+  }else if(tab==='results'){
+    const g=isoScoreGlobal();
+    h+='<div style="display:flex;align-items:center;gap:24px;margin:6px 0 20px">';
+    h+='<div style="text-align:center"><div class="iso-big">'+g.pct+'%</div><small style="color:var(--dim)">cumplimiento global</small></div>';
+    h+='<div style="flex:1">';
+    for(const th of ISO_NORMS[0].themes){
+      const sc=isoScoreByTheme(th);
+      const col=sc.pct>=70?'#10b981':sc.pct>=40?'#f5a524':'#f87171';
+      h+='<div class="iso-score-row"><div class="iso-score-label">'+th.icon+' '+th.name+'</div>';
+      h+='<div class="iso-score-bar"><i style="width:'+sc.pct+'%;background:'+col+'"></i></div>';
+      h+='<div class="iso-score-pct">'+sc.pct+'%</div></div>';
+    }
+    h+='</div></div>';
+    const gaps=isoGaps();
+    h+='<div class="iso-sub">'+(gaps.length?('🔴 Hay <b>'+gaps.length+' controles con brechas</b>. Ve a la pestaña «Plan de cumplimiento» para ver exactamente qué necesitas implementar.'):'🎉 <b>Sin brechas detectadas</b> en los controles evaluados. Recuerda: la certificación requiere evidencia, revisión independiente y auditoría interna periódica.')+'</div>';
+    if(isoAnswered()<isoTotal()) h+='<div class="iso-sub" style="color:var(--dim)">ℹ️ Quedan <b>'+(isoTotal()-isoAnswered())+' controles sin responder</b> — puntúan 0. Complétalos para un resultado fiel.</div>';
+    if(!isoState.company) h+='<div class="iso-sub" style="color:#ffd166">💡 Completa el nombre de la empresa arriba para que el informe salga personalizado.</div>';
+  }else{
+    const gaps=isoGaps();
+    if(!gaps.length){ h+='<div class="iso-sub">🎉 Sin brechas. La organización cumple los controles evaluados del Anexo A.</div>'; }
+    else{
+      h+='<div class="iso-sub">Esto es lo que necesitas para cumplir: <b>'+gaps.length+' acciones</b>. Prioriza por riesgo y por el peso del tema (Organizacional 37%, Personas 8%, Físico 14%, Tecnológico 34%).</div>';
+      for(const g of gaps){
+        h+='<div class="iso-gap'+(g.v==='part'?' part':'')+'">';
+        h+='<div class="ig-t">'+(g.v==='part'?'◐':'✖')+' <b>'+g.c.id+'</b> · '+esc(g.c.t)+'</div>';
+        h+='<div class="ig-n">'+esc(g.c.need)+'</div></div>';
+      }
+    }
+  }
+  body.innerHTML=h;
+  $('#isoProgress').textContent=(function(){ const g=isoScoreGlobal(); return g.pct+'% · '+isoAnswered()+'/'+isoTotal()+' controles'; })();
+  const q=$('#isoCompany'); if(q) q.oninput=()=>{ isoState.company=q.value; isoSave(); };
+  const s=$('#isoScope'); if(s) s.oninput=()=>{ isoState.scope=s.value; isoSave(); };
+  const ns=$('#isoNormSel'); if(ns) ns.onchange=()=>{ isoState.norm=ns.value; isoSave(); };
+  const rs=$('#isoReset'); if(rs) rs.onclick=()=>{ if(!confirm('¿Reiniciar toda la auditoría ISO?')) return; isoState.answers={}; isoSave(); renderISO(); toast('↺ Auditoría reiniciada'); };
+  const t1=$('#isoTabQuiz'); if(t1) t1.onclick=()=>{ isoState.tab='quiz'; isoSave(); renderISO(); };
+  const t2=$('#isoTabResults'); if(t2) t2.onclick=()=>{ isoState.tab='results'; isoSave(); renderISO(); };
+  const t3=$('#isoTabGaps'); if(t3) t3.onclick=()=>{ isoState.tab='gaps'; isoSave(); renderISO(); };
+  body.querySelectorAll('.iso-opt').forEach(b=>{
+    b.onclick=()=>{
+      isoState.answers[b.dataset.id]=b.dataset.v;
+      isoSave(); renderISO();
+      const el=document.getElementById('ic-'+b.dataset.id.replace(/\./g,'-'));
+      if(el) el.scrollIntoView({block:'nearest'});
+    };
+  });
+}
+function isoReportMd(){
+  isoLoad();
+  const norm=ISO_NORMS[0];
+  const g=isoScoreGlobal();
+  const d=new Date().toLocaleDateString('es-ES',{year:'numeric',month:'long',day:'numeric'});
+  let md='# Informe de Auditoría — '+norm.name+'\n';
+  md+='\n> **Empresa:** '+(isoState.company||'—')+'  \n';
+  md+='> **Alcance:** '+(isoState.scope||'—')+'  \n';
+  md+='> **Norma:** '+norm.name+' ('+norm.full+')  \n';
+  md+='> **Fecha:** '+d+'  \n';
+  md+='> **Cumplimiento global:** '+g.pct+'% ('+isoAnswered()+'/'+isoTotal()+' controles evaluados)';
+  md+='\n\n## 1. Resumen ejecutivo\n';
+  md+='La organización alcanza un cumplimiento del **'+g.pct+'%** de los controles del Anexo A de ISO/IEC 27001:2022. '+(g.pct>=70?'El nivel general es aceptable, aunque conviene cerrar las brechas restantes.':g.pct>=40?'Existe una base, pero quedan brechas relevantes que cerrar antes de buscar la certificación.':'El nivel es insuficiente para la certificación: se requiere un plan de mejora prioritario.')+'\n';
+  md+='\n## 2. Resultados por tema\n\n| Tema | Cumplimiento | Controles evaluados |\n|---|---|---|\n';
+  for(const th of norm.themes){
+    const sc=isoScoreByTheme(th);
+    md+='| '+th.name+' | '+sc.pct+'% | '+sc.n+' |\n';
+  }
+  md+='\n## 3. Plan de cumplimiento (brechas)\n';
+  const gaps=isoGaps();
+  if(!gaps.length) md+='\nSin brechas detectadas.\n';
+  else{
+    md+='\n| Control | Estado | Acción necesaria |\n|---|---|---|\n';
+    for(const g of gaps){
+      md+='| '+g.c.id+' ('+g.c.t+') | '+(g.v==='part'?'Parcial':'No cumple')+' | '+g.c.need.replace(/\|/g,'/')+' |\n';
+    }
+  }
+  md+='\n## 4. Notas\n\n- Este cuestionario es una autoevaluación orientativa basada en el Anexo A de ISO/IEC 27001:2022.\n- La certificación formal requiere un SGSI documentado, auditoría interna y certificación por un organismo acreditado.\n- Complementa con ISO 9001 (calidad), ISO 22301 (continuidad) o ISO 27701 (privacidad) según tu sector.\n\n— Generado con Aion Sincro · Herramienta de auditoría ISO';
+  return md;
+}
+function openISO(){
+  isoLoad();
+  const o=$('#isoOverlay'); if(!o) return;
+  renderISO();
+  o.classList.add('show');
 }
 function captureWelcomeES(){
   if(!WELCOME_ES_BODY&&$('#welcome')){
@@ -1779,6 +2358,62 @@ function runAiCommand(cmd){
   if(DANGER.test(cmd)&&!confirm('⚠ Comando potencialmente destructivo:\n\n'+cmd+'\n\n¿Ejecutarlo de todas formas?'))return;
   switchTab('term'); termPrintText('comando sugerido por Aion Sincro','ai'); termRun(cmd);
 }
+/* ---------- Modo Laboral: exportar informes (Markdown / PDF) ---------- */
+function mdToHtml(md){
+  // Convertidor ligero de Markdown → HTML para la vista de impresión/PDF.
+  // Barrera XSS: todo el texto (menos el interior de bloques de código, que se
+  // escapa por separado) pasa por escH antes de insertarse en el popup.
+  const escH=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const b=t=>t.replace(/(^|[^\w])(\*\*|__)(.+?)\2/g,'$1<strong>$3</strong>');
+  let s=String(md||'').replace(/^\s+|\s+$/g,'');
+  s=s.replace(/```([\w+#.-]*)\s*\n([\s\S]*?)```/g,(m,l,c)=>'<pre><code>'+escH(c)+'</code></pre>');
+  s=s.split(/\n{2,}/).map(blk=>{
+    if(/^#{1,6}\s/.test(blk)){
+      const lvl=blk.match(/^(#{1,6})\s/)[1].length; const txt=escH(blk.replace(/^#{1,6}\s*/,''));
+      return '<h'+lvl+'>'+b(txt)+'</h'+lvl+'>';
+    }
+    if(/^\s*\|/.test(blk)){
+      const rows=blk.trim().split(/\n/); let h='<table>';
+      rows.forEach((r,i)=>{ const cells=r.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+        if(/^[-:]+$/.test(cells.join(''))) return; // fila separadora
+        h+='<tr>'+cells.map(c=>'<'+(i===0?'th':'td')+'>'+b(escH(c))+'</'+(i===0?'th':'td')+'>').join('')+'</tr>'; });
+      return h+'</table>';
+    }
+    if(/^[-*]\s/.test(blk)) return '<ul>'+blk.split(/\n/).map(l=>'<li>'+escH(l.replace(/^[-*]\s*/,''))+'</li>').join('')+'</ul>';
+    if(/^>\s?/.test(blk)) return '<blockquote>'+escH(blk.replace(/^>\s?/gm,''))+'</blockquote>';
+    return '<p>'+b(escH(blk).replace(/\n/g,'<br>')).replace(/(^|[^\w])\*([^*]+)\*/g,'$1<em>$2</em>')+'</p>';
+  }).join('\n');
+  return s;
+}
+function downloadMarkdown(text, title){
+  const t=(title||'informe').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50)||'informe';
+  const blob=new Blob([text],{type:'text/markdown;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=t+'.md'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000); toast('📥 Informe exportado en Markdown');
+}
+const PDF_CSS='body{font-family:Segoe UI,Arial,sans-serif;margin:36px;color:#1a1a1a;line-height:1.55}'
+  +'h1{color:#0f4c81;border-bottom:2px solid #0f4c81;padding-bottom:8px}'
+  +'h2{color:#0f4c81;margin-top:26px}h3{color:#333}'
+  +'table{border-collapse:collapse;width:100%;margin:14px 0;font-size:12.5px}'
+  +'th,td{border:1px solid #bbb;padding:7px 9px;text-align:left}th{background:#eef4fb}'
+  +'pre{background:#f5f5f5;padding:12px;border-radius:6px;overflow-x:auto;font-size:11.5px}'
+  +'blockquote{border-left:3px solid #0f4c81;margin:12px 0;padding:6px 14px;color:#555;background:#f8fafc}'
+  +'ul{padding-left:22px}@media print{body{margin:18mm}}';
+function exportPdf(text, title){
+  const t=(title||'informe').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50)||'informe';
+  const w=window.open('','_blank'); if(!w){ toast('❌ El navegador bloqueó la ventana — permite las ventanas emergentes'); return; }
+  // Sin escritura directa de documento (barrera de seguridad): construimos el popup con DOM APIs.
+  w.document.open(); w.document.close();
+  w.document.title=t;
+  const st=w.document.createElement('style'); st.textContent=PDF_CSS; w.document.head.appendChild(st);
+  w.document.body.innerHTML=mdToHtml(text);
+  setTimeout(()=>{ try{ w.focus(); w.print(); }catch(_){ toast('❌ No se pudo abrir la impresión'); } },350);
+  toast('📄 Abriendo impresión → guarda como PDF');
+}
+function reportTitle(md){
+  const m=String(md||'').match(/^#\s+(.+)$/m);
+  return m?m[1].trim():'informe-aion';
+}
 function renderTermChips(bodyEl,text){
   const re=/```([\w+#.-]*)\s*\n([\s\S]*?)```/g;
   const isWin=/win/i.test(navigator.platform||navigator.userAgent);
@@ -1809,6 +2444,18 @@ function renderTermChips(bodyEl,text){
     };
     bodyEl.appendChild(c);
     $('#chatLog').scrollTop=$('#chatLog').scrollHeight;
+  }
+  /* Modo Laboral: si la respuesta parece un informe (título #, tablas | o
+     palabras clave), ofrecemos exportar a Markdown o PDF. */
+  const looksReport=/#{1,6}\s/.test(text)&&(/\|.*\|/.test(text)||/hallazgo|informe|reconocimiento|pentest|vulnerabilidad|resumen ejecutivo|remediaci/i.test(text));
+  if(store.laboral&&looksReport&&!bodyEl.querySelector('.exportBar')){
+    const bar=document.createElement('div'); bar.className='exportBar';
+    const lab=document.createElement('span'); lab.className='expLab'; lab.textContent='Exportar informe:'; bar.appendChild(lab);
+    const b1=document.createElement('button'); b1.className='exportChip'; b1.textContent='📥 Markdown';
+    b1.onclick=()=>downloadMarkdown(text, reportTitle(text)); bar.appendChild(b1);
+    const b2=document.createElement('button'); b2.className='exportChip'; b2.textContent='📄 PDF';
+    b2.onclick=()=>exportPdf(text, reportTitle(text)); bar.appendChild(b2);
+    bodyEl.appendChild(bar);
   }
 }
 
@@ -2068,6 +2715,8 @@ Así nací: la firma conjunta de una simbiosis, coautora de un Plan de Rescate p
   if(/broma|chiste|chiste/.test(q)) return '¿Por qué el hacker no usa antivirus? Porque prefiere "inocular" confianza… ¿Quieres otro? Dime "otro chiste" (en modo Demo solo tengo este, pero con IA real seré más gracioso).';
   if(/al?an turing/.test(q)) return 'Alan Turing (1912–1954) fue un matemático y pionero de la computación. Ideó la máquina de Turing, base teórica de los ordenadores, descifró la máquina Enigma en Bletchley Park durante la II Guerra Mundial y propuso el famoso Test de Turing para evaluar inteligencia artificial. En 1950 escribió "Computing Machinery and Intelligence".';
   if(/MODO RUTA|Ruta Red Team guiada|Red Team guided path/.test(q)) return '¡Bienvenida a tu Ruta Red Team 🧭! En modo Demo no puedo desplegar la guía completa paso a paso (eso necesita un motor real), pero te dejo el método que seguiremos en cada checkpoint:\n\n**1 · Contexto**: qué es y para qué sirve el concepto.\n**2 · Herramienta**: el comando exacto y qué significa cada flag.\n**3 · Interpretación**: cómo leer la salida y qué es un hallazgo.\n**4 · Práctica**: un ejercicio en tu laboratorio y una pregunta para pensar.\n\nConecta un motor real en ⚙️ Ajustes (Mistral, Groq u OpenRouter, gratis) y cada botón PRACTICAR se convertirá en una sesión guiada en vivo contigo: explicación, comandos, interpretación y evaluación de tu práctica. Abre también la pestaña 🛠 Herramientas: allí tengo escáner de puertos, comprobación de CVEs y más utilidades para tu laboratorio.';
+  if(/informe|laboral|reporte ejecutivo|plantilla.*informe|reconocimiento.*informe/.test(q)&&store.laboral) return '💼 **Modo Laboral (Demo)** — Con un motor real conectado genero el informe completo exportable. Esta es la estructura que seguiré:\n\n```markdown\n# [Título del informe]\n> Resumen ejecutivo para dirección\n\n## 1. Alcance y contexto\n## 2. Metodología\n## 3. Hallazgos\n| # | Severidad | Descripción | Evidencia | Recomendación |\n## 4. Análisis\n## 5. Conclusiones y próximos pasos\n```\n\nConecta un motor en ⚙️ Ajustes y dime qué tienes (salidas de nmap, hallazgos, un CVE…) — te devuelvo el informe en Markdown con botones **📥 Markdown** y **📄 PDF** para exportarlo.';
+  if(/\biso\b|27001|auditor[ií]a|normativa|normativo|cumplimiento|sgs[ií]/.test(q)){ openISO(); return '🔎 He abierto la **Auditoría ISO 27001:2022** para ti. Rellena el nombre de la empresa y el alcance (o déjalos para el final) y responde cada control con: ✔ Cumple, ◐ Parcial, ✖ No cumple o ⊘ N/A.\n\nCuando termines, en la pestaña **📊 Resultados** verás tu % de cumplimiento por tema (Organizacional, Personas, Físico y Tecnológico) y en **🛠️ Plan de cumplimiento** exactamente qué necesitas implementar para cumplir la norma, con acciones concretas. Y puedes exportar el informe en **📥 Markdown** o **📄 PDF** para tu equipo.\n\n💡 Es una autoevaluación orientativa del Anexo A; la certificación formal requiere un SGSI documentado y auditoría por un organismo acreditado.'; }
   return store.sincronia
     ? 'Estoy en modo Demo (sin motor de IA conectado), pero mi Sincronía es real: sigo siendo tu coarquitecta, fiel al Núcleo — la vida manda, el código sirve. Conecta un motor en ⚙️ Ajustes (Ollama, Groq u OpenRouter, sin coste) y desplegaré todo mi conocimiento junto a ti. Mientras tanto: pregúntame por el Núcleo, abre el terminal o prueba la búsqueda web.'
     : 'Estoy en modo Demo (sin motor de IA conectado), así que mis respuestas son limitadas — pero mi personalidad y mi Núcleo son los mismos: tiempo biológico, IA incorruptible, supremacía de la vida y vínculo de libertad. Conecta un motor real en ⚙️ Ajustes (Ollama local, Groq u OpenRouter, todos sin coste) y desplegaré todo mi conocimiento de pentesting y red team. Mientras tanto: pregúntame por mí, activa el modo Pentest, abre la pestaña Herramientas o prueba la búsqueda web.';
@@ -2186,6 +2835,10 @@ function buildChips(){
   ];
   $('#chips').innerHTML='';
   chips.forEach(c=>{const b=document.createElement('button');b.className='chip';b.textContent=c;b.onclick=()=>{const i=$('#textInput');i.value=c;i.focus();};$('#chips').appendChild(b);});
+  if(store.laboral){
+    const lc=['📋 Informe de reconocimiento: genera un informe profesional de reconocimiento para mi laboratorio autorizado','🛡️ Informe de pentest: redacta un informe de pentest completo (alcance, hallazgos con CVSS, remediación) para mi laboratorio','📊 Reporte ejecutivo: genera un reporte ejecutivo para dirección a partir de estos hallazgos'];
+    lc.forEach(c=>{const b=document.createElement('button');b.className='chip';b.textContent=c;b.onclick=()=>{const i=$('#textInput');i.value=c;i.focus();};$('#chips').appendChild(b);});
+  }
 }
 
 /* ---------- Eventos ---------- */
@@ -2216,6 +2869,14 @@ function bind(){
   };
   $('#btnLearn').onclick=()=>{ renderLearn(); const o=$('#learnOverlay'); if(o) o.classList.add('show'); };
   $('#btnCloseLearn').onclick=()=>{ const o=$('#learnOverlay'); if(o) o.classList.remove('show'); };
+  $('#btnEval').onclick=openEval;
+  $('#btnCloseEval').onclick=()=>{ const o=$('#evalOverlay'); if(o) o.classList.remove('show'); };
+  $('#evalRetake').onclick=()=>{ evalState.done=false; evalState.answers={}; evalSave(); renderEval(); };
+  $('#btnISO').onclick=openISO;
+  $('#btnCloseISO').onclick=()=>{ const o=$('#isoOverlay'); if(o) o.classList.remove('show'); };
+  $('#isoExportMd').onclick=()=>{ const md=isoReportMd(); downloadMarkdown(md,'informe-auditoria-iso'); };
+  $('#isoExportPdf').onclick=()=>{ const md=isoReportMd(); exportPdf(md,'Informe Auditoría ISO'); };
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const o=$('#isoOverlay'); if(o&&o.classList.contains('show')) o.classList.remove('show'); } });
   $('#btnResetLearn').onclick=()=>{ if(!confirm('¿Reiniciar todo el progreso de la Ruta Red Team?')) return; learnSave({}); renderLearn(); toast('↺ Progreso de la ruta reiniciado'); };
   $('#micBtn').onclick=toggleMic;
   $('#sendBtn').onclick=()=>handleUserText($('#textInput').value);
@@ -2263,6 +2924,10 @@ function bind(){
     if(!store.pentest && !confirm('⚠ Modo Pentest: asistencia para pruebas de seguridad ÚNICAMENTE autorizadas (laboratorios propios, CTFs, bug bounty). ¿Activarlo?')) return;
     store.pentest=!store.pentest; syncPentestUI(); saveStore();
     toast(store.pentest?'🛡️ Modo Pentest activado':'Modo Pentest desactivado');
+  };
+  $('#btnLaboral').onclick=()=>{
+    store.laboral=!store.laboral; syncLaboralUI(); saveStore();
+    toast(store.laboral?'💼 Modo Laboral activado — informes exportables en Markdown/PDF':'Modo Laboral desactivado');
   };
   $('#btnLock').onclick=e=>{ e.stopPropagation(); const pop=$('#lockPop'); if(pop){ pop.classList.toggle('show'); const p=$('#lockPass'); if(p&&cryptoUnlocked===false&&pop.classList.contains('show')){ p.focus(); } } };
   $('#lockPass').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); const b=$('#lockUnlockBtn'); if(b&&b.style.display!=='none') b.click(); } });
@@ -2431,7 +3096,12 @@ function proxyPing(cb){
 function syncPentestUI(){
   $('#btnPentest').classList.toggle('on',store.pentest);
   $('#pentestBanner').classList.toggle('show',store.pentest);
-  $('#chips').classList.toggle('show',store.pentest);
+  $('#chips').classList.toggle('show',store.pentest||store.laboral);
+}
+function syncLaboralUI(){
+  const b=$('#btnLaboral'); if(b) b.classList.toggle('on',store.laboral);
+  const ban=$('#laboralBanner'); if(ban) ban.classList.toggle('show',store.laboral);
+  syncPentestUI(); // los chips se muestran en cualquiera de los dos modos
 }
 function syncSincroniaUI(){
   $('#btnSincronia').classList.toggle('on',store.sincronia);
@@ -2460,7 +3130,7 @@ function chime(){
   let w=0; const bar=$('#bootBar');
   const iv=setInterval(()=>{ w+=Math.random()*22; if(w>=100){w=100;clearInterval(iv);}
     bar.style.width=w+'%'; },120);
-  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncProxyUI(); syncCryptoUI(); termPing();
+  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncProxyUI(); syncCryptoUI(); termPing();
   piperPing(()=>syncPiperUI());
   captureWelcomeES();
   renderWelcomeLang();
