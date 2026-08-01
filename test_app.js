@@ -318,10 +318,35 @@ check("parser soporta formato grepable (-oG)", script.includes("Ports:") && scri
 check("parser extrae OS/Running/MAC", script.includes("OS\\s+details?:\\s*(.+)$") && script.includes("MAC\\s+Address:\\s*(.+)$"));
 check("informe tiene resumen ejecutivo y tabla de puertos", script.includes("# Informe de Reconocimiento — Nmap") && script.includes("| Puerto | Protocolo | Estado | Servicio / Versión |"));
 check("informe incluye superficie de ataque y recomendaciones", script.includes("## 3. Superficie de ataque") && script.includes("## 4. Recomendaciones") && script.includes("laboratorio propio o permiso del propietario"));
-check("handleUserText intercepta nmap en modo Laboral", script.includes("const report=nmapReconReport(text)") && script.includes("if(report){") && script.includes("body.textContent=report"));
+check("handleUserText intercepta la salida de herramientas en modo Laboral", script.includes("const report=reconReport(text)") && script.includes("if(report){") && script.includes("body.textContent=report"));
 check("el informe reutiliza renderTermChips (barra exportar)", script.includes("renderTermChips(body, report)"));
 check("banner Laboral menciona pegar salida de nmap", html.includes("Pega aquí la salida real de nmap"));
+// --- Modo Laboral: parsers de gobuster / Nessus / Burp Suite ---
+check("parseGobusterOutput() definida", /function\s+parseGobusterOutput\s*\(/.test(script));
+check("gobusterReconReport() definida", /function\s+gobusterReconReport\s*\(/.test(script));
+check("parseNessusOutput() definida", /function\s+parseNessusOutput\s*\(/.test(script));
+check("nessusReconReport() definida", /function\s+nessusReconReport\s*\(/.test(script));
+check("parseBurpOutput() definida", /function\s+parseBurpOutput\s*\(/.test(script));
+check("burpReconReport() definida", /function\s+burpReconReport\s*\(/.test(script));
+check("dispatcher detectToolOutput() detecta las 4 herramientas", /function\s+detectToolOutput\s*\(/.test(script) && script.includes("return 'gobuster'") && script.includes("return 'nessus'") && script.includes("return 'burp'"));
+check("dispatcher reconReport() enruta cada herramienta a su generador", /function\s+reconReport\s*\(/.test(script) && script.includes("if(tool==='nmap') return nmapReconReport(text)") && script.includes("if(tool==='gobuster') return gobusterReconReport(text)") && script.includes("if(tool==='nessus') return nessusReconReport(text)") && script.includes("if(tool==='burp') return burpReconReport(text)"));
+check("informe gobuster: tabla de rutas + resumen ejecutivo", script.includes("# Informe de Enumeración de Directorios — Gobuster") && script.includes("| Ruta | Estado | Tamaño | Redirección |") && script.includes("## 2. Hallazgos interesantes"));
+check("informe nessus: tabla de hallazgos + detalle críticos/altos", script.includes("# Informe de Escaneo de Vulnerabilidades — Nessus") && script.includes("| Severidad | Plugin | Nombre | CVSS | Host |") && script.includes("## 2. Detalle de críticos/altos"));
+check("informe burp: tabla de hallazgos + detalle altos/críticos", script.includes("# Informe de Seguridad de Aplicación — Burp Suite") && script.includes("| Severidad | Hallazgo | Host | Ruta |") && script.includes("## 2. Detalle de hallazgos altos/críticos"));
+check("los 3 generadores son bilingües (reportIsEn)", script.includes("const en=reportIsEn();") && script.includes("'# Directory Enumeration Report — Gobuster") && script.includes("'# Vulnerability Scan Report — Nessus") && script.includes("'# Application Security Report — Burp Suite"));
 check("demoBrain Laboral explica el parsing local", script.includes("el parsing es local"));
+
+// --- Re-escaneo nmap desde la barra del informe (flags nuevos en el terminal) ---
+check("termRun acepta callback onDone con salida acumulada", /function\s+termRun\s*\(cmd,\s*onDone\)/.test(script) && script.includes("out+=j.out+'\\n'") && script.includes("if(typeof onDone==='function') onDone(out)"));
+check("nmapRescan() definida para re-ejecutar nmap", /function\s+nmapRescan\s*\(/.test(script));
+check("botón ↻ Re-scan nmap en la barra de exportar", script.includes("'↻ Re-scan nmap'") && script.includes("nmapRescan(nmapH[1].split("));
+check("barra solo en informes nmap (título + host sección 2)", script.includes("Informe de Reconocimiento — Nmap") && script.includes("nmapH=text.match(/### 2\\.\\d+ `([^`]+)`/)"));
+check("nmapRescan sanea flags y host (anti-inyección, puente shell=True)", script.includes("const SAFE=/^[A-Za-z0-9") && script.includes("if(!SAFE.test(f))") && script.includes("!SAFE.test(h)"));
+check("botón nmap quita '(ip)' del host antes de re-escanear", script.includes("nmapRescan(nmapH[1].split("));
+check("nmapRescan avisa si el terminal está ocupado", script.includes("if(termBusy){ toast('⏳ El terminal está ocupado") );
+check("nmapRescan vuelve al chat con el informe regenerado", script.includes("switchTab('chat'); // volvemos al chat para ver el informe regenerado"));
+check("nmapRescan regenera el informe con la salida fresca", script.includes("const fresh=nmapReconReport(out)") && script.includes("renderTermChips(body, fresh)"));
+check("nmapRescan usa prompt por defecto -sV -sC -p-", script.includes("prompt('Flags de nmap para el re-escaneo (p. ej. -sV -sC -p-):','-sV -sC -p-')"));
 
 // --- Modo Laboral: idioma de los informes (es/en) ---
 check("store default reportLang:'es'", script.includes("reportLang:'es'"));
@@ -570,6 +595,78 @@ await (async () => {
     check("en-US → usa WELCOME_EN_BODY", en.bodyInner.indexOf(enBodySrc.slice(0, 40)) >= 0);
     check("es-ES → título en español (sub)", es.sub.indexOf("La historia de Ark & Jimmy") >= 0, es.sub.slice(0, 80));
     check("es-ES → usa WELCOME_ES_BODY", es.bodyInner.indexOf(esBodySrc.slice(0, 40)) >= 0);
+  }
+
+  // ---------- Parsers dinámicos: gobuster / Nessus / Burp Suite ----------
+  console.log("\n[Modo Laboral] Parsers de herramientas (muestras reales)");
+  const dynParsers = ["parseGobusterOutput", "parseNessusOutput", "parseBurpOutput",
+    "gobusterReconReport", "nessusReconReport", "burpReconReport", "detectToolOutput", "reconReport"];
+  const dynSrcs = dynParsers.map(n => [n, extractFn(script, n)]);
+  check("parsers y generadores extraíbles del <script>", dynSrcs.every(([, s]) => !!s));
+  if (dynSrcs.every(([, s]) => !!s)) {
+    try {
+      // reportIsEn() se inyecta como stub falso (es-ES) para los generadores bilingües.
+      const src = `"use strict"; const store=arguments[0]; function reportIsEn(){return false;}
+        ${dynSrcs.map(([, s]) => s).join("\n")};
+        return {parseGobusterOutput,parseNessusOutput,parseBurpOutput,gobusterReconReport,nessusReconReport,burpReconReport,detectToolOutput,reconReport};`;
+      const fns = new Function(src)({ lang: "es-ES" });
+
+      // gobuster: salida real del formato '/path (Status: NNN) [Size: NNN]'
+      const gob = fns.parseGobusterOutput(
+        "===============================================================\n" +
+        "Gobuster v3.6 by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)\n" +
+        "===============================================================\n" +
+        "/admin                (Status: 200) [Size: 5123]\n" +
+        "/login                (Status: 301) [Size: 178] [--> /login/]\n" +
+        "/backup              (Status: 403) [Size: 212]\n");
+      check("gobuster: extrae rutas con status y tamaño", !!gob && gob.length === 3 && gob[0].path === "/admin" && gob[0].status === 200 && gob[2].status === 403);
+      const gobMd = fns.gobusterReconReport("/admin (Status: 200) [Size: 5123]\n/login (Status: 301) [Size: 178] [--> /login/]\n");
+      check("gobuster: informe con tabla y hallazgos", !!gobMd && gobMd.includes("| `/admin` | 200 |") && gobMd.includes("## 2. Hallazgos interesantes"));
+
+      // Nessus: formato 'Plugin #ID (Nombre)' + campos clave
+      const nes = fns.parseNessusOutput(
+        "- 192.168.1.10 (\n" +
+        "Plugin #11936 (OS Identification)\n" +
+        "  Severity: Medium\n" +
+        "  CVSS v2.0 Base Score: 5.0\n" +
+        "  Synopsis: The remote host can be identified.\n" +
+        "  Description: The remote host is running an OS.\n" +
+        "  Solution: N/A\n" +
+        "Plugin #10150 (Windows SMB Remote Code Execution)\n" +
+        "  Severity: Critical\n" +
+        "  CVSS v2.0 Base Score: 10.0\n" +
+        "  Synopsis: Arbitrary code execution.\n" +
+        "  Solution: Apply the vendor patch.\n");
+      check("nessus: extrae plugins con severidad y CVSS", !!nes && nes.length === 2 && /critical/i.test(nes[1].severity) && nes[1].cvss === "10.0" && nes[1].host === "192.168.1.10");
+      const nesMd = fns.nessusReconReport("Plugin #10150 (Windows SMB RCE)\n  Severity: Critical\n  CVSS v2.0 Base Score: 10.0\n  Synopsis: RCE.\n  Solution: Patch.\n");
+      check("nessus: informe con resumen y detalle críticos", !!nesMd && nesMd.includes("1 crítico") && nesMd.includes("## 2. Detalle de críticos/altos"));
+
+      // Burp Suite: formato 'Issue: Nombre' + campos clave
+      const bur = fns.parseBurpOutput(
+        "Issue: SQL Injection\n" +
+        "  Severity: High\n" +
+        "  Confidence: Certain\n" +
+        "  Host: https://app.example.com\n" +
+        "  Path: /search?q=test\n" +
+        "  Description: The parameter q is injectable.\n" +
+        "  Remediation: Use parameterized queries.\n" +
+        "Issue: Missing X-Frame-Options\n" +
+        "  Severity: Medium\n" +
+        "  Confidence: Firm\n" +
+        "  Host: https://app.example.com\n" +
+        "  Path: /\n");
+      check("burp: extrae issues con severidad y host", !!bur && bur.length === 2 && /high/i.test(bur[0].severity) && bur[0].path === "/search?q=test");
+      const burMd = fns.burpReconReport("Issue: SQL Injection\n  Severity: High\n  Confidence: Certain\n  Host: https://app.example.com\n  Path: /search\n  Description: injectable.\n  Remediation: parameterized queries.\n");
+      check("burp: informe con tabla y remediación", !!burMd && burMd.includes("| High | SQL Injection |") && burMd.includes("**Remediación:**"));
+
+      // Dispatcher: detección y enrutado de cada formato
+      check("detectToolOutput identifica cada formato", fns.detectToolOutput("Nmap scan report for 10.0.0.1") === "nmap" && fns.detectToolOutput("/x (Status: 200) [Size: 1]") === "gobuster" && fns.detectToolOutput("Plugin #1 (x)\nSeverity: High") === "nessus" && fns.detectToolOutput("Issue: X\nSeverity: High") === "burp");
+      check("reconReport devuelve null con texto irrelevante", fns.reconReport("hola que tal") === null);
+      const burViaDispatcher = fns.reconReport("Issue: SQL Injection\nSeverity: High\nHost: x\nPath: /\n");
+      check("reconReport enruta burp al generador correcto", !!burViaDispatcher && burViaDispatcher.includes("# Informe de Seguridad de Aplicación"));
+    } catch (e) {
+      check("parsers dinámicos ejecutan sin error", false, (e && e.message || e).toString().slice(0, 200));
+    }
   }
 
   // ---------- Resumen ----------
