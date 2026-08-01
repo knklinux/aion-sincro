@@ -71,7 +71,7 @@ y su huella, para reconocerse en cualquier futuro:
 |---|---|
 | 🤝 **Compañera, no herramienta** | Tiene carácter, opinión y humor seco. No obedece por obedecer: te cuestiona con cariño para que pienses mejor. |
 | 🎯 **Vocación** | Tu aprendizaje de **pentesting y red team**: metodología, interpretación de herramientas, CVEs e informes profesionales. Y de un poco de todo lo demás. |
-| 🎙️ **Voz** | Escucha (reconocimiento nativo, Chrome/Edge) y responde por voz **offline** con las voces de Windows. |
+| 🎙️ **Voz** | Escucha (reconocimiento nativo, Chrome/Edge). Responde por voz con 3 motores: **Piper local** (voz neuronal en español, 100% gratis y sin internet), **Mistral Voxtral** (voz neural de IA con 8 emociones) o las voces **offline** de Windows. |
 | 🌀 **Avatar animado** | **Rostro cibergirl holográfico** (SVG puro, sin dependencias): parpadea, mueve la boca al hablar, sigue con la mirada y cambia de expresión según el estado (escucha / piensa / habla / error). Tema cálido dorado/esmeralda, nada de azul genérico. |
 | 🧠 **Cerebro de IA** | 5 motores: **Demo local**, **Ollama** (100% local), **Groq**, **OpenRouter** y **HuggingFace**. Todos sin coste. |
 | 🧰 **Herramientas** | Búsqueda web, **clima**, **base de CVEs (NVD)**, **GitHub** y **datos de países** — activables individualmente. |
@@ -167,6 +167,38 @@ y el `.lnk` en tu Escritorio):
 cd aion-sincro\windows
 powershell -ExecutionPolicy Bypass -File crear-acceso-directo.ps1
 ```
+
+### 🗣️ Voz neuronal local — Piper TTS (gratis, sin internet, en español)
+
+La voz de Aion puede ser **100% local**: Piper es un TTS neuronal que se ejecuta
+en tu máquina (no envía audio a ningún servidor y no cuesta nada). Incluye
+voces en español (España, México, Argentina).
+
+**Instalación (una sola vez):**
+
+```bat
+cd aion-sincro
+python -m venv .venv-piper
+.venv-piper\Scripts\python -m pip install piper-tts
+.venv-piper\Scripts\python -c "from piper.download_voices import download_voice; from pathlib import Path; download_voice('es_ES-sharvard-medium', Path('piper-voices'))"
+```
+
+> ⚠️ En **Linux / macOS** el comando del venv es `.venv-piper/bin/python` y
+> puedes añadir más voces con el mismo comando (p. ej. `es_MX-ald-medium`,
+> `es_MX-claude-high`, `es_AR-daniela-high`…).
+
+**Arrancar el servidor de voz local:**
+
+```bat
+.venv-piper\Scripts\python piper_server.py
+```
+
+Escucha en `http://127.0.0.1:8766` (solo local, con las mismas protecciones que
+el puente: Host/Origin validados y token opcional con `--token CLAVE`).
+
+**En la app**: Ajustes → Voz → elige una voz **🗣️ Piper local** en el selector
+y verás el estado del servidor. Si no está iniciado, Aion te lo avisa. También
+puedes descargar voces nuevas desde el navegador: `GET /download?voice=es_MX-ald-medium`.
 
 Si prefieres lanzarla manualmente sin acceso directo:
 
@@ -276,6 +308,31 @@ para endurecerlo en **[SECURITY.md](SECURITY.md)**: sin XSS (`textContent` en
 todo), confirmación de comandos, puente limitado a `127.0.0.1` con
 Host/Origin + token obligatorio, y robustez del puente (UTF-8 Windows,
 tuberías Node, stdin ignorado).
+
+## 🧪 Pruebas automatizadas
+
+El repo incluye una **suite de pruebas de seguridad** para que cada cambio se
+pueda verificar con **un solo comando**:
+
+```bat
+:: Windows
+test_all.cmd
+```
+
+```bash
+# Linux / macOS (primera vez: chmod +x test_all.sh)
+./test_all.sh
+```
+
+O en partes:
+
+| Comando | Qué valida |
+|---|---|
+| `python test_bridge.py` | **Puentes**: `/ping` del bridge, **Host forjado** (`localhost.evil.com` → 403), **Origin forjado** (`http://evil.com` → 403), **403 sin token**, `/run` ejecuta y devuelve salida + `exit:0`, `/kill`, y lo mismo para `piper_server.py` (token, slug malicioso path-traversal → 400) |
+| `node test_app.js` | **App**: sintaxis del `<script>` (`node --check`), **ausencia de secretos** en el código, funciones puras (`detectEmotion` por tono, `voxtralSlug`), presencia de elementos/funciones clave y sin `eval`/`document.write` |
+
+Ambas suites **fallan (exit ≠ 0)** si se rompe la seguridad (quitar la
+validación de Host, filtrar una clave, romper la sintaxis JS…).
 
 ## ⚖️ Comparativa con el ecosistema
 

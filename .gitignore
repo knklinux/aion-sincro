@@ -8,6 +8,10 @@ desktop-v2.db-wal
 __pycache__/
 *.pyc
 
+# Piper TTS local (venv + modelos de voz, ~600 MB — no subir)
+.venv-piper/
+piper-voices/
+
 # Node
 node_modules/
 

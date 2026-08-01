@@ -43,6 +43,23 @@ máquina). Sus componentes y superficie de ataque:
   y `/kill` debe incluirlo. También puedes fijar el tuyo con `--token CLAVE`.
   La app guarda el token solo en tu navegador.
 - **Body limitado a 1 MB** en ambos puentes (Python y Node).
+
+### En el servidor de voz local (piper_server.py)
+- **Bind exclusivo a `127.0.0.1`** en el puerto 8766: nunca expone la red.
+- **Validación EXACTA de `Host` y `Origin`** con las mismas regex que el puente
+  (`^((localhost|127\.0\.0\.1)(:\d+)?)$` / `^https?://(localhost|127\.0\.0\.1)(:\d+)?$`)
+  — bloquea DNS rebinding y CSRF desde webs externas.
+- **Token opcional con comparación en tiempo constante** (`secrets.compare_digest`)
+  vía `?token=` o cabecera `X-Token`, si lo inicias con `--token CLAVE`.
+- **Validación estricta del slug de voz**: `^[a-z]{2}(_[A-Z]{2})?-[a-zA-Z0-9_-]+$`
+  — sin puntos, barras ni diagonales → imposible el path traversal al resolver
+  `piper-voices/{slug}.onnx`.
+- **Síntesis serializada con candado**: onnxruntime comparte estado, así que las
+  síntesis concurrentes se encolan para evitar corrupción.
+- **Texto limitado a 5000 caracteres** por petición; respuesta `audio/wav` con
+  `Cache-Control: no-store`.
+- **El venv y los modelos se excluyen del repo** (`.gitignore`: `.venv-piper/`,
+  `piper-voices/`) — el código fuente no contiene binarios ni voces.
 - **Manejo de errores de escritura**: si el cliente cierra la pestaña, el puente
   no crashea (try/catch + `res.on('error')`), y además `res.on('close')` mata
   el proceso hijo en ejecución para no dejar huérfanos.
