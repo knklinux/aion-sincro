@@ -11,6 +11,10 @@ __pycache__/
 # Node
 node_modules/
 
+# Scripts temporales de validación/pruebas
+.tmp_*
+*.tmp_*
+
 # Sistema
 .DS_Store
 Thumbs.db

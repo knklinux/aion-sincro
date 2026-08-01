@@ -21,8 +21,17 @@ import json
 import os
 import secrets
 import subprocess
+import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+# Windows: la consola por defecto usa cp1252 y no puede imprimir caracteres
+# como → o · (UnicodeEncodeError). Forzamos UTF-8 con tolerancia a errores.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
+except Exception:
+    pass
 
 PORT = 8765
 TOKEN = ""

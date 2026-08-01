@@ -39,7 +39,18 @@ máquina). Sus componentes y superficie de ataque:
   La app guarda el token solo en tu navegador.
 - **Body limitado a 1 MB** en ambos puentes (Python y Node).
 - **Manejo de errores de escritura**: si el cliente cierra la pestaña, el puente
-  no crashea (try/catch + `res.on('error')`).
+  no crashea (try/catch + `res.on('error')`), y además `res.on('close')` mata
+  el proceso hijo en ejecución para no dejar huérfanos.
+- **Robustez de tuberías (Node)**: se capturan los eventos `error` de
+  `stdout`/`stderr` y del propio `spawn` (un error de tubería ya no tumba el
+  puente), y se convierte Buffer→string con `setEncoding('utf8')` antes de
+  partir por líneas.
+- **stdin ignorado**: el proceso hijo no recibe stdin (`DEVNULL` en Python,
+  `stdio:['ignore','pipe','pipe']` en Node), evitando que comandos que leen
+  de stdin (`cat`, `read`) se bloqueen.
+- **Consola Windows (Python)**: `sys.stdout/stderr.reconfigure(utf-8,
+  errors='replace', line_buffering=True)` para que el banner del token (con
+  `→`) no crashee por cp1252 y aparezca al instante en los logs.
 - **Matar procesos de forma recursiva**: en Windows se usa `taskkill /T /F`
   (mata el árbol de procesos hijo); en Linux/macOS se mata al **grupo de
   procesos** (`SIGKILL` al grupo, `start_new_session`/`detached` al lanzar),
@@ -49,24 +60,48 @@ máquina). Sus componentes y superficie de ataque:
   `127.0.0.1` (nunca en la red local). El token vive en
   `~/.config/aion-sincro/token` y solo lo lee tu usuario.
 
-## Mejoras recomendadas (roadmap)
+## Pruebas realizadas (primera versión)
+
+- **Sintaxis** validada en los 3 lenguajes: `node --check bridge.mjs`,
+  `python -m py_compile bridge.py`, `bash -n` en los scripts Linux y parseo del
+  JS del `index.html` (`new Function`).
+- **Puente funcional** (Python y Node, puerto de prueba): `/ping` → 200 sin
+  token; `/run` sin token → 403; `/run` con token → salida del comando;
+  `/kill` con token → `{ok:true}`; el puente **permanece vivo** tras ejecutar.
+- **Sin filtraciones**: el staged no contiene claves (`sk-`, `gsk_`, `hf_`,
+  `ghp_`), ni emails, ni rutas internas; `.gitignore` cubre `.freebuff/` y
+  `desktop-v2.db*`; el token de GitHub jamás se commit a.
+- **XSS**: todo el contenido del usuario y del streaming se inserta con
+  `textContent`/nodos de texto; el rostro cibergirl es SVG estático.
+
+## Mejoras recomendadas (roadmap a futuro)
+
+### Endurecimiento de seguridad
 
 1. **No compartas el token**: el `TOKEN DE CONEXIÓN` que imprime el puente es
    tu llave de ejecución. Quien lo tenga podrá ejecutar comandos en tu máquina
-   mientras el puente esté activo. Puedes regenerarlo reiniciando el puente o
-   usando `--token` con una clave propia.
-2. **No sirvas la app por HTTP en una red local**: el reconocimiento de voz y
-   el micrófono solo funcionan en `localhost`/HTTPS; si la expones en LAN, hazlo
-   con HTTPS para evitar que otra máquina capture las peticiones.
-3. **Considera un proxy de claves**: si subes la app a un dominio público,
-   mueve las llamadas a los proveedores (Groq, OpenRouter…) a un backend proxy
-   para no exponer las API keys en el cliente. En uso local, `localStorage` es
-   aceptable.
-4. **Ejecuta el puente con el menor privilegio posible** y en una carpeta
-   dedicada (el cwd del puente es el directorio desde el que se lanzan los
-   comandos).
-5. **Revisa periódicamente** las reglas de la lista `DANGER` de la app y la
-   política de los proveedores de IA gratuitos.
+   mientras el puente esté activo. Regéneralo reiniciando el puente o con
+   `--token` propio.
+2. **No sirvas la app por HTTP en una red local**: el micrófono solo funciona
+   en `localhost`/HTTPS; si la expones en LAN, hazlo con HTTPS.
+3. **Proxy de claves**: si la app llega a un dominio público, mueve las
+   llamadas a los proveedores (Groq, OpenRouter…) a un backend proxy para no
+   exponer API keys en el cliente. En uso local, `localStorage` es aceptable.
+4. **Puente con mínimo privilegio**: ejecútalo con el menor privilegio posible
+   y en una carpeta dedicada (el cwd del puente es el directorio desde el que
+   se lanzan los comandos). Considera un usuario separado o `systemd` en Linux.
+5. **Revisa periódicamente** la lista `DANGER` de la app y las políticas de los
+   proveedores gratuitos.
+6. **TOTP/expiración del token del puente**: rotación automática del token
+   cada N horas o tras N peticiones.
+7. **Sandbox del puente**: lista blanca de comandos permitidos en modo
+   "seguro" y bloqueo de rutas sensibles (`~/.ssh`, `/etc`).
+8. **CSP estricta** en `index.html` (Content-Security-Policy) y cabecera
+   `X-Frame-Options` para endurecer el navegador.
+9. **Cifrar las claves en `localStorage`** (WebCrypto con passphrase derivada
+   del usuario) en lugar de texto plano.
+10. **Firma/checksum del puente**: verificación de integridad de `bridge.py`/
+    `bridge.mjs` antes de arrancar (evita modificación por malware local).
 
 ## Reportar una vulnerabilidad
 

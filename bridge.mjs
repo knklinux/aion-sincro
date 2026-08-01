@@ -126,10 +126,16 @@ http
           windowsVerbatimArguments: true,
           windowsHide: true,
           detached: process.platform !== "win32", // grupo propio en Linux/macOS
+          stdio: ["ignore", "pipe", "pipe"], // stdin ignorado, como en bridge.py
         });
 
+        // Node emite Buffer por defecto en 'data'; lo convertimos a texto
+        // para poder partirlo por líneas sin TypeError.
+        proc.stdout.setEncoding("utf8");
+        proc.stderr.setEncoding("utf8");
         const emit = (s) => {
-          for (const line of s.split("\n")) {
+          const str = Buffer.isBuffer(s) ? s.toString("utf8") : String(s);
+          for (const line of str.split("\n")) {
             if (line.trim() !== "") {
               try { res.write(JSON.stringify({ out: line.replace(/\r$/, "") }) + "\n"); } catch {}
             }
@@ -137,10 +143,23 @@ http
         };
         proc.stdout.on("data", emit);
         proc.stderr.on("data", emit);
-        proc.on("close", (code) => {
-          res.end(JSON.stringify({ exit: code }) + "\n");
+        // Robustez: si una tubería del proceso hijo falla (proceso cerrado,
+        // consola, permisos…), el puente NO debe caerse. Capturamos los
+        // eventos de error de las tuberías y del propio spawn.
+        proc.stdout.on("error", () => {});
+        proc.stderr.on("error", () => {});
+        proc.on("error", (e) => {
+          try {
+            res.end(JSON.stringify({ exit: -1, error: String((e && e.message) || e) }) + "\n");
+          } catch {}
           proc = null;
         });
+        proc.on("close", (code) => {
+          try { res.end(JSON.stringify({ exit: code }) + "\n"); } catch {}
+          proc = null;
+        });
+        // Si el cliente cierra la pestaña, no dejamos procesos huérfanos.
+        res.on("close", () => killProc());
         return;
       }
 
