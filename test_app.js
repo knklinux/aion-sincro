@@ -339,15 +339,27 @@ check("continuousCycle() definida", /function\s+continuousCycle\s*\(/.test(scrip
   check("openSettings inicializa turnTimeout desde el store", /\$\('#turnTimeout'\)\.value=store\.turnTimeout\|\|4;/.test(script));
   check("collectSettings persiste turnTimeout limitado a 2-5", /store\.turnTimeout=Math\.max\(2,Math\.min\(5,parseFloat\(\$\('#turnTimeout'\)\.value\)\|\|4\)\);/.test(script));
   check("silenceTimer pausa el ciclo si no hablas (turnTimeout s)", script.includes("const tt=turnTimeoutAdaptado();") && script.includes("silenceTimer=setTimeout(()=>{") && script.includes("⏸️ Te espero en silencio"));
-  check("hablar cancela el límite de silencio (clearTimeout(silenceTimer) en onresult)", /clearTimeout\(silenceTimer\);\s*if\(final\)\{/.test(script));
+  check("hablar cancela el límite de silencio (clearTimeout(silenceTimer) en onresult)", script.includes("clearTimeout(silenceTimer); turnRingHide();") && /if\(final\)\{/.test(script));
   check("stopAll limpia silenceTimer", script.includes("function stopAll(){ clearTimeout(silenceTimer);"));
   // Sonidos de transición del ciclo (WebAudio puro): pausa y reanudación por audio
   check("chimePause() definido (doble pit corto)", script.includes("function chimePause(){") && script.includes("window.AudioContext||window.webkitAudioContext"));
   check("chimePause() usa tonos descendentes (392→311)", script.includes("[[392,0],[311.13,.16]]"));
   check("chimeResume() definido (tono ascendente)", script.includes("function chimeResume(){") && script.includes("window.AudioContext||window.webkitAudioContext"));
   check("chimeResume() usa tonos ascendentes (392→523→659)", script.includes("[[392,0],[523.25,.12],[659.25,.24]]"));
-  check("chimePause() suena al pausar por silencio", /setListening\(false\);\s*chimePause\(\);\s*\/\/ doble pit corto/.test(script));
+  check("chimePause() suena al pausar por silencio", /setListening\(false\);\s*turnRingHide\(\);\s*chimePause\(\);\s*\/\/ doble pit corto/.test(script));
   check("chimeResume() suena al reabrir el micrófono", /setListening\(true\);\s*chimeResume\(\);\s*\/\/ tono ascendente/.test(script));
+  // Anillo de cuenta atrás del turno (indicador visual en el avatar)
+  check("turnRing: elemento SVG en el avatar", html.includes('id="turnRing"') && html.includes('id="turnRingArc"') && html.includes('class="tr-track"'));
+  check("turnRing: CSS con .on y .warn", html.includes(".turnRing.on{opacity:1}") && html.includes(".turnRing.warn .tr-arc{stroke:#fb7185"));
+  check("turnRing: arco SVG con dasharray (círculo r=53)", html.includes(".tr-arc{") && html.includes("stroke-dasharray:333") && html.includes('r="53"'));
+  check("turnRingShow() definida y llena el anillo", /function\s+turnRingShow\s*\(ms\)\{[\s\S]*?strokeDashoffset='0'/.test(script));
+  check("turnRingShow() contrae con setInterval y avisa en rojo <25%", /turnRingTimer=setInterval\(\(\)=>\{[\s\S]*?strokeDashoffset=String\(333\*\(1-frac\)\)/.test(script) && /frac<0\.25\) ring\.classList\.add\('warn'\)/.test(script));
+  check("turnRingHide() definida", /function\s+turnRingHide\s*\([^)]*\)\{[\s\S]*?classList\.remove\('on'\)/.test(script));
+  check("turnRing: se muestra al reabrir el micrófono (tt s)", /const tt=turnTimeoutAdaptado\(\);\s*turnRingShow\(tt\*1000\)/.test(script));
+  check("turnRing: se oculta al pausar por silencio", /setListening\(false\);\s*turnRingHide\(\);\s*chimePause/.test(script));
+  check("turnRing: se oculta al hablar (onresult)", /clearTimeout\(silenceTimer\); turnRingHide\(\);/.test(script));
+  check("turnRing: se oculta al interrumpir (toggleMic)", /clearTimeout\(continuousTimer\); clearTimeout\(silenceTimer\); turnRingHide\(\);/.test(script));
+  check("turnRing: se oculta en stopAll", /function stopAll\(\)\{ clearTimeout\(silenceTimer\); turnRingHide\(\);/.test(script));
   check("sonidos usan WebAudio sin archivos externos (catch silencioso)", script.includes("window.AudioContext||window.webkitAudioContext") && /function\s+chimePause[\s\S]*?\}catch\(_\)\{\}/.test(script) && /function\s+chimeResume[\s\S]*?\}catch\(_\)\{\}/.test(script));
   // Límite de silencio adaptativo según contexto (nmap/ISO/laboral → más largo)
   check("turnTimeoutAdaptado() definida", /function\s+turnTimeoutAdaptado\s*\(/.test(script));
