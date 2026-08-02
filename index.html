@@ -749,6 +749,29 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
   background:linear-gradient(135deg,#ffd166,#f5a524);box-shadow:0 0 24px rgba(245,165,36,.35);cursor:pointer;transition:.25s}
 #btnCloseLi:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(245,165,36,.5)}
 
+/* ---------- Overlay CV / Mi perfil ---------- */
+#cvOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
+  background:radial-gradient(circle at 50% 30%,rgba(16,185,129,.08),rgba(2,6,12,.88) 70%);
+  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s}
+#cvOverlay.show{opacity:1;visibility:visible;pointer-events:auto}
+.cv-card{width:min(900px,100%);max-height:92vh;display:flex;flex-direction:column;border-radius:20px;
+  border:1px solid rgba(16,185,129,.26);background:linear-gradient(180deg,rgba(6,10,9,.97),rgba(6,8,12,.98));
+  box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 60px rgba(16,185,129,.07);animation:winIn .6s cubic-bezier(.2,.8,.25,1)}
+.cv-body{flex:1;overflow:hidden;position:relative;min-height:300px}
+.cv-body iframe{width:100%;height:100%;border:none;position:absolute;inset:0}
+.cv-status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
+  font-size:13.5px;color:var(--dim);background:rgba(6,10,9,.85);transition:opacity .4s}
+.cv-status.gone{opacity:0}
+.cv-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 24px;border-top:1px solid rgba(16,185,129,.15)}
+.cv-hint{font-size:11px;color:var(--dim);letter-spacing:.04em}
+#btnRegenCv{padding:10px 22px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.06em;
+  color:#9fe8c9;border:1px solid rgba(52,211,153,.4);background:rgba(16,185,129,.1);cursor:pointer;transition:.25s}
+#btnRegenCv:hover{background:rgba(16,185,129,.22);transform:translateY(-1px);box-shadow:0 0 20px rgba(52,211,153,.25)}
+#btnRegenCv.busy{opacity:.6;pointer-events:none;animation:corePulse 1.2s ease-in-out infinite}
+#btnCloseCv{padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.1em;color:#03130c;
+  background:linear-gradient(135deg,#6ee7b7,#10b981);box-shadow:0 0 24px rgba(16,185,129,.35);cursor:pointer;transition:.25s}
+#btnCloseCv:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(16,185,129,.5)}
+
 /* ---------- Asistente de primera configuración ---------- */
 #setupOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
   background:radial-gradient(circle at 50% 30%,rgba(255,209,102,.09),rgba(2,6,12,.9) 70%);
@@ -924,6 +947,7 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
     <button class="head-btn" id="btnLearn" title="Ruta Red Team: aprendizaje guiado con checkpoints de práctica">🧭 Ruta</button>
     <button class="head-btn" id="btnOsint" title="OSINT local: busca cuentas por usuario/email/teléfono y analiza dominios (robots.txt, Wayback, contenido oculto) vía aion_osint.py">🕵️ OSINT</button>
     <button class="head-btn" id="btnLinkedin" title="LinkedIn: 10 publicaciones semanales de pentesting listas para copiar y publicar">📢 LinkedIn</button>
+    <button class="head-btn" id="btnCv" title="Mi perfil: ver y regenerar el CV generado desde LINKEDIN.md">👤 Perfil</button>
     <button class="head-btn" id="btnStory" title="Releer la historia de Ark & Jimmy (MANIFIESTO)">📖 Ver historia</button>
     <button class="head-btn" id="btnIntegrity" title="Verificar integridad: suites de pruebas y secretos del repo">🧬</button>
     <div class="lockWrap" id="lockWrap">
@@ -1465,6 +1489,32 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
     <div class="li-foot">
       <small>⚖️ Publicación honesta: solo datos verificables, eJPT en preparación</small>
       <button id="btnCloseLi">ENTENDER · CERRAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay CV / Mi perfil -->
+<div id="cvOverlay">
+  <div class="cv-card">
+    <div class="win-head">
+      <div class="wh-hex hex">
+        <svg viewBox="0 0 40 40">
+          <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#10b981" stroke-width="1.5"/>
+          <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(16,185,129,.1)" stroke="#6ee7b7" stroke-width="1"/>
+          <text x="20" y="24" text-anchor="middle" font-size="13" font-weight="800" fill="#a7f3d0" font-family="monospace">👤</text>
+        </svg>
+      </div>
+      <h2>Mi perfil — CV de Arkaitz</h2>
+      <p class="wh-sub">Generado desde LINKEDIN.md · fuente única de verdad</p>
+    </div>
+    <div class="cv-body">
+      <iframe id="cvFrame" src="CV_Arkaitz.html" title="CV de Arkaitz Cabezuelo"></iframe>
+      <div class="cv-status" id="cvStatus">Cargando CV...</div>
+    </div>
+    <div class="cv-foot">
+      <span class="cv-hint" id="cvHint">Actualizado: hoy</span>
+      <button id="btnRegenCv" title="Regenerar el CV desde LINKEDIN.md ejecutando python generar_cv.py">🔄 Regenerar CV</button>
+      <button id="btnCloseCv">CERRAR</button>
     </div>
   </div>
 </div>
@@ -2129,8 +2179,9 @@ function detectLang(text,def){
   if(scoreEn>scoreEs) return 'en';
   return (def||'es-ES').split('-')[0];
 }
+let ttsWarned=false;
 function speak(text){
-  if(!store.tts) return;
+  if(!store.tts){ if(!ttsWarned){ ttsWarned=true; toast(isEnglish()?'🔇 Voice is off — press the «Voz» button at the bottom to turn it on':'🔇 La voz está desactivada — pulsa el botón «Voz» abajo para activarla'); } return; }
   if(isPiperVoice()) return speakPiper(text);
   if(store.autoLang){
     const lang=detectLang(text,store.lang);
@@ -2160,7 +2211,7 @@ function speakWindows(text,lang){
       else{ speaking=false; setState(streaming?'thinking':'idle'); } };
     u.onboundary=()=>{ if(document.body.dataset.state==='speaking') beatCore(); };
     u.onstart=()=>{ speaking=true; };
-    u.onerror=advance;
+    u.onerror=(e)=>{ console.warn('Aion voice error:',e?.error||e?.message||'unknown', 'lang:',lang,'voices:',voices.length); advance(); };
     u.onend=advance;
     speakQueue.push(u);
   });
@@ -4653,6 +4704,29 @@ function openLinkedin(){
   viewLinkedinPost(liCur); // visor sincronizado con la tarjeta seleccionada al abrir
   o.classList.add('show');
 }
+/* ---------- CV / Mi perfil ---------- */
+function openCv(){
+  const o=$('#cvOverlay'); if(!o) return;
+  o.classList.add('show');
+  const f=$('#cvFrame'), s=$('#cvStatus');
+  if(f){ f.src=''; f.src='CV_Arkaitz.html'; if(s)s.classList.remove('gone'); }
+  if(f) f.onload=()=>{ if(s)s.classList.add('gone'); };
+}
+async function regenCv(){
+  const b=$('#btnRegenCv'), h=$('#cvHint');
+  if(!b||b.classList.contains('busy')) return;
+  if(!termConnected){ toast('⚠️ El puente de terminal no está conectado. Inicia bridge.py y vuelve a intentarlo.'); return; }
+  if(termBusy){ toast('⚠️ El terminal está ocupado — espera a que termine el comando actual.'); return; }
+  b.classList.add('busy'); b.textContent='⏳ Regenerando...';
+  termRun('python generar_cv.py',(out)=>{
+    b.classList.remove('busy'); b.textContent='🔄 Regenerar CV';
+    if((out||'').indexOf('CV HTML')>=0||(out||'').indexOf('CV_Arkaitz')>=0){
+      toast('✅ CV regenerado — recargando vista...');
+      if(h) h.textContent='CV regenerado ahora';
+      const f=$('#cvFrame'); if(f){ f.src='CV_Arkaitz.html?'+Date.now(); }
+    }else{ toast('⚠️ No se detectó salida de CV en la terminal — ¿está generar_cv.py en la carpeta?'); }
+  });
+}
 function renderLinkedinGrid(){
   const g=$('#liGrid'); if(!g) return;
   g.innerHTML=LINKEDIN_POSTS.map((p,i)=>`<div class="li-item${i===liCur?' on':''}" onclick="viewLinkedinPost(${i})"><div class="li-week">Semana ${p.w}</div><div class="li-title">${esc(p.t)}</div><div class="li-hook">${esc(p.h)}</div></div>`).join('');
@@ -4835,6 +4909,9 @@ function bind(){
   $('#setupTermHelp').onclick=()=>{ toast('📘 Puente: python bridge.py — pega el token en ⚙️ Ajustes → Terminal'); };
   $('#btnLinkedin').onclick=openLinkedin;
   $('#btnCloseLi').onclick=()=>{ const o=$('#linkedinOverlay'); if(o) o.classList.remove('show'); };
+  $('#btnCv').onclick=openCv;
+  $('#btnCloseCv').onclick=()=>{ const o=$('#cvOverlay'); if(o) o.classList.remove('show'); };
+  $('#btnRegenCv').onclick=regenCv;
   $('#liCopyBtn').onclick=copyLinkedinPost;
   $('#liMdBtn').onclick=exportLinkedinPost;
   $('#liGenBtn').onclick=generateLinkedinPost;
@@ -4846,6 +4923,7 @@ function bind(){
   $('#isoExportPdf').onclick=()=>{ const md=isoReportMd(); exportPdf(md,'Informe Auditoría ISO'); };
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const o=$('#isoOverlay'); if(o&&o.classList.contains('show')) o.classList.remove('show'); } });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const o=$('#osintOverlay'); if(o&&o.classList.contains('show')) o.classList.remove('show'); } });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const o=$('#cvOverlay'); if(o&&o.classList.contains('show')) o.classList.remove('show'); } });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const o=$('#linkedinOverlay'); if(o&&o.classList.contains('show')) o.classList.remove('show'); } });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const o=$('#setupOverlay'); if(o&&o.classList.contains('show')){ o.classList.remove('show'); try{ sessionStorage.setItem('aion_setup_skip_session','1'); }catch(_){} } } });
   $('#btnResetLearn').onclick=()=>{ if(!confirm('¿Reiniciar todo el progreso de la Ruta Red Team?')) return; learnSave({}); renderLearn(); toast('↺ Progreso de la ruta reiniciado'); };
@@ -4865,7 +4943,7 @@ function bind(){
   $('#termReconnect').onclick=()=>{ termPing(); toast(termConnected?'Puente conectado ✔':'Puente no disponible — inicia bridge.py o bridge.mjs'); };
   $('#termClear').onclick=()=>{ $('#termOut').innerHTML=''; };
   $('#termKillBtn').onclick=termKill;
-  $('#btnTts').onclick=()=>{ store.tts=!store.tts; $('#btnTts').classList.toggle('on',store.tts); saveStore(); };
+  $('#btnTts').onclick=()=>{ store.tts=!store.tts; if(store.tts) ttsWarned=false; $('#btnTts').classList.toggle('on',store.tts); saveStore(); };
   $('#btnSearch').onclick=()=>{ store.search=!store.search; store.tools.internet=store.search; syncSearchUI(); saveStore(); renderTools(); toast(store.search?'Búsqueda web activada':'Búsqueda web desactivada'); };
   $('#toolsReset').onclick=()=>{ store.tools={internet:true,weather:true,cve:true,github:true,countries:true}; store.search=true; syncSearchUI(); saveStore(); renderTools(); toast('Herramientas restauradas'); };
   $('#btnSearchSet').onclick=()=>{ store.search=!store.search; syncSearchUI(); };
@@ -5065,6 +5143,7 @@ function refreshModelsViaProxy(){
     .catch(e=>toast('❌ No pude sincronizar modelos: '+(e.message||e)))
     .finally(()=>{ btn.disabled=false; btn.classList.remove('busy'); });
 }
+function syncTtsUI(){ const b=$('#btnTts'); if(b)b.classList.toggle('on',store.tts); }
 function syncProxyUI(){
   const b=$('#btnProxy'); if(b)b.classList.toggle('on',store.proxyOn);
   const rm=$('#btnRefreshModels'); if(rm){
@@ -5264,7 +5343,7 @@ async function autoConfigure(){
   let w=0; const bar=$('#bootBar');
   const iv=setInterval(()=>{ w+=Math.random()*22; if(w>=100){w=100;clearInterval(iv);}
     bar.style.width=w+'%'; },120);
-  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncProxyUI(); syncCryptoUI();
+  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncTtsUI(); syncProxyUI(); syncCryptoUI();
   autoConfigure();
   captureWelcomeES();
   renderWelcomeLang();
@@ -5292,6 +5371,16 @@ async function autoConfigure(){
   document.body.dataset.state='idle';
   bind(); initRecog();
   if(!store.model) store.model=store.modelByProvider[store.provider]||'hermes3';
+  // Test de voz diferido al primer click (evita falso positivo de Chrome por autoplay)
+  let _voiceTested=false;
+  const _testVoice=()=>{
+    if(_voiceTested||!store.tts||!('speechSynthesis' in window)) return;
+    _voiceTested=true;
+    const testU=new SpeechSynthesisUtterance(''); testU.volume=0; testU.rate=10;
+    testU.onerror=()=>{ console.warn('Aion: speechSynthesis NO funciona en este navegador. La voz estara silenciada.'); };
+    try{ speechSynthesis.speak(testU); }catch(e){ console.warn('Aion: speechSynthesis bloqueado:', e.message); }
+  };
+  document.addEventListener('click',_testVoice,{once:true});
 })();
 </script>
 </body>

@@ -15,7 +15,7 @@ rem
 rem Variables de entorno opcionales:
 rem     AION_APP_PORT     puerto web (por defecto 8080)
 rem     AION_BRIDGE_PORT  puerto del puente (por defecto 8765)
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 
 rem --- Localiza la carpeta de la app (instalada o repo) ---
 if exist "%~dp0index.html" (
@@ -93,12 +93,24 @@ if exist "%APP_DIR%\.venv-piper\Scripts\python.exe" (
   echo   [Piper] no detectado — ejecuta windows\instalar-piper.cmd para la voz local
 )
 
-rem --- 4) Abre el navegador ---------------------------------------
-rem Usamos la ruta completa del timeout de Windows: el GNU timeout de Git
-rem Bash (si su PATH precede a System32) no entiende /t y escupe ruido, y el
-rem retardo es NECESARIO para que el servidor web acabe de arrancar antes de
-rem abrir el navegador.
-%SystemRoot%\System32\timeout.exe /t 1 /nobreak >nul
+rem --- 4) Espera activa a que el puente esté listo (máx 8 intentos) ---
+echo   Verificando servicios...
+set "BRIDGE_OK=0"
+where curl >nul 2>&1
+if %errorlevel%==0 (
+  for /L %%i in (1,1,8) do (
+    if "!BRIDGE_OK!"=="0" (
+      curl -s http://127.0.0.1:%PORT_BRIDGE%/ping >nul 2>&1
+      if !errorlevel!==0 set "BRIDGE_OK=1"
+      if "!BRIDGE_OK!"=="0" %SystemRoot%\System32\timeout.exe /t 1 /nobreak >nul
+    )
+  )
+) else (
+  powershell -Command "for($i=0;$i -lt 8;$i++){try{$r=Invoke-WebRequest -Uri 'http://127.0.0.1:%PORT_BRIDGE%/ping' -UseBasicParsing -TimeoutSec 2;if($r.StatusCode -eq 200){exit 0}}catch{}Start-Sleep 1}exit 1" >nul 2>&1
+  if !errorlevel!==0 set "BRIDGE_OK=1"
+)
+
+rem --- 5) Abre el navegador -----------------------------------------
 start "" "http://127.0.0.1:%PORT_APP%/"
 
 echo   Listo. Resumen de la sesión:
@@ -106,6 +118,11 @@ echo     · App web      http://127.0.0.1:%PORT_APP%/
 echo     · Puente       http://127.0.0.1:%PORT_BRIDGE%  (token persistente en 'token' —
 echo                   la app lo adopta sola al cargar; no hace falta pegarlo)
 echo     · Piper        http://127.0.0.1:8766  (si está instalado)
+if "!BRIDGE_OK!"=="1" (
+  echo     · Estado       puente conectado ^✔
+) else (
+  echo     · Estado       puente NO detectado — si falla, revisa que python esté en el PATH
+)
 echo.
 %SystemRoot%\System32\timeout.exe /t 2 /nobreak >nul
 exit /b 0

@@ -46,24 +46,30 @@ La portada del README (logo ⚡ + título "Compañera de Pentest · Coarquitecta
 
 ## Semana 2 · nmap más allá de `-sV -sC`
 
-### 📝 Post
+### 📝 Post (listo para pegar)
 
 **Un escaneo no es un informe. 🗺️**
 
-Durante semanas usé nmap igual que todos: `-sV -sC` contra una IP y a copiar puertos a mano. Hasta que entendí la diferencia: el escaneo responde *qué hay abierto*, el informe explica *qué significa para quien tiene que decidir*.
+Cuando empecé con nmap, mi comando era siempre el mismo: `nmap -sV -sC` contra la IP, copiar puertos a mano al bloc de notas, y a otra cosa. Tardé semanas en entender que un escaneo responde *qué hay abierto*, pero un informe explica *qué significa para quien tiene que decidir*.
 
-Lo que cambió mi forma de trabajar:
+Como no tengo a nadie que me revise los informes (soy autodidacta y aprendo solo), tuve que construir mi propio revisor: un parser que convierte la salida real de nmap en un informe de reconocimiento automático.
 
-1. **`-p-` + `--min-rate`** para mapear TODO el rango de puertos, no solo los "de siempre".
-2. **`-oX` salida XML**, no texto: así puedo parsearla y convertirla en informe automático.
-3. **Reducir el ruido**: bajar la plantilla de timing (`-T1`/`-T2`) para escaneos discretos y `--disable-arp-ping` cuando el objetivo no está en tu red.
-4. **Interpretar, no listar**: un puerto 9100 abierto no es "raro", es *una impresora expuesta* — eso es un hallazgo, no un puerto.
+Lo que aprendí en el camino:
 
-Construí un parser que convierte la salida de nmap directamente en un informe de reconocimiento con tabla de puertos, superficie de ataque y recomendaciones, exportable a Markdown, PDF y hasta Word. Con la salida real de mi laboratorio, no con una demo.
+1. **`-p-` + `--min-rate`** para mapear TODO el rango de puertos. Los "de siempre" (22, 80, 443) son solo el 0,004% de los 65535. Escanear 1000 puertos por defecto es ir a una auditoría con los ojos vendados.
+2. **`-oX` salida XML**, no texto plano: así la máquina puede leerla y yo puedo automatizar el informe en lugar de copiar y pegar.
+3. **Reducir el ruido**: `-T1`/`-T2` para escaneos discretos y `--disable-arp-ping` cuando el objetivo no está en tu red local.
+4. **Interpretar, no listar**: un puerto 9100 abierto no es "raro", es *una impresora expuesta*. Eso es un hallazgo. Un puerto 6379 sin autenticación no es "Redis", es *una posible puerta trasera*. Cada puerto cuenta una historia.
 
-¿Cuál es tu flag de nmap favorita? Yo tengo un par de opiniones polémicas sobre `-A`… 👇
+El parser lo metí dentro de Aion Sincro (mi asistente open-source): pegas la salida de nmap en el chat y te genera un informe con tabla de puertos, superficie de ataque y recomendaciones. Exportable a Markdown, PDF y Word. Sin subir datos a ningún sitio, todo en local.
 
-`#Nmap #Pentesting #Reconocimiento #InfoSec #Linux #RedTeam`
+No soy un experto en nmap. Soy un tipo que aprendió a base de escanear su propio laboratorio y automatizar la parte aburrida. Pero cada afirmación de este post se puede comprobar en el repo.
+
+📎 Repo: github.com/knklinux/aion-sincro
+
+**Pregunta para ti:** ¿cuál es la flag de nmap que más usas y por qué? Yo tengo un par de opiniones polémicas sobre `-A`… 👇
+
+`#Nmap #Pentesting #Reconocimiento #InfoSec #Linux #RedTeam #Autodidacta`
 
 ### 📸 Captura sugerida
 Salida real de un escaneo con `-sV -sC -p-` y el informe generado automáticamente a partir de su XML.
