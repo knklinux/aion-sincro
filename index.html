@@ -1260,6 +1260,13 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
       </div>
     </div>
 
+    <div class="sect"><label>⚡ Sistema</label>
+      <div class="field">
+        <button class="toggle" id="btnAutoStart" style="width:100%;justify-content:center"><span class="tk"></span> 🚀 Iniciar Aion al arrancar Windows</button>
+        <div class="hint">Los servicios de Aion (web + puente + Piper) arrancan solos en segundo plano al iniciar sesión en Windows — sin ventanas, sin esperas. Luego solo abres <b>http://127.0.0.1:8080/</b> en tu navegador o haces clic en el icono anclado y la app ya está viva. Usa <b><code>windows\crear-arranque-automatico.ps1</code></b> para instalarlo. Al desactivarlo se elimina el acceso directo de la carpeta de Inicio.</div>
+      </div>
+    </div>
+
     <div class="sect"><label>🔐 Cifrado de claves</label>
       <div class="field">
         <input type="password" id="cryptoPass" placeholder="Contraseña maestra (mín. 6 caracteres)" autocomplete="off">
@@ -1711,7 +1718,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const store={
   provider:'demo', model:'hermes3', modelByProvider:{},
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
-  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion', pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:'', reportLang:'es',
+  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion', autoStart:false, pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:'', reportLang:'es',
   pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, autoLockMin:0, rememberUnlock:false, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
 };
 
@@ -5183,6 +5190,24 @@ function bind(){
   };
   $('#btnPdfWatermark').onclick=()=>{ store.pdfWatermark=!store.pdfWatermark; syncPdfUI(); saveStore(); toast(store.pdfWatermark?'💧 Marca de agua de confidencialidad activada':'Marca de agua desactivada'); };
   $('#btnPdfCover').onclick=()=>{ store.pdfCover=!store.pdfCover; syncPdfUI(); saveStore(); toast(store.pdfCover?'🏢 Portada corporativa activada':'Portada desactivada'); };
+  $('#btnAutoStart').onclick=()=>{
+    // Ejecuta crear-arranque-automatico.ps1 via el puente de terminal.
+    // El puente y el HTTP comparten APP_DIR: la ruta relativa siempre funciona.
+    const action=store.autoStart?'-Remove':'-Install';
+    const cmd=`powershell -ExecutionPolicy Bypass -File "windows\\crear-arranque-automatico.ps1" ${action}`;
+    termRun(cmd).then(r=>{
+      if(r&&r.exit===0){
+        store.autoStart=!store.autoStart;
+        saveStore();
+        syncAutoStartUI();
+        toast(store.autoStart?'🚀 Aion arrancará al iniciar Windows (servicios en segundo plano)':'🚀 Arranque automático desactivado');
+      }else{
+        toast('⚠️ No se pudo '+(store.autoStart?'desactivar':'activar')+' el arranque automático. Ejecuta manualmente: windows\\crear-arranque-automatico.ps1 '+(store.autoStart?'-Remove':'-Install'));
+      }
+    }).catch(()=>{
+      toast('⚠️ No se pudo '+(store.autoStart?'desactivar':'activar')+' el arranque automático — ¿está el puente conectado?');
+    });
+  };
   $('#btnProxy').onclick=()=>{
     store.proxyOn=!store.proxyOn; syncProxyUI(); saveStore();
     if(store.proxyOn) proxyPing(()=>syncProxyUI());
@@ -5315,7 +5340,7 @@ function openSettings(){
   $('#pdfWatermarkText').value=store.pdfWatermarkText||'CONFIDENCIAL';
   $('#pdfCompany').value=store.pdfCompany||'';
   $('#reportLangSel').value=store.reportLang||'es';
-  syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncPdfUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); syncLaboralUI(); refreshProviderUI();
+  syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncPdfUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); syncLaboralUI(); syncAutoStartUI(); refreshProviderUI();
   if(isPiperVoice()) piperPing(()=>syncPiperUI());
 }
 function closeSettings(){ $('#settings').classList.remove('open'); $('#backdrop').classList.remove('show'); }
@@ -5346,6 +5371,7 @@ function syncSearchUI(){ $('#btnSearch').classList.toggle('on',store.search); $(
 function syncWakeUI(){ const b=$('#btnWakeSet'); if(b)b.classList.toggle('on',store.wake); syncWakeWordUI(); }
 function syncAutoLangUI(){ const b=$('#btnAutoLang'); if(b)b.classList.toggle('on',store.autoLang); }
 function syncPdfUI(){ const a=$('#btnPdfWatermark'); if(a)a.classList.toggle('on',store.pdfWatermark); const b=$('#btnPdfCover'); if(b)b.classList.toggle('on',store.pdfCover); }
+function syncAutoStartUI(){ const b=$('#btnAutoStart'); if(b)b.classList.toggle('on',store.autoStart); }
 function refreshModelsViaProxy(){
   const p=store.provider, btn=$('#btnRefreshModels');
   if(!btn) return;
@@ -5571,7 +5597,7 @@ async function autoConfigure(){
   let w=0; const bar=$('#bootBar');
   const iv=setInterval(()=>{ w+=Math.random()*22; if(w>=100){w=100;clearInterval(iv);}
     bar.style.width=w+'%'; },120);
-  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncTtsUI(); syncProxyUI(); syncCryptoUI();
+  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncTtsUI(); syncProxyUI(); syncCryptoUI(); syncAutoStartUI();
   autoConfigure();
   captureWelcomeES();
   renderWelcomeLang();

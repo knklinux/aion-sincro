@@ -377,7 +377,7 @@ check("demoBrain Laboral responde en inglés cuando reportLang=en", script.inclu
 check("demoBrain Laboral mantiene la respuesta en español", script.includes("store.laboral) return '💼 **Modo Laboral**") && script.includes("el parsing es local"));
 check("confirmación hablada del informe respeta reportLang", script.includes("const _tool=TOOL_LABEL[detectToolOutput(text)]||(reportIsEn()?'the tool':'la herramienta');") && script.includes("speak(reportIsEn()") && script.includes("I generated the reconnaissance report from your") && script.includes("He generado el informe de reconocimiento desde tu salida de "));
 check("banner Laboral bilingüe en syncLaboralUI", script.includes("ban.innerHTML=reportIsEn()") && script.includes("LABORAL MODE ACTIVATED") && script.includes("Paste the real nmap output") && script.includes("MODO LABORAL ACTIVADO"));
-check("cambio de reportLang refresca el banner (syncLaboralUI en syncSettings)", script.includes("syncProxyUI(); syncLaboralUI(); refreshProviderUI();"));
+check("cambio de reportLang refresca el banner (syncLaboralUI en syncSettings)", script.includes("syncProxyUI(); syncLaboralUI(); syncAutoStartUI(); refreshProviderUI();"));
 check("tabla de puertos bilingüe", script.includes("| Port | Protocol | State | Service / Version |") && script.includes("| Puerto | Protocolo | Estado | Servicio / Versión |"));
 check("superficie de ataque bilingüe", script.includes("## 3. Attack surface") && script.includes("## 3. Superficie de ataque"));
 check("recomendaciones bilingües", script.includes("## 4. Recommendations") && script.includes("## 4. Recomendaciones"));
@@ -1017,6 +1017,31 @@ await (async () => {
   check("TOOLS: descripcion aclara limitacion WiFi", /redes WiFi no son accesibles|WiFi.*no.*accesibles|no.*API.*web/i.test(html));
   check("_geoCache: cache de coordenadas", html.includes('_geoCache'));
   check("geoloc-btn: botones con estilo de enlace", html.includes('.geoloc-btn{display:inline-flex'));
+
+  // ---------- Arranque automático de Windows ----------
+  check("btnAutoStart en el HTML", script.includes("$('#btnAutoStart')")||script.includes('$("#btnAutoStart")'));
+  check("syncAutoStartUI definida", script.includes("function syncAutoStartUI()"));
+  check("autoStart en el store por defecto", script.includes("autoStart:false"));
+  check("VBS de arranque silencioso existe", fs.existsSync("windows/aion-sincro-startup.vbs"));
+  check("PowerShell crear-arranque-automatico existe", fs.existsSync("windows/crear-arranque-automatico.ps1"));
+  check("AION_STARTUP en el launcher .cmd", fs.readFileSync("windows/aion-sincro.cmd","utf8").includes("AION_STARTUP"));
+  check("STARTUP_MODE en el launcher .cmd", fs.readFileSync("windows/aion-sincro.cmd","utf8").includes("STARTUP_MODE"));
+  // Verificar que el VBS contiene wscript.exe y el .cmd
+  const vbs=fs.readFileSync("windows/aion-sincro-startup.vbs","utf8");
+  check("VBS referencia a aion-sincro.cmd", vbs.includes("aion-sincro.cmd"));
+  check("VBS usa WScript.Shell", vbs.includes("WScript.Shell"));
+  check("VBS modo oculto (windowStyle 0)", vbs.includes("0, False"));
+  // Verificar el PowerShell
+  const ps1=fs.readFileSync("windows/crear-arranque-automatico.ps1","utf8");
+  check("PS1 tiene flag -Install", ps1.includes("-Install"));
+  check("PS1 tiene flag -Remove", ps1.includes("-Remove"));
+  check("PS1 usa carpeta Startup", ps1.includes("Startup"));
+  check("PS1 referencia al VBS", ps1.includes("aion-sincro-startup.vbs"));
+  check("PS1 limpia accesos directos antiguos", ps1.includes("Hermes AI.lnk")||ps1.includes("Hermes.lnk"));
+  // Modo startup en el .cmd no abre navegador
+  const cmd=fs.readFileSync("windows/aion-sincro.cmd","utf8");
+  check("CMD en startup no abre navegador", cmd.includes('"%STARTUP_MODE%"=="0"') && cmd.includes("start \"\" \"http"));
+  check("CMD en startup no muestra banner", cmd.includes('STARTUP_MODE%")=="0" (')||cmd.includes('STARTUP_MODE%"=="0" ('));
 
   // ---------- Resumen ----------
   console.log("\n" + "=".repeat(60));

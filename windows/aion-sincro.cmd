@@ -12,10 +12,17 @@ rem   · Instalado (install.cmd): los archivos están en su MISMA carpeta
 rem     (%LOCALAPPDATA%\AionSincro) y hay un token persistente en 'token'.
 rem   · Repo: los archivos están en la carpeta PADRE (windows\..).
 rem
+rem Modo startup (AION_STARTUP=1): solo arranca servicios (web+puente+
+rem Piper) en segundo plano, sin navegador, banner, ni timeout.
+rem Lo activa aion-sincro-startup.vbs desde la carpeta de Inicio.
+rem
 rem Variables de entorno opcionales:
 rem     AION_APP_PORT     puerto web (por defecto 8080)
 rem     AION_BRIDGE_PORT  puerto del puente (por defecto 8765)
+rem     AION_STARTUP=1    modo silencioso (sin navegador ni pausas)
 setlocal EnableExtensions EnableDelayedExpansion
+set "STARTUP_MODE=0"
+if /i "%AION_STARTUP%"=="1" set "STARTUP_MODE=1"
 
 rem --- Localiza la carpeta de la app (instalada o repo) ---
 if exist "%~dp0index.html" (
@@ -49,23 +56,27 @@ if exist "%APP_DIR%\token" (
   if exist "%APP_DIR%\token" set /p BRIDGE_TOKEN=<"%APP_DIR%\token"
 )
 
-cd /d "%APP_DIR%" || (echo [ERROR] No encuentro la carpeta del proyecto: %APP_DIR% & pause & exit /b 1)
+cd /d "%APP_DIR%" || (if "%STARTUP_MODE%"=="0" echo [ERROR] No encuentro la carpeta del proyecto: %APP_DIR% & if "%STARTUP_MODE%"=="0" pause & exit /b 1)
 
-echo.
-echo   ============================================
-echo     AION SINCRÓ - Compañera de Pentest y Red Team
-echo   ============================================
-echo.
+if "%STARTUP_MODE%"=="0" (
+  echo.
+  echo   ============================================
+  echo     AION SINCRÓ - Compañera de Pentest y Red Team
+  echo   ============================================
+  echo.
+)
 
 rem --- 0) Limpiar servicios de sesiones anteriores (evita conflictos de puerto) ---
-echo   Cerrando servicios de sesiones anteriores...
+if "%STARTUP_MODE%"=="0" echo   Cerrando servicios de sesiones anteriores...
 for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr /c:"127.0.0.1:%PORT_APP% "') do taskkill /pid %%a /f 2>nul
 for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr /c:"127.0.0.1:%PORT_BRIDGE% "') do taskkill /pid %%a /f 2>nul
 for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr /c:"127.0.0.1:8766 "') do taskkill /pid %%a /f 2>nul
 %SystemRoot%\System32\timeout.exe /t 1 /nobreak >nul
 
-echo   Sirviendo la app en  http://127.0.0.1:%PORT_APP%/
-echo.
+if "%STARTUP_MODE%"=="0" (
+  echo   Sirviendo la app en  http://127.0.0.1:%PORT_APP%/
+  echo.
+)
 
 rem --- 1) Servidor web (python preferido, node como respaldo) ---
 where python >nul 2>&1
@@ -96,13 +107,13 @@ if %errorlevel%==0 (
 rem --- 3) Piper local (voz neuronal, si esta instalado) -----------
 if exist "%APP_DIR%\.venv-piper\Scripts\python.exe" (
   start "Aion Sincro Piper" /min cmd /c "cd /d ""%APP_DIR%"" && .venv-piper\Scripts\python.exe piper_server.py"
-  echo   [Piper] arrancado en  http://127.0.0.1:8766  (voz local activa)
+  if "%STARTUP_MODE%"=="0" echo   [Piper] arrancado en  http://127.0.0.1:8766  (voz local activa)
 ) else (
-  echo   [Piper] no detectado — ejecuta windows\instalar-piper.cmd para la voz local
+  if "%STARTUP_MODE%"=="0" echo   [Piper] no detectado — ejecuta windows\instalar-piper.cmd para la voz local
 )
 
 rem --- 4) Espera activa a que el puente esté listo (máx 8 intentos) ---
-echo   Verificando servicios...
+if "%STARTUP_MODE%"=="0" echo   Verificando servicios...
 set "BRIDGE_OK=0"
 where curl >nul 2>&1
 if %errorlevel%==0 (
@@ -118,19 +129,21 @@ if %errorlevel%==0 (
   if !errorlevel!==0 set "BRIDGE_OK=1"
 )
 
-rem --- 5) Abre el navegador -----------------------------------------
-start "" "http://127.0.0.1:%PORT_APP%/index.html"
+rem --- 5) Abre el navegador (solo en modo normal) --------------------
+if "%STARTUP_MODE%"=="0" (
+  start "" "http://127.0.0.1:%PORT_APP%/index.html"
 
-echo   Listo. Resumen de la sesión:
-echo     · App web      http://127.0.0.1:%PORT_APP%/
-echo     · Puente       http://127.0.0.1:%PORT_BRIDGE%  (token persistente en 'token' —
-echo                   la app lo adopta sola al cargar; no hace falta pegarlo)
-echo     · Piper        http://127.0.0.1:8766  (si está instalado)
-if "!BRIDGE_OK!"=="1" (
-  echo     · Estado       puente conectado ^✔
-) else (
-  echo     · Estado       puente NO detectado — si falla, revisa que python esté en el PATH
+  echo   Listo. Resumen de la sesión:
+  echo     · App web      http://127.0.0.1:%PORT_APP%/
+  echo     · Puente       http://127.0.0.1:%PORT_BRIDGE%  (token persistente en 'token' —
+  echo                   la app lo adopta sola al cargar; no hace falta pegarlo)
+  echo     · Piper        http://127.0.0.1:8766  (si está instalado)
+  if "!BRIDGE_OK!"=="1" (
+    echo     · Estado       puente conectado ^✔
+  ) else (
+    echo     · Estado       puente NO detectado — si falla, revisa que python esté en el PATH
+  )
+  echo.
+  %SystemRoot%\System32\timeout.exe /t 2 /nobreak >nul
 )
-echo.
-%SystemRoot%\System32\timeout.exe /t 2 /nobreak >nul
 exit /b 0
