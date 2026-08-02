@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
-  Ancla el lanzador de Aion Sincro a la barra de tareas de Windows.
+  Ancla el lanzador de Aion Sincro a la barra de tareas de Windows
+  usando el METODO DEL MENU INICIO (metodo fiable en Win10/11).
 
 .DESCRIPTION
   El problema: si anclas la PWA de Edge (el icono de la app instalada), al
@@ -10,10 +11,24 @@
   La solucion: anclar el LANZADOR (windows\aion-sincro.cmd), que es el que
   arranca los servicios (web 8080 + puente 8765 + Piper) y luego abre la app.
 
-  Este script crea el acceso directo "Aion Sincro.lnk" en la carpeta de
-  tareas ancladas de Windows apuntando al lanzador, con el icono de Aion.
+  METODO (por que este es fiable):
+    1. Se crea "Aion Sincro.lnk" en la carpeta de Programas del MENU INICIO
+       ( %APPDATA%\Microsoft\Windows\Start Menu\Programs ). Eso hace que el
+       lanzador aparezca en la busqueda de Inicio con su icono.
+    2. Se invoca el verbo "taskbarpin" SOBRE ESE acceso de Inicio. Anclar
+       desde el menu Inicio es el flujo que Windows soporta nativamente en
+       Win10/11 (escribir directamente en User Pinned\TaskBar ya NO pinta el
+       icono de forma fiable, por eso este script cambio de metodo).
+    3. Se elimina cualquier acceso viejo en User Pinned\TaskBar que apuntase
+       a otra version, para que no haya iconos duplicados en la barra.
+
+  Si el verbo taskbarpin no surte efecto (Microsoft lo restringe en algunas
+  builds), el acceso YA existe en el menu Inicio: el usuario solo tiene que
+  buscar "Aion Sincro" en Inicio -> clic derecho -> Anclar a la barra de
+  tareas. Una sola accion manual, sin pelear con carpetas internas.
 
   Uso:  powershell -ExecutionPolicy Bypass -File anclar-barra-tareas.ps1
+        powershell -ExecutionPolicy Bypass -File anclar-barra-tareas.ps1 -Remove   (quita el acceso)
 
   Requisitos: ejecutar con permisos normales (sin admin). Windows 10/11.
 
@@ -23,6 +38,10 @@
 .NOTES
   Autor: Ark & Jimmy - Aion Sincro - Licencia MIT
 #>
+
+param(
+    [switch]$Remove
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -43,43 +62,79 @@ $appDir = Split-Path -Parent (Split-Path -Parent $launcher)
 $icon = Join-Path $scriptDir "aion-sincro.ico"
 if (-not (Test-Path $icon)) { $icon = "$launcher,0" } else { $icon = "$icon,0" }
 
-# ------- Carpeta de tareas ancladas de la barra de tareas -------
+# ------- Rutas implicadas -------
+# Carpeta de Programas del MENU INICIO (donde aparecen las apps al buscar en Inicio)
+$startMenuDir = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs"
+$startMenuLnk = Join-Path $startMenuDir "Aion Sincro.lnk"
+
+# Carpeta interna de anclados de la barra (la ANTIGUA forma de hacerlo; ya no pinta bien)
 $taskbarDir = Join-Path $env:APPDATA "Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar"
-if (-not (Test-Path $taskbarDir)) {
-    New-Item -ItemType Directory -Path $taskbarDir -Force | Out-Null
+$oldTaskbarLnk = Join-Path $taskbarDir "Aion Sincro.lnk"
+
+# ------- MODO ELIMINAR -------
+if ($Remove) {
+    Write-Host "=== Quitando Aion Sincro de la barra de tareas / menu Inicio ==="
+    if (Test-Path $startMenuLnk) {
+        Remove-Item $startMenuLnk -Force
+        Write-Host "  [OK] Eliminado acceso del menu Inicio: $startMenuLnk"
+    } else {
+        Write-Host "  [i] No habia acceso en el menu Inicio"
+    }
+    if (Test-Path $oldTaskbarLnk) {
+        Remove-Item $oldTaskbarLnk -Force
+        Write-Host "  [OK] Eliminado acceso antiguo de User Pinned\TaskBar"
+    } else {
+        Write-Host "  [i] No habia acceso antiguo en User Pinned\TaskBar"
+    }
+    Write-Host ""
+    Write-Host "  Si el icono sigue en la barra de tareas, haz clic derecho sobre" -ForegroundColor Yellow
+    Write-Host "  el -> Desanclar. Listo." -ForegroundColor Yellow
+    exit 0
 }
 
-$lnkPath = Join-Path $taskbarDir "Aion Sincro.lnk"
-
-# ------- Crear el acceso directo -------
+# ------- 1) Crear el acceso en el MENU INICIO -------
+Write-Host "=== Anclando Aion Sincro (metodo menu Inicio) ==="
 $ws = New-Object -ComObject WScript.Shell
-$lnk = $ws.CreateShortcut($lnkPath)
+$lnk = $ws.CreateShortcut($startMenuLnk)
 $lnk.TargetPath = $launcher
 $lnk.WorkingDirectory = $appDir
 $lnk.IconLocation = $icon
 $lnk.Description = "Aion Sincro - Companion de Pentest y Red Team (arranca servicios + app)"
 $lnk.Save()
+Write-Host "  [OK] Acceso creado en el menu Inicio:"
+Write-Host "       $startMenuLnk"
+Write-Host "       Lanzador: $launcher"
 
-# ------- El .lnk ya esta en la carpeta de anclados: eso ES el pin -------
-# El InvokeVerb('taskbarpin') de abajo es best-effort: Microsoft bloqueo el
-# anclado programatico en Win10/11, asi que puede no hacer nada (no pasa nada,
-# el .lnk ya esta en la carpeta correcta). Solo informamos si el icono no sale.
+# ------- 2) Anclar a la barra de tareas (verbo taskbarpin sobre el acceso de Inicio) -------
 try {
     $shellApp = New-Object -ComObject Shell.Application
-    $item = $shellApp.Namespace($taskbarDir).ParseName("Aion Sincro.lnk")
-    if ($item) { $item.InvokeVerb("taskbarpin") | Out-Null }
-} catch {}
+    $item = $shellApp.Namespace($startMenuDir).ParseName("Aion Sincro.lnk")
+    if ($item) {
+        # Esperar un instante a que Explorer indexe el acceso nuevo
+        Start-Sleep -Milliseconds 400
+        $item.InvokeVerb("taskbarpin") | Out-Null
+        Start-Sleep -Milliseconds 600
+    }
+} catch {
+    # Si falla el verbo, no pasa nada: el acceso ya esta en Inicio para anclarlo a mano
+}
+
+# ------- 3) Limpiar el acceso viejo de User Pinned\TaskBar (evita duplicados) -------
+if (Test-Path $oldTaskbarLnk) {
+    try { Remove-Item $oldTaskbarLnk -Force; Write-Host "  [OK] Limpiado acceso antiguo de User Pinned\TaskBar" }
+    catch { Write-Host "  [i] No se pudo limpiar el acceso antiguo (se ignora)" }
+}
 
 Write-Host ""
-Write-Host "OK - acceso directo creado en:" -ForegroundColor Green
-Write-Host "  $lnkPath"
-Write-Host "  Lanzador: $launcher"
+Write-Host "  Hecho. Comprueba la barra de tareas." -ForegroundColor Green
 Write-Host ""
-Write-Host "Si el icono no aparece aun en la barra de tareas:" -ForegroundColor Cyan
-Write-Host "  1. Espera unos segundos (Explorer tarda en refrescar) o reinicia el explorador" -ForegroundColor Gray
-Write-Host "  2. Ve a Inicio y busca 'Aion Sincro' -> clic derecho -> Anclar a la barra de tareas" -ForegroundColor Gray
+Write-Host "  Si el icono NO aparece (Microsoft restringe el anclado programatico" -ForegroundColor Cyan
+Write-Host "  en algunas builds), hazlo en 10 segundos a mano:" -ForegroundColor Cyan
+Write-Host "    1. Pulsa la tecla Windows y escribe: Aion Sincro" -ForegroundColor Gray
+Write-Host "    2. Clic derecho sobre el resultado -> Anclar a la barra de tareas" -ForegroundColor Gray
+Write-Host "    (El acceso ya esta en el menu Inicio: solo falta el clic derecho.)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "IMPORTANTE: desancla la PWA vieja de Edge de la barra de tareas" -ForegroundColor Yellow
-Write-Host "  (clic derecho -> Desanclar). Esta PWA solo abre la URL sin arrancar los servicios;" -ForegroundColor Yellow
-Write-Host "  este icono nuevo SI arranca la web + puente + Piper." -ForegroundColor Yellow
+Write-Host "  (clic derecho -> Desanclar). Esta PWA solo abre la URL sin arrancar los" -ForegroundColor Yellow
+Write-Host "  servicios; este icono nuevo SI arranca la web + puente + Piper." -ForegroundColor Yellow
 Write-Host ""

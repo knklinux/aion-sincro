@@ -332,6 +332,32 @@ cd aion-sincro\windows
 powershell -ExecutionPolicy Bypass -File crear-acceso-directo.ps1
 ```
 
+**Anclar a la barra de tareas (método del menú Inicio)** — ancla el
+**lanzador** (`aion-sincro.cmd`), no la PWA de Edge: la PWA solo abre la
+URL sin arrancar los servicios, el lanzador sí arranca web + puente + Piper.
+
+```powershell
+cd aion-sincro\windows
+powershell -ExecutionPolicy Bypass -File anclar-barra-tareas.ps1
+```
+
+El script crea **`Aion Sincro.lnk` en la carpeta de Programas del menú
+Inicio** (aparece al buscar en Inicio con su icono) y luego invoca el verbo
+`taskbarpin` sobre ese acceso. Anclar desde el menú Inicio es el método que
+Windows 10/11 soporta de forma fiable (escribir directamente en
+`User Pinned\TaskBar` ya **no pinta el icono** de forma consistente, por eso
+este script cambió de método). También elimina cualquier acceso antiguo de
+`User Pinned\TaskBar` para evitar iconos duplicados.
+
+Si el verbo `taskbarpin` no surte efecto (Microsoft lo restringe en algunas
+builds), el acceso **ya está en el menú Inicio**: busca «Aion Sincro» al
+pulsar la tecla Windows → clic derecho → **Anclar a la barra de tareas**.
+Una sola acción manual, sin tocar carpetas internas.
+
+Para quitarlo: `anclar-barra-tareas.ps1 -Remove` (borra el acceso del menú
+Inicio y el antiguo de `User Pinned\TaskBar`; si el icono sigue en la barra,
+clic derecho → Desanclar).
+
 ### 🗣️ Voz neuronal local — Piper TTS (gratis, sin internet, en español)
 
 La voz de Aion puede ser **100% local**: Piper es un TTS neuronal que se ejecuta

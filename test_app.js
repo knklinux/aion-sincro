@@ -1074,6 +1074,19 @@ await (async () => {
   check("/read: rechaza binarios", pyRead.includes("archivo binario no soportado") && jsRead.includes("archivo binario no soportado"));
   check("/read: verifica que la ruta queda dentro del proyecto", pyRead.includes("fuera del proyecto") && jsRead.includes("fuera del proyecto"));
 
+  // ---------- Anclar a la barra de tareas (metodo menu Inicio) ----------
+  check("anclar-barra-tareas.ps1 existe", fs.existsSync("windows/anclar-barra-tareas.ps1"));
+  const pinSrc=fs.readFileSync("windows/anclar-barra-tareas.ps1","utf8");
+  check("anclar: usa el metodo del menu Inicio (Start Menu Programs)", pinSrc.includes("Start Menu\\Programs"));
+  check("anclar: invoca taskbarpin sobre el acceso de Inicio", pinSrc.includes("InvokeVerb(\"taskbarpin\")"));
+  check("anclar: soporta -Remove para desanclar", pinSrc.includes("$Remove") && pinSrc.includes("-Remove"));
+  check("anclar: limpia el acceso antiguo de User Pinned\\TaskBar", pinSrc.includes("User Pinned\\TaskBar") && pinSrc.includes("Remove-Item $oldTaskbarLnk"));
+  check("anclar: icono aion-sincro.ico", pinSrc.includes("aion-sincro.ico"));
+  check("anclar: ASCII puro (PowerShell 5.1)", !/[áéíóúñÁÉÍÓÚÑ¿¡]/.test(pinSrc));
+  const readme=fs.readFileSync("README.md","utf8");
+  check("README: documenta anclar a la barra de tareas", readme.includes("anclar-barra-tareas.ps1") && readme.includes("Anclar a la barra de tareas"));
+  check("README: explica el metodo del menu Inicio", readme.includes("menú Inicio")||readme.includes("menu Inicio"));
+
   // ---------- Resumen ----------
   console.log("\n" + "=".repeat(60));
   console.log(`RESULTADO: ${PASS} ok · ${FAIL} fallos`);
