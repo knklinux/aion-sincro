@@ -10,13 +10,7 @@
 
 ## 🔮 Pendiente de publicar
 
-Trabajo validado en local, aún sin commit en `main`:
-
-- **Test de mutación real** (`test_mutacion.py`) — copia temporal de `index.html` a la que se le quita la limpieza de `saveStore` y verifica que el check de regresión WebCrypto **cae** (prueba no vacua). Integrado como paso `[3/3]` en `test_all.cmd` y `test_all.sh`.
-- **`AION_HTML`** en `test_app.js` — la suite acepta una ruta alternativa de `index.html` (la usa el harness de mutación), con auto-check del soporte.
-- **Flujo completo de sesión WebCrypto** en `test_app.js` — cifrar → reiniciar (solo sobrevive el blob) → desbloquear con contraseña correcta (las claves vuelven) y errónea (`null`), simulando una recarga real de la app.
-
-También hay **trabajo sin commitear en el árbol** que aún no forma parte de `main` y se documentará en su release: el **módulo OSINT** (`aion_osint.py` con su suite `test_aion_osint.py` y lanzadores `linux/aion-osint` / `windows/aion-osint.cmd`), junto a modificaciones en `README.md` e `index.html`.
+Trabajo validado en local, aún sin commit en `main`: *(sección vacía — todo lo publicado hasta ahora está reflejado en las secciones `✨` de abajo.)*
 
 ---
 
