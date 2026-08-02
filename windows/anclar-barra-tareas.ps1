@@ -58,8 +58,11 @@ if (-not (Test-Path $launcher)) {
 }
 $appDir = Split-Path -Parent (Split-Path -Parent $launcher)
 
-# Icono: si no existe .ico, usamos el propio .cmd (icono generico)
-$icon = Join-Path $scriptDir "aion-sincro.ico"
+# Icono: preferimos favicon.ico dorado (hexagono + delta, multi-tamano).
+# Si no existe, usamos aion-sincro.ico; si tampoco, el propio .cmd (generico).
+$icon = Join-Path $scriptDir "favicon.ico"
+if (-not (Test-Path $icon)) { $icon = Join-Path $appDir "favicon.ico" }
+if (-not (Test-Path $icon)) { $icon = Join-Path $scriptDir "aion-sincro.ico" }
 if (-not (Test-Path $icon)) { $icon = "$launcher,0" } else { $icon = "$icon,0" }
 
 # ------- Rutas implicadas -------

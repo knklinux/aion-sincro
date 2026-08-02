@@ -1138,9 +1138,12 @@ await (async () => {
   check("anclar: soporta -Remove para desanclar", pinSrc.includes("$Remove") && pinSrc.includes("-Remove"));
   check("anclar: limpia el acceso antiguo de User Pinned\\TaskBar", pinSrc.includes("User Pinned\\TaskBar") && pinSrc.includes("Remove-Item $oldTaskbarLnk"));
   check("anclar: icono aion-sincro.ico", pinSrc.includes("aion-sincro.ico"));
+  check("anclar: prefiere favicon.ico dorado (multi-tamano)", pinSrc.includes("favicon.ico") && pinSrc.indexOf("favicon.ico") < pinSrc.indexOf("aion-sincro.ico"));
   check("anclar: limpia Arguments al regenerar (evita doble cmd /c)", pinSrc.includes("$lnk.Arguments = \"\""));
   const cadSrc = fs.existsSync("windows/crear-acceso-directo.ps1") ? fs.readFileSync("windows/crear-acceso-directo.ps1","utf8") : "";
   check("crear-acceso-directo: limpia Arguments al regenerar", cadSrc.includes("$lnk.Arguments       = \"\""));
+  check("crear-acceso-directo: prefiere favicon.ico dorado", cadSrc.includes("$favIcon = Join-Path $appDir \"favicon.ico\"") && cadSrc.includes("$icoPath = $favIcon"));
+  check("crear-acceso-directo: usa favicon.ico como IconLocation", cadSrc.includes("$icoPath,0"));
   check("anclar: ASCII puro (PowerShell 5.1)", !/[áéíóúñÁÉÍÓÚÑ¿¡]/.test(pinSrc));
   const readme=fs.readFileSync("README.md","utf8");
   check("README: documenta anclar a la barra de tareas", readme.includes("anclar-barra-tareas.ps1") && readme.includes("Anclar a la barra de tareas"));
@@ -1155,6 +1158,7 @@ await (async () => {
   check("ISS: copia index.html y bridge.py", iss.includes('Source: "..\\index.html"') && iss.includes('Source: "..\\bridge.py"'));
   check("ISS: copia el lanzador y los scripts PS1", iss.includes('Source: "aion-sincro.cmd"') && iss.includes('Source: "crear-acceso-directo.ps1"') && iss.includes('Source: "anclar-barra-tareas.ps1"') && iss.includes('Source: "crear-arranque-automatico.ps1"'));
   check("ISS: copia el icono y el VBS", iss.includes('Source: "aion-sincro.ico"') && iss.includes('Source: "aion-sincro-startup.vbs"'));
+  check("ISS: copia favicon.ico dorado al app dir", iss.includes('Source: "..\\favicon.ico"'));
   check("ISS: [Run] genera el token con crear-token.ps1", iss.includes("crear-token.ps1"));
   check("ISS: [Run] crea acceso directo", iss.includes("crear-acceso-directo.ps1"));
   check("ISS: [Run] ancla a la barra de tareas", iss.includes("anclar-barra-tareas.ps1"));

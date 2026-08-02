@@ -60,6 +60,7 @@ Source: "..\COMPARATIVA.md"; DestDir: "{app}"; Flags: ignoreversion
 ; --- Lanzador y herramientas de Windows ---
 Source: "aion-sincro.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "serve.js"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\favicon.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "aion-sincro.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "aion-sincro-startup.vbs"; DestDir: "{app}"; Flags: ignoreversion
 Source: "crear-acceso-directo.ps1"; DestDir: "{app}"; Flags: ignoreversion
