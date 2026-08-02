@@ -341,6 +341,14 @@ check("continuousCycle() definida", /function\s+continuousCycle\s*\(/.test(scrip
   check("silenceTimer pausa el ciclo si no hablas (turnTimeout s)", /const tt=Math\.max\(2,Math\.min\(5,\+store\.turnTimeout\|\|4\)\);/.test(script) && /silenceTimer=setTimeout\(\(\)=>\{/.test(script) && script.includes("⏸️ Te espero en silencio"));
   check("hablar cancela el límite de silencio (clearTimeout(silenceTimer) en onresult)", /clearTimeout\(silenceTimer\);\s*if\(final\)\{/.test(script));
   check("stopAll limpia silenceTimer", script.includes("function stopAll(){ clearTimeout(silenceTimer);"));
+  // Sonidos de transición del ciclo (WebAudio puro): pausa y reanudación por audio
+  check("chimePause() definido (doble pit corto)", script.includes("function chimePause(){") && script.includes("window.AudioContext||window.webkitAudioContext"));
+  check("chimePause() usa tonos descendentes (392→311)", script.includes("[[392,0],[311.13,.16]]"));
+  check("chimeResume() definido (tono ascendente)", script.includes("function chimeResume(){") && script.includes("window.AudioContext||window.webkitAudioContext"));
+  check("chimeResume() usa tonos ascendentes (392→523→659)", script.includes("[[392,0],[523.25,.12],[659.25,.24]]"));
+  check("chimePause() suena al pausar por silencio", /setListening\(false\);\s*chimePause\(\);\s*\/\/ doble pit corto/.test(script));
+  check("chimeResume() suena al reabrir el micrófono", /setListening\(true\);\s*chimeResume\(\);\s*\/\/ tono ascendente/.test(script));
+  check("sonidos usan WebAudio sin archivos externos (catch silencioso)", script.includes("window.AudioContext||window.webkitAudioContext") && /function\s+chimePause[\s\S]*?\}catch\(_\)\{\}/.test(script) && /function\s+chimeResume[\s\S]*?\}catch\(_\)\{\}/.test(script));
 check("conversación continua enganchada al terminar de hablar (Windows)", /speaking=false; setState\(streaming\?'thinking':'idle'\); continuousCycle\(\); \}\ };/.test(script));
 check("conversación continua enganchada al terminar (Voxtral y Piper)", (script.match(/speaking=false; setState\(streaming\?'thinking':'idle'\); continuousCycle\(\);/g)||[]).length>=3);
 

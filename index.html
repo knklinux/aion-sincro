@@ -4321,6 +4321,7 @@ function continuousCycle(){
   continuousTimer=setTimeout(()=>{
     if(store.continuous&&!streaming&&!speaking&&!listening&&recog&&!wakeDenied&&document.visibilityState!=='hidden'&&!$('#settings').classList.contains('open')){
       setListening(true);
+      chimeResume(); // tono ascendente: se reabre el micrófono para tu turno
       if(!toastShownContinuous){ toastShownContinuous=true; toast('🔄 Tu turno — habla cuando quieras','1800'); setTimeout(()=>{toastShownContinuous=false;},6000); }
       /* Límite de silencio configurable (turnTimeout, 2-5 s): si el usuario no
          dice nada en ese tiempo, Aion pausa el ciclo sola y espera en silencio
@@ -4331,6 +4332,7 @@ function continuousCycle(){
       silenceTimer=setTimeout(()=>{
         if(store.continuous&&listening&&!streaming&&!speaking&&!wakeScan){
           setListening(false);
+          chimePause(); // doble pit corto: ciclo pausado por silencio
           clearTimeout(continuousTimer); clearTimeout(silenceTimer);
           toast('⏸️ Te espero en silencio. Pulsa el micrófono o di «'+wakeLabel()+'» para retomar','3500');
         }
@@ -5461,6 +5463,34 @@ function chime(){
       o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);
       g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.16,t+d+.02);
       g.gain.exponentialRampToValueAtTime(.001,t+d+.8);o.start(t+d);o.stop(t+d+.9);
+    });
+  }catch(_){}
+}
+/* Sonidos de transición del ciclo de conversación continua (WebAudio puro,
+   sin archivos): el estado del turno se percibe también por audio.
+   - chimePause(): doble pit corto descendente — el ciclo se pausa por silencio.
+   - chimeResume(): tono ascendente — se reabre el micrófono para tu turno. */
+function chimePause(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const t=ctx.currentTime;
+    [[392,0],[311.13,.16]].forEach(([f,d])=>{ // Sol4 → Mi♭4: corto y descendente
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);
+      g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.14,t+d+.015);
+      g.gain.exponentialRampToValueAtTime(.001,t+d+.22);o.start(t+d);o.stop(t+d+.3);
+    });
+  }catch(_){}
+}
+function chimeResume(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const t=ctx.currentTime;
+    [[392,0],[523.25,.12],[659.25,.24]].forEach(([f,d])=>{ // Sol4 → Do5 → Mi5: ascendente
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);
+      g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.15,t+d+.015);
+      g.gain.exponentialRampToValueAtTime(.001,t+d+.3);o.start(t+d);o.stop(t+d+.4);
     });
   }catch(_){}
 }
