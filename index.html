@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpolygon points='20,2 36,11 36,29 20,38 4,29 4,11' fill='none' stroke='%23f5a524' stroke-width='2.5'/%3E%3Ctext x='20' y='26' text-anchor='middle' font-size='16' font-weight='800' fill='%23f5a524' font-family='monospace'%3EΔ%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#080604">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icons/aion-192.png">
 <title>Aion Sincro · Compañera de Pentest y Red Team</title>
 <style>
 /* ============================================================
@@ -107,6 +113,8 @@ header.top{
 .lockPop input{width:100%;padding:9px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.1);
   background:rgba(255,255,255,.04);color:var(--text);font-size:12.5px;margin-bottom:9px;outline:none}
 .lockPop input:focus{border-color:rgba(245,165,36,.5)}
+.lockPop .lp-remember{display:flex;align-items:center;gap:7px;font-size:10.8px;color:var(--dim);margin:8px 0 6px;cursor:pointer;line-height:1.4}
+.lockPop .lp-remember input{width:auto;flex:0 0 auto;margin:0;cursor:pointer}
 .lockPop .lp-actions{display:flex;gap:7px}
 .lockPop button{flex:1;padding:8px 10px;border-radius:8px;font-size:11.5px;font-weight:600;letter-spacing:.04em;cursor:pointer;transition:.2s}
 #lockUnlockBtn{color:#9fe8c9;border:1px solid rgba(52,211,153,.4);background:rgba(16,185,129,.12)}
@@ -667,6 +675,121 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
   border:1px solid rgba(52,211,153,.35);color:#6ee7b7;background:rgba(16,185,129,.08)}
 .iso-export:hover{background:rgba(16,185,129,.18);transform:translateY(-1px)}
 
+/* ---------- Herramienta OSINT local (aion_osint.py vía puente) ---------- */
+#osintOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
+  background:radial-gradient(circle at 50% 30%,rgba(34,211,238,.07),rgba(2,6,12,.88) 70%);
+  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s}
+#osintOverlay.show{opacity:1;visibility:visible;pointer-events:auto}
+.osint-card{width:min(920px,100%);max-height:92vh;display:flex;flex-direction:column;border-radius:20px;
+  border:1px solid rgba(34,211,238,.24);background:linear-gradient(180deg,rgba(10,16,26,.97),rgba(6,10,18,.98));
+  box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 60px rgba(34,211,238,.07);animation:winIn .6s cubic-bezier(.2,.8,.25,1)}
+.osint-body{flex:1;overflow-y:auto;padding:18px 26px 10px;scrollbar-width:thin;scrollbar-color:rgba(34,211,238,.3) transparent}
+.osint-body::-webkit-scrollbar{width:6px}
+.osint-body::-webkit-scrollbar-thumb{background:rgba(34,211,238,.28);border-radius:3px}
+.osint-sub{font-size:12px;color:var(--dim);line-height:1.7;margin-bottom:14px}
+.osint-cfg{display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap}
+.osint-cfg label{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.osint-cfg input,.osint-cfg select{background:rgba(2,6,12,.7);border:1px solid rgba(34,211,238,.25);color:#dff8ff;border-radius:10px;padding:9px 12px;font-size:12.5px;outline:none;transition:.2s}
+.osint-cfg input:focus,.osint-cfg select:focus{border-color:rgba(34,211,238,.6);box-shadow:0 0 14px rgba(34,211,238,.15)}
+.osint-go{padding:9px 18px;border-radius:20px;font-size:12.5px;font-weight:700;cursor:pointer;transition:.2s;
+  color:#04161c;background:linear-gradient(135deg,#67e8f9,#06b6d4);box-shadow:0 0 18px rgba(6,182,212,.3)}
+.osint-go:hover{transform:translateY(-1px);box-shadow:0 0 26px rgba(6,182,212,.5)}
+#osintOut{display:flex;flex-direction:column;gap:6px;padding-bottom:12px}
+.osint-head{font-size:13.5px;font-weight:800;color:#cffafe;margin-bottom:6px}
+.osint-stat{font-size:12.5px;color:var(--dim);margin-bottom:8px}
+.osint-hit{display:flex;flex-direction:column;gap:2px;padding:8px 12px;border-radius:10px;text-decoration:none;
+  border:1px solid rgba(34,211,238,.25);background:rgba(34,211,238,.05);color:#a5f3fc;transition:.2s}
+.osint-hit:hover{border-color:rgba(34,211,238,.6);background:rgba(34,211,238,.12)}
+.osint-hit span{font-size:11px;color:var(--dim);word-break:break-all}
+.osint-pos{display:inline-block;padding:5px 12px;border-radius:14px;font-size:11.5px;margin-right:6px;margin-bottom:6px;
+  border:1px solid rgba(245,165,36,.35);color:#ffd166;background:rgba(245,165,36,.07);text-decoration:none;transition:.2s}
+.osint-pos:hover{background:rgba(245,165,36,.18)}
+.osint-dim{font-size:11.8px;color:var(--dim);line-height:1.5}
+.osint-err{font-size:12.3px;color:#fca5a5;line-height:1.6;border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:10px 14px;background:rgba(248,113,113,.05)}
+.osint-err pre{font-family:var(--mono);font-size:11px;margin-top:6px;white-space:pre-wrap;color:#ffd9a8}
+.osint-busy{font-size:12.5px;color:#67e8f9}
+.osint-note{font-size:11px;color:var(--dim);margin-top:10px;padding-top:8px;border-top:1px solid rgba(34,211,238,.12)}
+.osint-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 24px;border-top:1px solid rgba(34,211,238,.15)}
+.osint-foot small{font-size:10.5px;color:var(--dim);letter-spacing:.04em}
+#btnCloseOsint{padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.1em;color:#03130c;
+  background:linear-gradient(135deg,#67e8f9,#06b6d4);box-shadow:0 0 24px rgba(6,182,212,.35);cursor:pointer;transition:.25s}
+#btnCloseOsint:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(6,182,212,.5)}
+
+/* ---------- LinkedIn: 10 publicaciones semanales de pentesting ---------- */
+#linkedinOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
+  background:radial-gradient(circle at 50% 30%,rgba(245,165,36,.08),rgba(2,6,12,.88) 70%);
+  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s}
+#linkedinOverlay.show{opacity:1;visibility:visible;pointer-events:auto}
+.li-card{width:min(960px,100%);max-height:92vh;display:flex;flex-direction:column;border-radius:20px;
+  border:1px solid rgba(245,165,36,.26);background:linear-gradient(180deg,rgba(12,10,6,.97),rgba(6,8,12,.98));
+  box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 60px rgba(245,165,36,.07);animation:winIn .6s cubic-bezier(.2,.8,.25,1)}
+.li-body{flex:1;overflow-y:auto;padding:18px 26px 10px;scrollbar-width:thin;scrollbar-color:rgba(245,165,36,.3) transparent}
+.li-body::-webkit-scrollbar{width:6px}
+.li-body::-webkit-scrollbar-thumb{background:rgba(245,165,36,.28);border-radius:3px}
+.li-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-bottom:16px}
+.li-item{border:1px solid rgba(245,165,36,.16);border-radius:12px;padding:12px 14px;cursor:pointer;transition:.2s;background:rgba(2,6,12,.5)}
+.li-item:hover{border-color:rgba(245,165,36,.5);transform:translateY(-1px)}
+.li-item.on{border-color:rgba(245,165,36,.6);background:rgba(245,165,36,.07)}
+.li-item .li-week{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#f5a524;margin-bottom:4px}
+.li-item .li-title{font-size:13px;font-weight:700;color:#ffe9c7;line-height:1.4}
+.li-item .li-hook{font-size:11.5px;color:var(--dim);line-height:1.45;margin-top:5px}
+.li-view{border:1px solid rgba(245,165,36,.2);border-radius:14px;padding:18px 20px;background:rgba(2,6,12,.55);margin-bottom:14px}
+.li-view .li-vhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.li-view .li-vtitle{font-size:15px;font-weight:800;color:#ffd166}
+.li-view .li-actions{display:flex;gap:8px;flex-wrap:wrap}
+.li-btn{padding:8px 16px;border-radius:18px;font-size:12px;font-weight:700;cursor:pointer;transition:.2s;border:1px solid rgba(245,165,36,.35);color:#ffd166;background:rgba(245,165,36,.08)}
+.li-btn:hover{background:rgba(245,165,36,.18);transform:translateY(-1px)}
+.li-text{font-size:13.5px;color:#f3e6cf;line-height:1.75;white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow-y:auto;padding:14px;border-radius:10px;background:rgba(0,0,0,.35);border:1px solid rgba(245,165,36,.12)}
+.li-capture{font-size:11.5px;color:var(--dim);line-height:1.6;margin-top:10px}
+.li-gen{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.li-gen input{flex:1;min-width:220px;background:rgba(2,6,12,.7);border:1px solid rgba(245,165,36,.25);color:#ffe9c7;border-radius:10px;padding:9px 12px;font-size:12.5px;outline:none;transition:.2s}
+.li-gen input:focus{border-color:rgba(245,165,36,.55)}
+.li-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 24px;border-top:1px solid rgba(245,165,36,.15)}
+#btnCloseLi{padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.1em;color:#1a1003;
+  background:linear-gradient(135deg,#ffd166,#f5a524);box-shadow:0 0 24px rgba(245,165,36,.35);cursor:pointer;transition:.25s}
+#btnCloseLi:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(245,165,36,.5)}
+
+/* ---------- Asistente de primera configuración ---------- */
+#setupOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
+  background:radial-gradient(circle at 50% 30%,rgba(255,209,102,.09),rgba(2,6,12,.9) 70%);
+  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s}
+#setupOverlay.show{opacity:1;visibility:visible;pointer-events:auto}
+.setup-card{width:min(620px,100%);max-height:92vh;display:flex;flex-direction:column;border-radius:20px;
+  border:1px solid rgba(255,209,102,.28);background:linear-gradient(180deg,rgba(14,11,5,.98),rgba(6,8,12,.98));
+  box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 60px rgba(255,209,102,.08);animation:winIn .6s cubic-bezier(.2,.8,.25,1)}
+.setup-body{flex:1;overflow-y:auto;padding:18px 26px 12px;scrollbar-width:thin;scrollbar-color:rgba(255,209,102,.3) transparent}
+.setup-dots{display:flex;gap:8px;margin-bottom:16px}
+.setup-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;
+  border:1px solid rgba(255,209,102,.3);color:#8a7a55;background:rgba(2,6,12,.5);transition:.25s}
+.setup-dot.on{background:linear-gradient(135deg,#ffd166,#f5a524);color:#1a1003;box-shadow:0 0 14px rgba(245,165,36,.45);border-color:#ffd166}
+.setup-step h4{font-size:14.5px;font-weight:800;color:#ffd166;margin:2px 0 10px;letter-spacing:.03em}
+.setup-p{font-size:12.6px;color:#f3e6cf;line-height:1.7;margin:0 0 12px}
+.setup-p.dim{color:var(--dim)}
+.setup-field{margin-bottom:10px}
+.setup-field label{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.setup-field input{width:100%;background:rgba(2,6,12,.7);border:1px solid rgba(255,209,102,.25);color:#ffe9c7;border-radius:10px;padding:10px 12px;font-size:12.8px;outline:none;transition:.2s}
+.setup-field input:focus{border-color:rgba(255,209,102,.6);box-shadow:0 0 14px rgba(255,209,102,.15)}
+.setup-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.setup-btn{padding:9px 16px;border-radius:18px;font-size:12.3px;font-weight:700;cursor:pointer;transition:.2s;border:1px solid rgba(255,209,102,.35);color:#ffd166;background:rgba(245,165,36,.08)}
+.setup-btn:hover{background:rgba(245,165,36,.18);transform:translateY(-1px)}
+.setup-btn.go{padding:10px 20px;border:none;color:#1a1003;background:linear-gradient(135deg,#ffd166,#f5a524);box-shadow:0 0 18px rgba(245,165,36,.35)}
+.setup-btn.go:hover{box-shadow:0 0 28px rgba(245,165,36,.55)}
+.setup-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.setup-status{font-size:12px;padding:9px 12px;border-radius:9px;line-height:1.55;margin:8px 0;display:none}
+.setup-status.ok{display:block;background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.setup-status.err{display:block;background:rgba(251,113,133,.1);color:#fda4af;border:1px solid rgba(251,113,133,.3)}
+.setup-status.warn{display:block;background:rgba(245,165,36,.08);color:#ffd166;border:1px solid rgba(245,165,36,.3)}
+.setup-status.busy{display:block;color:#67e8f9}
+.setup-code{display:block;background:rgba(0,0,0,.45);border:1px solid rgba(255,209,102,.18);border-radius:10px;padding:9px 12px;font-family:var(--mono);font-size:11.5px;color:#ffd9a8;margin:8px 0;word-break:break-all}
+.setup-ok-list{list-style:none;padding:0;margin:8px 0 0}
+.setup-ok-list li{font-size:12.3px;color:#f3e6cf;line-height:1.8;padding-left:22px;position:relative}
+.setup-ok-list li::before{content:'✓';position:absolute;left:2px;color:#34d399;font-weight:800}
+.setup-ok-list li b{color:#ffd166}
+.setup-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 24px;border-top:1px solid rgba(255,209,102,.15)}
+#btnCloseSetup{padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.1em;color:#1a1003;
+  background:linear-gradient(135deg,#ffd166,#f5a524);box-shadow:0 0 24px rgba(245,165,36,.35);cursor:pointer;transition:.25s}
+#btnCloseSetup:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(245,165,36,.5)}
+
 /* ---------- Modo Evaluación: examen práctico de la Ruta Red Team ---------- */
 #evalOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
   background:radial-gradient(circle at 50% 30%,rgba(167,139,250,.08),rgba(2,6,12,.88) 70%);
@@ -799,6 +922,8 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
     <button class="head-btn" id="btnEval" title="Evaluación: examen práctico de la Ruta Red Team con puntuación y recomendaciones de repaso">🎓 Evaluación</button>
     <button class="head-btn" id="btnISO" title="Auditoría de cumplimiento ISO 27001:2022 — cuestionario, gap analysis y plan de cumplimiento exportable">🔎 ISO</button>
     <button class="head-btn" id="btnLearn" title="Ruta Red Team: aprendizaje guiado con checkpoints de práctica">🧭 Ruta</button>
+    <button class="head-btn" id="btnOsint" title="OSINT local: busca cuentas por usuario/email/teléfono y analiza dominios (robots.txt, Wayback, contenido oculto) vía aion_osint.py">🕵️ OSINT</button>
+    <button class="head-btn" id="btnLinkedin" title="LinkedIn: 10 publicaciones semanales de pentesting listas para copiar y publicar">📢 LinkedIn</button>
     <button class="head-btn" id="btnStory" title="Releer la historia de Ark & Jimmy (MANIFIESTO)">📖 Ver historia</button>
     <button class="head-btn" id="btnIntegrity" title="Verificar integridad: suites de pruebas y secretos del repo">🧬</button>
     <div class="lockWrap" id="lockWrap">
@@ -807,12 +932,15 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
         <h5>🔐 Claves cifradas</h5>
         <p>Introduce tu contraseña maestra para desbloquear las claves de esta sesión (AES-GCM 256 · la contraseña no se guarda).</p>
         <input type="password" id="lockPass" placeholder="Contraseña maestra" autocomplete="off">
+        <label class="lp-remember"><input type="checkbox" id="lockRemember"> 🔁 Recordar desbloqueo en esta pestaña (sessionStorage)</label>
         <div class="lp-actions">
           <button id="lockUnlockBtn">🔓 Desbloquear</button>
           <button id="lockNowBtn" style="display:none">🔒 Bloquear</button>
         </div>
       </div>
     </div>
+    <button class="head-btn" id="btnInstall" title="Instalar Aion Sincro como aplicación (PWA, funciona sin conexión)" style="display:none">⬇️ Instalar</button>
+    <button class="head-btn" id="btnSetup" title="Asistente de primera configuración: conecta el motor, la voz y el terminal">🚀 Inicio</button>
     <button class="head-btn" id="btnSettings" title="Configuración">⚙️ Ajustes</button>
   </header>
 
@@ -1076,7 +1204,12 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
           <input type="number" id="autoLockMin" min="0" max="480" step="1" style="width:74px;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:13px;outline:none" title="Minutos sin usar la app antes de bloquear las claves (0 = desactivado)">
           <span style="font-size:11px;color:var(--dim)">min</span>
         </div>
-        <div class="hint">Si no usas Aion durante ese tiempo con las claves desbloqueadas, <b>se bloquean solas</b> y el candado vuelve a rojo (0 = desactivado).</div>
+        <div class="hint">Si no usas Aion durante ese tiempo con las claves desbloqueadas, <b>se bloquean solas</b> y el candado vuelve a rojo (0 = desactivado). Al bloquear (manual o automático) también se olvida el desbloqueo recordado.</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+          <label for="setRememberUnlock" style="font-size:12px;color:var(--dim);flex:1">🔁 Recordar desbloqueo durante la sesión</label>
+          <input type="checkbox" id="setRememberUnlock" style="width:auto;transform:scale(1.15)" title="Guarda la clave derivada en sessionStorage: sobrevive a recargas de esta pestaña">
+        </div>
+        <div class="hint">Guarda la <b>clave derivada</b> (nunca la contraseña) en <b>sessionStorage</b> de esta pestaña: al recargar la app, Aion se desbloquea sola. Se borra al <b>cerrar la pestaña</b>, al <b>bloquear</b> las claves o al <b>desactivar</b> el cifrado. Tradeoff: cualquier script del mismo origen podría leerla durante la vida de la pestaña (equivalente a tenerla en memoria) — documentado en SECURITY.md. 💡 Si la activas con las claves <b>ya desbloqueadas</b>, se aplicará en el <b>próximo desbloqueo</b>: bloquea y desbloquea para guardarla al momento.</div>
       </div>
     </div>
 
@@ -1249,6 +1382,180 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
   </div>
 </div>
 
+<!-- Herramienta OSINT local (aion_osint.py vía puente) -->
+<div id="osintOverlay">
+  <div class="osint-card">
+    <div class="win-head">
+      <div class="wh-hex hex">
+        <svg viewBox="0 0 40 40">
+          <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#22d3ee" stroke-width="1.5"/>
+          <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(34,211,238,.1)" stroke="#67e8f9" stroke-width="1"/>
+          <text x="20" y="24" text-anchor="middle" font-size="13" font-weight="800" fill="#e0fbff" font-family="monospace">🕵</text>
+        </svg>
+      </div>
+      <h2 id="osintTitle">🕵️ OSINT</h2>
+      <p class="wh-sub" id="osintSub">Reconocimiento local · cuentas, email, teléfono y dominios</p>
+    </div>
+    <div class="osint-body">
+      <p class="osint-sub" id="osintHint">Busca cuentas públicas asociadas a un usuario/email/teléfono, o analiza robots.txt + Wayback Machine + contenido oculto de un dominio. Requiere el puente local (bridge.py o bridge.mjs).</p>
+      <div class="osint-cfg">
+        <div>
+          <label id="osintLblType">Tipo</label>
+          <select id="osintType">
+            <option value="user">Usuario</option>
+            <option value="email">Email</option>
+            <option value="phone">Teléfono</option>
+            <option value="domain">Dominio</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <label id="osintLblVal">Valor</label>
+          <input id="osintInput" placeholder="p. ej. knklinux" autocomplete="off" spellcheck="false">
+        </div>
+        <div style="width:100px">
+          <label id="osintLblLim">Límite (user)</label>
+          <input id="osintLimit" type="number" min="1" max="70" value="10">
+        </div>
+        <div>
+          <button class="osint-go" id="osintRunBtn">🕵️ Buscar</button>
+        </div>
+      </div>
+      <div id="osintOut"><div class="osint-dim">—</div></div>
+    </div>
+    <div class="osint-foot">
+      <small>⚖️ Uso legal: solo datos propios o con autorización (Art. 197 C.P.)</small>
+      <button id="btnCloseOsint">ENTENDER · CERRAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- LinkedIn: 10 publicaciones semanales de pentesting -->
+<div id="linkedinOverlay">
+  <div class="li-card">
+    <div class="win-head">
+      <div class="wh-hex hex">
+        <svg viewBox="0 0 40 40">
+          <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#f5a524" stroke-width="1.5"/>
+          <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(245,165,36,.1)" stroke="#ffd166" stroke-width="1"/>
+          <text x="20" y="24" text-anchor="middle" font-size="13" font-weight="800" fill="#ffe9c7" font-family="monospace">📢</text>
+        </svg>
+      </div>
+      <h2 id="liTitle">📢 LinkedIn</h2>
+      <p class="wh-sub" id="liSub">10 publicaciones semanales de pentesting · listas para publicar</p>
+    </div>
+    <div class="li-body">
+      <div class="li-grid" id="liGrid"></div>
+      <div class="li-view" id="liView">
+        <div class="li-vhead">
+          <div class="li-vtitle" id="liVTitle">Elige una publicación</div>
+          <div class="li-actions">
+            <button class="li-btn" id="liCopyBtn">📋 Copiar</button>
+            <button class="li-btn" id="liMdBtn">📥 Markdown</button>
+          </div>
+        </div>
+        <div class="li-text" id="liText">Selecciona una de las 10 publicaciones para verla completa, copiarla o exportarla. Cada dato es verificable en el repo (sin logros inventados).</div>
+        <div class="li-capture" id="liCapture">📸 Captura sugerida — se muestra al elegir.</div>
+      </div>
+      <div class="li-gen">
+        <input id="liTopic" placeholder="Tema para un post nuevo (p. ej. «cómo parseé la salida de Nessus»)" autocomplete="off" spellcheck="false">
+        <button class="li-btn" id="liGenBtn">✨ Generar borrador</button>
+      </div>
+      <p class="osint-sub" style="margin-top:12px">💡 El generador redacta un borrador nuevo con la misma estructura (gancho, qué muestro, pregunta final, hashtags) usando el motor conectado — o te explica el método si estás en Demo. Los 10 posts completos viven también en <b>POSTS_LINKEDIN.md</b> del repo.</p>
+    </div>
+    <div class="li-foot">
+      <small>⚖️ Publicación honesta: solo datos verificables, eJPT en preparación</small>
+      <button id="btnCloseLi">ENTENDER · CERRAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- Asistente de primera configuración: guía paso a paso para conectar motor, voz y terminal -->
+<div id="setupOverlay">
+  <div class="setup-card">
+    <div class="win-head">
+      <div class="wh-hex hex">
+        <svg viewBox="0 0 40 40">
+          <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#ffd166" stroke-width="1.5"/>
+          <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(255,209,102,.1)" stroke="#ffd166" stroke-width="1"/>
+          <text x="20" y="24" text-anchor="middle" font-size="13" font-weight="800" fill="#ffe9c7" font-family="monospace">⚡</text>
+        </svg>
+      </div>
+      <h2 id="setupTitle">⚡ Primera configuración</h2>
+      <p class="wh-sub" id="setupSub">Conecta el motor, la voz y el terminal — todo gratuito y verificable</p>
+    </div>
+    <div class="setup-body">
+      <div class="setup-dots" id="setupDots"></div>
+
+      <!-- Paso 1: Bienvenida -->
+      <div class="setup-step" id="setupStep0">
+        <h4>👋 Bienvenida</h4>
+        <p class="setup-p">Soy <b>Aion Sincro</b>, tu compañera de pentesting y red team. Aún estás en <b>modo Demo</b> (respuestas limitadas, sin motor real). Conectemos las piezas para desplegar todo mi conocimiento:</p>
+        <ul class="setup-ok-list">
+          <li><b>🧠 Motor de IA</b> — Mistral gratuito (verificado) u otro motor</li>
+          <li><b>🗣️ Voz local</b> — Piper, neuronal y 100% local (opcional)</li>
+          <li><b>🔌 Terminal</b> — puente local para ejecutar comandos</li>
+        </ul>
+      </div>
+
+      <!-- Paso 2: Motor (Mistral) -->
+      <div class="setup-step" id="setupStep1" style="display:none">
+        <h4>🧠 Paso 1 · Conecta el motor de IA</h4>
+        <p class="setup-p">Pega tu <b>API Key de Mistral</b> (gratis en <b>console.mistral.ai → API Keys</b>) y pulsa <b>Probar conexión</b>:</p>
+        <div class="setup-field">
+          <label for="setupMistralKey">API Key de Mistral</label>
+          <input type="password" id="setupMistralKey" placeholder="Pega aquí tu clave … (empieza por letras y números)" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="setup-row">
+          <button class="setup-btn go" id="setupTestBtn">🔌 Probar conexión</button>
+          <button class="setup-btn" id="setupAltMotor">¿Otro motor? ⚙️</button>
+        </div>
+        <div class="setup-status" id="setupKeyStatus"></div>
+        <p class="setup-p dim">🔒 Tu clave se <b>cifra con WebCrypto</b> (AES-GCM 256) antes de guardarse. También puedes usar Ollama local, Groq, OpenRouter o HuggingFace.</p>
+      </div>
+
+      <!-- Paso 3: Piper (voz local) -->
+      <div class="setup-step" id="setupStep2" style="display:none">
+        <h4>🗣️ Paso 2 · Activa la voz local de Piper</h4>
+        <p class="setup-p">Piper es una <b>voz neuronal 100% local y gratuita</b> en español (sin internet, sin claves). Comprueba si el servidor ya está activo:</p>
+        <div class="setup-row">
+          <button class="setup-btn go" id="setupPiperBtn">🔍 Comprobar Piper</button>
+          <button class="setup-btn" id="setupPiperHelp">❓ Cómo instalarlo</button>
+        </div>
+        <div class="setup-status" id="setupPiperStatus"></div>
+        <p class="setup-p dim">Sin Piper no pasa nada: Aion usará la voz del sistema. Este paso es opcional.</p>
+      </div>
+
+      <!-- Paso 4: Terminal + listo -->
+      <div class="setup-step" id="setupStep3" style="display:none">
+        <h4>🔌 Paso 3 · Terminal local</h4>
+        <p class="setup-p">Aion puede ejecutar comandos en tu consola a través del <b>puente local</b> (solo escucha en 127.0.0.1, token obligatorio y cada comando requiere tu confirmación):</p>
+        <div class="setup-row">
+          <button class="setup-btn go" id="setupTermBtn">🔌 Comprobar puente</button>
+          <button class="setup-btn" id="setupTermHelp">❓ Cómo iniciarlo</button>
+        </div>
+        <div class="setup-status" id="setupTermStatus"></div>
+        <p class="setup-p dim">💡 Aun sin puente puedes usar la app: búsqueda web, informes, Ruta Red Team y examen funcionan igual.</p>
+      </div>
+
+      <!-- Paso 5: Listo -->
+      <div class="setup-step" id="setupStep4" style="display:none">
+        <h4>✨ ¡Listo!</h4>
+        <p class="setup-p" id="setupDoneText">Ya tienes todo conectado. Bienvenida a la simbiosis:</p>
+        <ul class="setup-ok-list" id="setupDoneList"></ul>
+        <p class="setup-p dim">Puedes volver a este asistente cuando quieras con el botón <b>🚀 Inicio</b> de la cabecera.</p>
+      </div>
+    </div>
+    <div class="setup-foot">
+      <small style="font-size:10.5px;color:var(--dim)">⚖️ Asistente de primera configuración</small>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="setup-btn" id="setupBack" style="display:none">← Atrás</button>
+        <button class="setup-btn go" id="setupNext" disabled>Siguiente →</button>
+        <button class="setup-btn go" id="setupFinish" style="display:none">🚀 Empezar a usar Aion</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modo Evaluación: examen práctico de la Ruta Red Team -->
 <div id="evalOverlay">
   <div class="eval-card">
@@ -1313,7 +1620,7 @@ const store={
   provider:'demo', model:'hermes3', modelByProvider:{},
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
   lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion', pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:'', reportLang:'es',
-  pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, autoLockMin:0, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
+  pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, autoLockMin:0, rememberUnlock:false, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
 };
 
 const PROVIDERS={
@@ -1442,10 +1749,10 @@ function buf2b64(buf){ const b=new Uint8Array(buf); let s='';
   return btoa(s); }
 function b642buf(s){ const bin=atob(s); const b=new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) b[i]=bin.charCodeAt(i); return b; }
-async function deriveKey(pass,salt){
+async function deriveKey(pass,salt,extractable=false){
   const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
   return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:120000,hash:'SHA-256'},km,
-    {name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+    {name:'AES-GCM',length:256},extractable,['encrypt','decrypt']);
 }
 function collectSecrets(){
   return {mistralKey:store.mistralKey,groqKey:store.groqKey,openrouterKey:store.openrouterKey,hfToken:store.hfToken,bridgeToken:store.bridgeToken,piperToken:store.piperToken,proxyToken:store.proxyToken};
@@ -1472,6 +1779,48 @@ async function reEncryptSecrets(){
   store.encSecrets={v:1,salt:buf2b64(salt),iv:buf2b64(iv),data:buf2b64(data)};
 }
 function applySecrets(s){ store.mistralKey=s.mistralKey||''; store.groqKey=s.groqKey||''; store.openrouterKey=s.openrouterKey||''; store.hfToken=s.hfToken||''; store.bridgeToken=s.bridgeToken||''; store.piperToken=s.piperToken||''; store.proxyToken=s.proxyToken||''; }
+/* ---------- Recordar desbloqueo durante la sesión (sessionStorage) ----------
+   Opt-in: guarda la CLAVE DERIVADA (nunca la contraseña) en sessionStorage de la
+   pestaña. Sobrevive a recargas de la misma pestaña pero se borra al cerrarla,
+   al bloquear las claves o al desactivar el cifrado. Tradeoff documentado en
+   SECURITY.md: cualquier script del mismo origen podría leerla durante la vida
+   de la pestaña (riesgo aceptado y equivalente a tener la clave en memoria). */
+const REMEMBER_KEY='aion_remember_key';
+function rememberUnlockGet(){ try{ return sessionStorage.getItem(REMEMBER_KEY)||''; }catch(_){ return ''; } }
+function rememberUnlockSet(b64){ try{ sessionStorage.setItem(REMEMBER_KEY,b64); }catch(_){} }
+function rememberUnlockClear(){ try{ sessionStorage.removeItem(REMEMBER_KEY); }catch(_){} }
+async function rememberUnlockSave(pass){
+  // Deriva la clave en modo extraíble, exporta el material RAW y lo guarda en
+  // sessionStorage (solo esta pestaña). La contraseña NO se toca ni se guarda.
+  try{
+    const salt=b642buf(store.encSecrets.salt);
+    const k=await deriveKey(pass,salt,true);
+    const raw=await crypto.subtle.exportKey('raw',k);
+    rememberUnlockSet(buf2b64(raw));
+  }catch(_){ rememberUnlockClear(); }
+}
+async function tryRememberedUnlock(){
+  // Al recargar la pestaña: re-importa la clave RAW guardada (no extraíble de
+  // nuevo) y descifra el blob sin pedir la contraseña. Devuelve true si pudo.
+  try{
+    const b64=rememberUnlockGet();
+    if(!b64||!store.crypto||!store.encSecrets||cryptoUnlocked) return false;
+    const raw=b642buf(b64);
+    const key=await crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},false,['encrypt','decrypt']);
+    const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b642buf(store.encSecrets.iv)},key,b642buf(store.encSecrets.data));
+    const s=JSON.parse(new TextDecoder().decode(pt));
+    applySecrets(s); cryptoUnlocked=true; cryptoKey=key;
+    ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(id=>{ const el=$('#'+id); if(el) el.value=store[id]||''; });
+    syncCryptoUI(); avatarSecurityFx('unlock'); markActivity();
+    toast('🔓 Desbloqueado automáticamente (clave recordada en esta pestaña)',3200);
+    return true;
+  }catch(_){ rememberUnlockClear(); return false; } // blob cambiado o clave inválida → limpiar y pedir contraseña
+}
+function syncRememberUnlockUI(){
+  const lr=$('#lockRemember'), sr=$('#setRememberUnlock');
+  if(lr) lr.checked=!!store.rememberUnlock;
+  if(sr) sr.checked=!!store.rememberUnlock;
+}
 let secFxTimer=null;
 function avatarSecurityFx(type){
   // Transición del avatar: 'lock' → pulso rojo, 'unlock' → respiración verde.
@@ -1485,7 +1834,8 @@ function avatarSecurityFx(type){
 function lockSecrets(){
   // Bloquear SIN desactivar el cifrado: las claves cifradas siguen en el blob,
   // solo se purgan de la memoria y de los inputs de esta sesión.
-  cryptoUnlocked=false; cryptoKey=null;
+  // Si se bloquea (manual o por inactividad), se olvida el desbloqueo recordado.
+  cryptoUnlocked=false; cryptoKey=null; rememberUnlockClear();
   ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(k=>{ store[k]=''; const el=$('#'+k); if(el) el.value=''; });
   saveStore(); syncCryptoUI();
   avatarSecurityFx('lock');
@@ -1528,6 +1878,7 @@ function syncCryptoUI(){
     if(lu) lu.style.display=on&&!unlocked?'block':'none';
     if(ln) ln.style.display=on&&unlocked?'block':'none';
   }
+  syncRememberUnlockUI(); // recordar desbloqueo: refleja la preferencia en ambos checkboxes
   ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken'].forEach(id=>{ const el=$('#'+id); if(el) el.disabled=on&&!unlocked; });
   $('#cryptoHint').innerHTML=on
     ?(unlocked
@@ -3301,6 +3652,199 @@ function exportPdf(text, title){
   setTimeout(()=>{ try{ w.focus(); w.print(); }catch(_){ toast('❌ No se pudo abrir la impresión'); } },350);
   toast('📄 Abriendo impresión → guarda como PDF');
 }
+/* ---------- Exportación a Word (.docx) — OOXML, sin dependencias ---------- */
+/* buildDocx() genera un .docx real (ZIP + XML de Word) en memoria y devuelve
+   un Uint8Array: puro, sin DOM, testeable. exportDocx() lo descarga.
+   Cabecera corporativa (header1.xml, en todas las páginas) con organización,
+   título, fecha y marca de confidencialidad; portada opcional; marca de agua
+   VML nativa de Word. Barrera XSS: todo el contenido pasa por docxEscape. */
+function docxEscape(t){
+  return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function zipCrc32(data){
+  let table=zipCrc32.table;
+  if(!table){ table=zipCrc32.table=new Uint32Array(256);
+    for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); table[n]=c>>>0; } }
+  let crc=0xFFFFFFFF;
+  for(let i=0;i<data.length;i++) crc=table[(crc^data[i])&0xFF]^(crc>>>8);
+  return (crc^0xFFFFFFFF)>>>0;
+}
+function zipEntry(name,bytes){
+  // Entrada ZIP método 0 (stored): nombre + bytes, sin compresión.
+  const crc=zipCrc32(bytes); const n=name.length;
+  const lh=new Uint8Array(30+n); const dv=new DataView(lh.buffer);
+  dv.setUint32(0,0x04034b50,true); dv.setUint16(4,20,true); dv.setUint16(6,0x0800,true);
+  dv.setUint16(8,0,true); dv.setUint16(10,0,true); dv.setUint16(12,0,true);
+  dv.setUint32(14,crc,true); dv.setUint32(18,bytes.length,true); dv.setUint32(22,bytes.length,true);
+  dv.setUint16(26,n,true); dv.setUint16(28,0,true);
+  for(let i=0;i<n;i++) lh[30+i]=name.charCodeAt(i)&0xFF;
+  const out=new Uint8Array(lh.length+bytes.length); out.set(lh,0); out.set(bytes,lh.length);
+  return {local:out, name:name, crc:crc, size:bytes.length};
+}
+function zipBuild(entries){
+  // Une local headers + central directory + EOCD → Uint8Array.
+  let local=new Uint8Array(0); const central=[]; let offset=0;
+  for(const e of entries){
+    const t=new Uint8Array(local.length+e.local.length); t.set(local,0); t.set(e.local,local.length); local=t;
+    const n=e.name.length; const ch=new Uint8Array(46+n); const dv=new DataView(ch.buffer);
+    dv.setUint32(0,0x02014b50,true); dv.setUint16(4,20,true); dv.setUint16(6,20,true);
+    dv.setUint16(8,0x0800,true); dv.setUint16(10,0,true); dv.setUint16(12,0,true); dv.setUint16(14,0,true);
+    dv.setUint32(16,e.crc,true); dv.setUint32(20,e.size,true); dv.setUint32(24,e.size,true);
+    dv.setUint16(28,n,true); dv.setUint16(30,0,true); dv.setUint16(32,0,true);
+    dv.setUint16(34,0,true); dv.setUint16(36,0,true); dv.setUint32(38,0,true); dv.setUint32(42,offset,true);
+    for(let i=0;i<n;i++) ch[46+i]=e.name.charCodeAt(i)&0xFF;
+    central.push(ch); offset+=e.local.length;
+  }
+  let cdLen=0; for(const c of central) cdLen+=c.length;
+  const cd=new Uint8Array(cdLen); let p=0; for(const c of central){ cd.set(c,p); p+=c.length; }
+  const eocd=new Uint8Array(22); const dv=new DataView(eocd.buffer);
+  // EOCD: firma, nº de entradas en este disco, nº total, tamaño del CD y su offset.
+  dv.setUint32(0,0x06054b50,true);
+  dv.setUint16(8,entries.length,true); dv.setUint16(10,entries.length,true);
+  dv.setUint32(12,cdLen,true); dv.setUint32(16,local.length,true);
+  const out=new Uint8Array(local.length+cd.length+22);
+  out.set(local,0); out.set(cd,local.length); out.set(eocd,local.length+cd.length);
+  return out;
+}
+function mdToDocxBody(md){
+  // Convierte el markdown del informe a párrafos XML de Word. Todo escapa XML.
+  const esc=docxEscape;
+  // Barrera XSS/XML: primero se escapa TODO el texto y luego se envuelven en
+  // runs bold los tramos **...** (docxEscape no altera los asteriscos).
+  const inline=t=>esc(String(t||'')).replace(/(^|[^\w])(\*\*|__)(.+?)\2/g,(m,pre,_,x)=>pre+'<w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">'+x+'</w:t></w:r>');
+  let out='';
+  let s=String(md||'').replace(/^\s+|\s+$/g,'');
+  s=s.replace(/```([\w+#.-]*)\s*\n([\s\S]*?)```/g,(m,l,c)=>{
+    out+='<w:p><w:pPr><w:pStyle w:val="Code"/></w:pPr><w:r><w:t xml:space="preserve">'+esc(c)+'</w:t></w:r></w:p>';
+    return '';
+  });
+  s.split(/\n{2,}/).forEach(blk=>{
+    if(!blk.trim()) return;
+    if(/^#{1,6}\s/.test(blk)){
+      const lvl=blk.match(/^(#{1,6})\s/)[1].length;
+      const txt=blk.replace(/^#{1,6}\s*/,'');
+      out+='<w:p><w:pPr><w:pStyle w:val="Heading'+(lvl>4?4:lvl)+'"/></w:pPr>'+inline(txt)+'</w:p>';
+      return;
+    }
+    if(/^\s*\|/.test(blk)){
+      const rows=blk.trim().split(/\n/).filter(r=>!/^\s*\|?[\s:\-]+\|?\s*$/.test(r));
+      out+='<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/></w:tblPr>';
+      rows.forEach((r,i)=>{
+        const cells=r.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+        out+='<w:tr>';
+        cells.forEach(c=>{
+          out+='<w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/>'+(i===0?'<w:shd w:val="clear" w:color="auto" w:fill="EEF4FB"/>':'')+'</w:tcPr><w:p>'+(i===0?'<w:pPr><w:rPr><w:b/></w:rPr></w:pPr>':'')+inline(c)+'</w:p></w:tc>';
+        });
+        out+='</w:tr>';
+      });
+      out+='</w:tbl>';
+      return;
+    }
+    if(/^[-*]\s/.test(blk)){
+      out+='<w:p><w:pPr><w:pStyle w:val="ListParagraph"/></w:pPr><w:r><w:t xml:space="preserve">• </w:t></w:r>'+inline(blk.replace(/^[-*]\s*/,''))+'</w:p>';
+      return;
+    }
+    if(/^>\s?/.test(blk)){
+      out+='<w:p><w:pPr><w:pStyle w:val="Quote"/></w:pPr>'+inline(blk.replace(/^>\s?/gm,''))+'</w:p>';
+      return;
+    }
+    out+='<w:p>'+inline(blk)+'</w:p>';
+  });
+  return out;
+}
+function buildDocx(md,title,opts){
+  // Devuelve Uint8Array con el .docx. opts (para tests/harness): en, company,
+  // confidential, cover, watermark. En la app lee store/reportIsEn como fallback.
+  opts=opts||{};
+  const en=opts.en!==undefined?opts.en:(typeof reportIsEn==='function'&&reportIsEn());
+  const org=opts.company!==undefined?opts.company:((store&&store.pdfCompany)||'Aion Sincro');
+  const conf=opts.confidential!==undefined?opts.confidential:((store&&store.pdfWatermarkText)||'CONFIDENCIAL');
+  const tt=(title&&title.trim())||(typeof reportTitle==='function'?reportTitle(md):'informe-aion');
+  const hoy=new Date().toLocaleDateString(en?'en-US':((store&&store.lang)||'es-ES'),{day:'2-digit',month:'long',year:'numeric'});
+  const cover=opts.cover!==undefined?opts.cover:!!(store&&store.pdfCover);
+  const watermark=opts.watermark!==undefined?opts.watermark:!!(store&&store.pdfWatermark);
+  const esc=docxEscape;
+  const enc=s=>new TextEncoder().encode(s);
+  // Portada corporativa (opcional): organización, título, fecha y sello de confidencialidad.
+  let coverXml='';
+  if(cover){
+    coverXml='<w:p><w:pPr><w:pStyle w:val="CoverOrg"/><w:pageBreakBefore/></w:pPr><w:r><w:t xml:space="preserve">'+esc(org)+'</w:t></w:r></w:p>'
+      +'<w:p><w:pPr><w:pStyle w:val="CoverTitle"/></w:pPr><w:r><w:t xml:space="preserve">'+esc(tt)+'</w:t></w:r></w:p>'
+      +'<w:p><w:pPr><w:pStyle w:val="CoverSub"/></w:pPr><w:r><w:t xml:space="preserve">'+(en?'Report generated with Aion Sincro · ':'Informe generado con Aion Sincro · ')+esc(hoy)+'</w:t></w:r></w:p>'
+      +'<w:p><w:pPr><w:pStyle w:val="CoverConf"/></w:pPr><w:r><w:t xml:space="preserve">'+esc(conf)+'</w:t></w:r></w:p>'
+      +'<w:p><w:pPr><w:pageBreakBefore/></w:pPr><w:r><w:t xml:space="preserve"></w:t></w:r></w:p>';
+  }
+  // Cabecera corporativa: organización · título a la izquierda, confidencialidad a la derecha.
+  const headerXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">'
+    +'<w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr>'
+    +'<w:r><w:t xml:space="preserve">'+esc(org)+'</w:t></w:r>'
+    +'<w:r><w:t xml:space="preserve">   ·   '+esc(tt)+'</w:t></w:r>'
+    +'<w:r><w:tab/></w:r>'
+    +'<w:r><w:rPr><w:color w:val="B22222"/><w:b/></w:rPr><w:t xml:space="preserve">'+esc(conf)+'</w:t></w:r>'
+    +'</w:p>'
+    +(watermark?'<w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:pict><v:shape id="WordPictureWatermark0" o:spid="_x0000_s1026" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:0;width:500pt;height:240pt;z-index:-251658240;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" o:allowincell="f" filled="f" o:insetmode="auto" stroked="f"><v:textpath style="font-family:Arial;font-size:1pt" string="'+esc(conf)+'"/></v:shape></w:pict></w:r></w:p>':'')
+    +'</w:hdr>';
+  const body=coverXml+mdToDocxBody(md)
+    +'<w:sectPr><w:headerReference w:type="default" r:id="rIdHdr"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>';
+  const documentXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>'+body+'</w:body></w:document>';
+  const stylesXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+    +'<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:rFonts w:ascii="Segoe UI" w:hAnsi="Segoe UI"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:style>'
+    +'<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="0F4C81"/><w:b/><w:sz w:val="32"/></w:rPr></w:style>'
+    +'<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="0F4C81"/><w:b/><w:sz w:val="28"/></w:rPr></w:style>'
+    +'<w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="333333"/><w:b/><w:sz w:val="26"/></w:rPr></w:style>'
+    +'<w:style w:type="paragraph" w:styleId="Heading4"><w:name w:val="heading 4"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="333333"/><w:b/><w:sz w:val="24"/></w:rPr></w:style>'
+    +'<w:style w:type="paragraph" w:styleId="CoverOrg"><w:name w:val="CoverOrg"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:before="3000"/></w:pPr><w:rPr><w:color w:val="0F4C81"/><w:b/><w:sz w:val="24"/></w:rPr></w:style>'
+    +'<w:style w:type="paragraph" w:styleId="CoverTitle"><w:name w:val="CoverTitle"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="0F4C81"/><w:b/><w:sz w:val="44"/></w:rPr></w:style>'
+    +'<w:style w:type="paragraph" w:styleId="CoverSub"><w:name w:val="CoverSub"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="555555"/><w:sz w:val="22"/></w:rPr></w:style>'
+    +'<w:style w:type="paragraph" w:styleId="CoverConf"><w:name w:val="CoverConf"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="B22222"/><w:b/><w:sz w:val="24"/></w:rPr></w:style>'
+    +'<w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/><w:basedOn w:val="Normal"/><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:sz w:val="18"/></w:rPr></w:style>'
+    +'<w:style w:type="paragraph" w:styleId="Quote"><w:name w:val="Quote"/><w:basedOn w:val="Normal"/><w:rPr><w:i/><w:color w:val="555555"/></w:rPr></w:style>'
+    +'<w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="ListParagraph"/><w:basedOn w:val="Normal"/><w:ind w:left="360"/></w:style>'
+    +'<w:style w:type="paragraph" w:styleId="Header"><w:name w:val="header"/><w:basedOn w:val="Normal"/><w:rPr><w:sz w:val="16"/><w:color w:val="666666"/></w:rPr></w:style>'
+    +'<w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:color="BBBBBB"/><w:left w:val="single" w:sz="4" w:color="BBBBBB"/><w:bottom w:val="single" w:sz="4" w:color="BBBBBB"/><w:right w:val="single" w:sz="4" w:color="BBBBBB"/><w:insideH w:val="single" w:sz="4" w:color="BBBBBB"/><w:insideV w:val="single" w:sz="4" w:color="BBBBBB"/></w:tblBorders></w:tblPr></w:style>'
+    +'</w:styles>';
+  const settingsXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:zoom w:percent="100"/><w:defaultTabStop w:val="708"/></w:settings>';
+  const contentTypes='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    +'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+    +'<Default Extension="xml" ContentType="application/xml"/>'
+    +'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+    +'<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
+    +'<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'
+    +'<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'
+    +'</Types>';
+  const rootRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+    +'</Relationships>';
+  const docRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rIdHdr" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>'
+    +'<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+    +'<Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'
+    +'</Relationships>';
+  const entries=[
+    ['[Content_Types].xml',enc(contentTypes)],
+    ['_rels/.rels',enc(rootRels)],
+    ['word/document.xml',enc(documentXml)],
+    ['word/_rels/document.xml.rels',enc(docRels)],
+    ['word/styles.xml',enc(stylesXml)],
+    ['word/settings.xml',enc(settingsXml)],
+    ['word/header1.xml',enc(headerXml)],
+  ];
+  return zipBuild(entries.map(e=>zipEntry(e[0],e[1])));
+}
+function exportDocx(text,title){
+  const t=(title||'informe').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50)||'informe';
+  const bytes=buildDocx(text,title);
+  const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=t+'.docx'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000); toast('📝 Informe exportado en Word (.docx)');
+}
 function reportTitle(md){
   const m=String(md||'').match(/^#\s+(.+)$/m);
   return m?m[1].trim():'informe-aion';
@@ -3346,6 +3890,9 @@ function renderTermChips(bodyEl,text){
     b1.onclick=()=>downloadMarkdown(text, reportTitle(text)); bar.appendChild(b1);
     const b2=document.createElement('button'); b2.className='exportChip'; b2.textContent='📄 PDF';
     b2.onclick=()=>exportPdf(text, reportTitle(text)); bar.appendChild(b2);
+    const b2b=document.createElement('button'); b2b.className='exportChip'; b2b.textContent='📝 Word (.docx)';
+    b2b.title='Exportar a Microsoft Word (.docx) con cabecera corporativa y marca de agua de confidencialidad (configurable en Ajustes)';
+    b2b.onclick=()=>exportDocx(text, reportTitle(text)); bar.appendChild(b2b);
     /* Re-escaneo nmap: solo si el texto es un informe de reconocimiento generado
        desde salida real de nmap (título del informe + host en la sección 2). */
     const nmapH=text.match(/### 2\.\d+ `([^`]+)`/);
@@ -3633,7 +4180,8 @@ Así nací: la firma conjunta de una simbiosis, coautora de un Plan de Rescate p
   if(/gracias|genial|perfecto|excelente/.test(q)) return 'Para eso estamos: aprender y crecer juntos. Cuando quieras seguir, aquí estaré.';
   if(/broma|chiste|chiste/.test(q)) return '¿Por qué el hacker no usa antivirus? Porque prefiere "inocular" confianza… ¿Quieres otro? Dime "otro chiste" (en modo Demo solo tengo este, pero con IA real seré más gracioso).';
   if(/al?an turing/.test(q)) return 'Alan Turing (1912–1954) fue un matemático y pionero de la computación. Ideó la máquina de Turing, base teórica de los ordenadores, descifró la máquina Enigma en Bletchley Park durante la II Guerra Mundial y propuso el famoso Test de Turing para evaluar inteligencia artificial. En 1950 escribió "Computing Machinery and Intelligence".';
-  if(/MODO RUTA|Ruta Red Team guiada|Red Team guided path/.test(q)) return '¡Bienvenida a tu Ruta Red Team 🧭! En modo Demo no puedo desplegar la guía completa paso a paso (eso necesita un motor real), pero te dejo el método que seguiremos en cada checkpoint:\n\n**1 · Contexto**: qué es y para qué sirve el concepto.\n**2 · Herramienta**: el comando exacto y qué significa cada flag.\n**3 · Interpretación**: cómo leer la salida y qué es un hallazgo.\n**4 · Práctica**: un ejercicio en tu laboratorio y una pregunta para pensar.\n\nConecta un motor real en ⚙️ Ajustes (Mistral, Groq u OpenRouter, gratis) y cada botón PRACTICAR se convertirá en una sesión guiada en vivo contigo: explicación, comandos, interpretación y evaluación de tu práctica. Abre también la pestaña 🛠 Herramientas: allí tengo escáner de puertos, comprobación de CVEs y más utilidades para tu laboratorio.';
+  if(/config[uú]rame|primera configuraci[oó]n|asistente de (configuraci[oó]n|arranque)|configurar (aion|la app|el asistente|mis claves)/.test(q)){ openSetup(); return '🚀 Te he abierto el **asistente de primera configuración**: pega tu clave de Mistral (gratis en console.mistral.ai), prueba la conexión, activa la voz de Piper y conecta el terminal local. Todo gratuito y verificable. Cuando termines pulsa **🚀 Empezar a usar Aion**.'; }
+  if(/post de linkedin|publicaci[oó]n de linkedin|post para linkedin|post semanal|escribe un post/.test(q)) return '📢 **Modo LinkedIn** — Tengo los **10 posts semanales** ya escritos en el botón **📢 LinkedIn** de la cabecera: ábrelo, elige semana y copia o exporta cada publicación. Estructura de cada post: gancho, qué muestro (verificable en el repo), pregunta final y hashtags.\n\nEn modo Demo no puedo redactar posts nuevos a medida, pero sí enseñarte el método: **1) Gancho** que provoca curiosidad sin mentir, **2) Demostración** con captura o dato real (regla de oro: cada afirmación verificable en knklinux/aion-sincro), **3) Pregunta final** para generar conversación, y **4) Hashtags** (#Pentesting #RedTeam #eJPT…).\n\nConecta un motor real en ⚙️ Ajustes (Mistral, Groq u OpenRouter, gratis) y podré redactar el borrador completo del tema que quieras: dime el tema y lo escribo con tu tono.';
   if(/informe|laboral|reporte ejecutivo|plantilla.*informe|reconocimiento.*informe/.test(q)&&store.laboral&&reportIsEn()) return '💼 **Laboral Mode** — Connected to the terminal and your scans. 💡 **New**: paste the **real nmap output** (for example after running `nmap -sV -sC -p- <host>` in the terminal) and I will generate the **reconnaissance report** instantly, with port table, attack surface and recommendations — exportable as **📥 Markdown** or **📄 PDF**. Works even in Demo because the parsing is local.\n\nI can also draft the full report with this structure if you give me the context:\n\n```markdown\n# [Report title]\n> Executive summary for management\n\n## 1. Scope and context\n## 2. Methodology\n## 3. Findings\n| # | Severity | Description | Evidence | Recommendation |\n## 4. Analysis\n## 5. Conclusions and next steps\n```\n\nConnect an engine in ⚙️ Settings and tell me what you have (nmap outputs, findings, a CVE…) — I will return the report in Markdown with **📥 Markdown** and **📄 PDF** buttons to export it.';
   if(/informe|laboral|reporte ejecutivo|plantilla.*informe|reconocimiento.*informe/.test(q)&&store.laboral) return '💼 **Modo Laboral** — Conectado al terminal y a tus escaneos. 💡 **Nuevo**: pega aquí la **salida real de nmap** (por ejemplo tras correr `nmap -sV -sC -p- <host>` en el terminal) y genero el **informe de reconocimiento** al instante, con tabla de puertos, superficie de ataque y recomendaciones — exportable en **📥 Markdown** o **📄 PDF**. Funciona incluso en Demo porque el parsing es local.\n\nTambién puedo redactar el informe completo con esta estructura si me das el contexto:\n\n```markdown\n# [Título del informe]\n> Resumen ejecutivo para dirección\n\n## 1. Alcance y contexto\n## 2. Metodología\n## 3. Hallazgos\n| # | Severidad | Descripción | Evidencia | Recomendación |\n## 4. Análisis\n## 5. Conclusiones y próximos pasos\n```\n\nConecta un motor en ⚙️ Ajustes y dime qué tienes (salidas de nmap, hallazgos, un CVE…) — te devuelvo el informe en Markdown con botones **📥 Markdown** y **📄 PDF** para exportarlo.';
   if(/\biso\b|27001|auditor[ií]a|normativa|normativo|cumplimiento|sgs[ií]/.test(q)){ openISO(); return '🔎 He abierto la **Auditoría ISO 27001:2022** para ti. Rellena el nombre de la empresa y el alcance (o déjalos para el final) y responde cada control con: ✔ Cumple, ◐ Parcial, ✖ No cumple o ⊘ N/A.\n\nCuando termines, en la pestaña **📊 Resultados** verás tu % de cumplimiento por tema (Organizacional, Personas, Físico y Tecnológico) y en **🛠️ Plan de cumplimiento** exactamente qué necesitas implementar para cumplir la norma, con acciones concretas. Y puedes exportar el informe en **📥 Markdown** o **📄 PDF** para tu equipo.\n\n💡 Es una autoevaluación orientativa del Anexo A; la certificación formal requiere un SGSI documentado y auditoría por un organismo acreditado.'; }
@@ -3759,17 +4307,26 @@ function testProvider(){
         ok(has?'Proxy conectado y clave de '+p+' configurada en el servidor':'Proxy conectado, pero sin clave para '+p+' en proxy.py (usa env vars o keys.json)'); })
       .catch(fail);
   }else{
-    const cfgs={
-      groq:[PROVIDERS.groq.base+'/models','Bearer '+store.groqKey],
-      openrouter:[PROVIDERS.openrouter.base+'/models','Bearer '+store.openrouterKey],
-      huggingface:[PROVIDERS.huggingface.base+'/models/'+encodeURIComponent(store.model),'Bearer '+store.hfToken],
-      mistral:[PROVIDERS.mistral.base+'/models','Bearer '+store.mistralKey]
-    };
-    const[url,h]=cfgs[p];
-    tFetch(url,{headers:{Authorization:h}}).then(r=>r.ok?r.json():Promise.reject(new Error(r.status===401?'Clave inválida (401)':'HTTP '+r.status)))
-      .then(j=>{ const list=j.data||[]; const found=list.find(m=>m.id===store.model);
-        ok(found?'Modelo disponible: '+store.model:'API válida ('+list.length+' modelos)'); })
-      .catch(fail);
+    if(p==='openrouter'){
+      // ⚠️ /models de OpenRouter es PÚBLICO (200 sin clave): daría falso positivo.
+      // /auth/key sí valida la clave de verdad (401 si es inválida).
+      tFetch(PROVIDERS.openrouter.base+'/auth/key',{headers:{Authorization:'Bearer '+store.openrouterKey}})
+        .then(r=>r.ok?r.json():Promise.reject(new Error(r.status===401?'Clave inválida (401) — revísala en openrouter.ai/keys':'HTTP '+r.status)))
+        .then(j=>{ const d=j.data||{};
+          ok('Clave válida'+(d.label?' · '+d.label:'')+(d.limit?.remaining!=null?' · '+d.limit.remaining+' usos restantes':'')+' — prueba el chat para confirmar'); })
+        .catch(fail);
+    }else{
+      const cfgs={
+        groq:[PROVIDERS.groq.base+'/models','Bearer '+store.groqKey],
+        huggingface:[PROVIDERS.huggingface.base+'/models/'+encodeURIComponent(store.model),'Bearer '+store.hfToken],
+        mistral:[PROVIDERS.mistral.base+'/models','Bearer '+store.mistralKey]
+      };
+      const[url,h]=cfgs[p];
+      tFetch(url,{headers:{Authorization:h}}).then(r=>r.ok?r.json():Promise.reject(new Error(r.status===401?'Clave inválida (401)':'HTTP '+r.status)))
+        .then(j=>{ const list=j.data||[]; const found=list.find(m=>m.id===store.model);
+          ok(found?'Modelo disponible: '+store.model:'API válida ('+list.length+' modelos)'); })
+        .catch(fail);
+    }
   }
 }
 function buildChips(){
@@ -3795,6 +4352,435 @@ function buildChips(){
 }
 
 /* ---------- Eventos ---------- */
+/* ---------- Herramienta OSINT local (aion_osint.py vía puente) ---------- */
+/* ---------- LinkedIn: 10 publicaciones semanales (POSTS_LINKEDIN.md) ---------- */
+const LINKEDIN_POSTS=[
+ {w:1,t:'Presentación: por qué construyo mis herramientas',
+  h:'Sin título universitario, pero con 482 tests de seguridad en mi proyecto open-source. 🛡️',
+  c:'La portada del README (logo ⚡ + título) o una captura del visor geométrico de Aion hablando.',
+  b:`**Sin título universitario, pero con 482 tests de seguridad en mi proyecto open-source. 🛡️**
+
+Hola, soy Arkaitz. Autodidacta. Sin carrera, sin bootcamp, sin contactos en el sector. Solo un teclado, Linux y mucha hambre de aprender.
+
+En vez de esperar a "saber suficiente" para empezar, decidí construir lo que necesitaba para aprender: **Aion Sincro**, un asistente de IA open-source para pentesting y red team.
+
+¿Qué tiene? 5 motores de IA gratis (Ollama 100% local, Groq, OpenRouter y HuggingFace, más un modo demo sin conexión), voz con Piper 100% local y sin internet, informes de pentest exportables a Markdown/PDF/Word, auditoría ISO 27001, una ruta de red team con 18 checkpoints y examen, y una suite de seguridad con **482 tests** y pruebas de mutación.
+
+La parte que más me enorgullece no es el código: es que **cada afirmación se puede verificar**. Claves cifradas con WebCrypto, puente local endurecido, tests que protegen de verdad. Sin humo.
+
+Hoy me preparo para el eJPT y sigo construyendo en público, porque mi CV no son títulos: son repositorios.
+
+📎 Repo: github.com/knklinux/aion-sincro
+
+**Pregunta para ti:** ¿qué es lo más difícil de aprender ciberseguridad en solitario? Llevo tiempo dándole vueltas y me encantaría leer tu experiencia. 👇
+
+#Ciberseguridad #Pentesting #RedTeam #OpenSource #Linux #Autodidacta #eJPT #Infosec`},
+ {w:2,t:'nmap más allá de -sV -sC',
+  h:'Un escaneo no es un informe. 🗺️',
+  c:'Salida real de un escaneo con -sV -sC -p- y el informe generado automáticamente a partir de su XML.',
+  b:`**Un escaneo no es un informe. 🗺️**
+
+Durante semanas usé nmap igual que todos: -sV -sC contra una IP y a copiar puertos a mano. Hasta que entendí la diferencia: el escaneo responde *qué hay abierto*, el informe explica *qué significa para quien tiene que decidir*.
+
+Lo que cambió mi forma de trabajar:
+
+1. **-p- + --min-rate** para mapear TODO el rango de puertos, no solo los "de siempre".
+2. **-oX salida XML**, no texto: así puedo parsearla y convertirla en informe automático.
+3. **Reducir el ruido**: bajar la plantilla de timing (-T1/-T2) para escaneos discretos y --disable-arp-ping cuando el objetivo no está en tu red.
+4. **Interpretar, no listar**: un puerto 9100 abierto no es "raro", es *una impresora expuesta* — eso es un hallazgo, no un puerto.
+
+Construí un parser que convierte la salida de nmap directamente en un informe de reconocimiento con tabla de puertos, superficie de ataque y recomendaciones, exportable a Markdown, PDF y hasta Word. Con la salida real de mi laboratorio, no con una demo.
+
+¿Cuál es tu flag de nmap favorita? Yo tengo un par de opiniones polémicas sobre -A… 👇
+
+#Nmap #Pentesting #Reconocimiento #InfoSec #Linux #RedTeam`},
+ {w:3,t:'Parsear salidas de herramientas',
+  h:'Cansado de copiar a mano la salida de Burp, Nessus o gobuster. 🖥️',
+  c:'Fragmento del código del parser (detecta el tipo de herramienta) + un informe generado desde una salida real.',
+  b:`**Cansado de copiar a mano la salida de Burp, Nessus o gobuster. 🖥️**
+
+El 90% de mi tiempo de "informe" era copiar y pegar. Así que lo automatizé: enseñé a mi asistente a **leer la salida cruda** de 4 herramientas y generar el informe por mí.
+
+Lo que aprendí parseando:
+
+- **nmap**: puertos, servicios y versiones → tabla de superficie de ataque.
+- **gobuster**: directorios y códigos de estado → árbol de rutas interesantes.
+- **Burp Suite**: hallazgos y tráfico → sección de evidencia del informe.
+- **Nessus**: plugins y severidades → prioridad de remediación.
+
+No es magia: es regex, buenas estructuras de datos y **mucho testing**. Cada parser tiene sus casos de borde (una salida truncada, un puerto filtrado, un dominio sin respuesta).
+
+Lo mejor: funciona en local, sin subir los datos del cliente a ningún sitio. Pega la salida, genera el informe, exporta a Word/PDF. Mi CV no son títulos, son repositorios.
+
+¿Automatizas tus informes o los haces a mano? Me interesa saber cómo lo hace cada uno. 👇
+
+#Automatización #Pentesting #BurpSuite #Nessus #Gobuster #Informes #InfoSec`},
+ {w:4,t:'OSINT con herramientas libres',
+  h:'Empecé OSINT con holehe y Wayback Machine: esto encontré. 🕵️',
+  c:'Salida real de aion_osint.py --user <usuario> o la del análisis de un dominio (robots.txt + Wayback).',
+  b:`**Empecé OSINT con holehe y Wayback Machine: esto encontré. 🕵️**
+
+El reconocimiento pasivo es la fase más infravalorada del pentest. Sin tocar el objetivo, con solo fuentes abiertas, aprendí a:
+
+- **Comprobar qué servicios usan un email** (holehe, que consulta registros públicos de alta).
+- **Explorar el pasado de un dominio** con la Wayback Machine: versiones antiguas, archivos olvidados y subdominios que ya no existen… pero siguen en DNS.
+- **Buscar contenido oculto en robots.txt** y directorios que el propio sitio intenta esconder.
+
+Lo integré todo en un módulo local: python aion_osint.py --user NOMBRE te devuelve cuentas asociadas, y --domain DOMINIO analiza robots.txt + Wayback + contenido oculto. 70+ plataformas, 65 tests, y **sin subir nada a internet** — todo se consulta desde tu máquina.
+
+⚠️ Regla de oro: OSINT solo sobre **datos propios o con autorización** (Art. 197 C.P.). El objetivo de este post es aprender, no espiar.
+
+¿Qué herramienta OSINT te sorprendió más cuando la descubriste? 👇
+
+#OSINT #Pentesting #RedTeam #Privacidad #HackingEtico #Linux`},
+ {w:5,t:'OverTheWire Bandit: 27 niveles',
+  h:'27 niveles después, la terminal ya no me da miedo. 🐚',
+  c:'Captura del último nivel resuelto (o del ranking) — verifica el progreso sin inventar.',
+  b:`**27 niveles después, la terminal ya no me da miedo. 🐚**
+
+Cuando empecé, ls, cd y cat eran "los tres mandamientos". Hoy, tras los 27 niveles de OverTheWire Bandit, la terminal es mi lengua materna. Esto es lo que ese reto me enseñó:
+
+1. **Leer la ayuda es una habilidad**: man, --help y strings resuelven más que memorizar comandos.
+2. **Pensar en pipelines**: encadenar herramientas (grep, sort, uniq, awk) es pensar en flujos de datos.
+3. **La seguridad está en los detalles**: archivos ocultos, permisos raros, cron jobs, setuid… todo es una pista.
+4. **SSH y claves**: cada nivel es una excusa para usar ssh, scp y claves públicas/privadas sin miedo.
+
+No hay truco: es constancia. Un nivel al día durante un mes. Si te atascas, strings y grep -r son tus amigos.
+
+¿Cuál es tu reto CLI favorito? Yo estoy mirando ya hacia la siguiente montaña… 👇
+
+#OverTheWire #Bandit #Terminal #Linux #CTF #AprendizajeAutodidacta`},
+ {w:6,t:'Informes de pentest: la parte que nadie practica',
+  h:'El exploit es el 20%; el informe es el 80%. 🧾',
+  c:'Una página de un informe real generado (tabla de hallazgos con severidad o la portada con cabecera corporativa).',
+  b:`**El exploit es el 20%; el informe es el 80%. 🧾**
+
+Todos quieren ser los que "entran". Nadie quiere ser el que explica **qué se encontró, por qué importa y qué hacer**. Pero el informe es lo que lee el cliente, la dirección y, sí, también quien te contrata.
+
+Mi plantilla de informe de pentest tiene 5 bloques que nunca fallan:
+
+1. **Resumen ejecutivo** — para dirección: riesgo en 3 frases, sin tecnicismos.
+2. **Alcance y contexto** — qué se probó, con qué autorización, durante cuánto tiempo.
+3. **Metodología** — el proceso, no solo los resultados.
+4. **Hallazgos** — severidad + descripción + evidencia + recomendación, en tabla.
+5. **Conclusiones y próximos pasos** — qué priorizar, qué re-testear.
+
+Automatizar la parte repetitiva (tablas, cabecera, formato, incluso la **portada corporativa y la marca de agua CONFIDENCIAL** del PDF) me deja tiempo para lo que importa: la calidad del análisis.
+
+¿Cómo estructuras tus informes? ¿Usas plantillas o los haces desde cero? 👇
+
+#Pentesting #Informes #RedTeam #ReportWriting #Seguridad #eJPT`},
+ {w:7,t:'OWASP Top 10: lo que estoy aprendiendo',
+  h:'Los atacantes no memorizan listas: explotan contextos. 🌐',
+  c:'Un hallazgo real de tu laboratorio (una petición interceptada, un header mal configurado o la prueba de concepto de un fallo).',
+  b:`**Los atacantes no memorizan listas: explotan contextos. 🌐**
+
+Estudiando el OWASP Top 10 descubrí que el fallo no está en no conocer la lista, sino en no reconocer el **patrón en contexto**. Un mismo "insertar datos en una web" puede ser SQLi, XSS o command injection según dónde aterrice.
+
+Mis apuntes mentales hasta ahora:
+
+- **A03 Injection**: todo lo que construye una consulta con texto del usuario huele mal.
+- **A01 Broken Access Control**: el clásico que aparece cuando pruebas "¿y si cambio el ID de la URL?"
+- **A05 Security Misconfiguration**: headers faltantes, X-Powered-By gritando, directorios listados.
+- **A02 Cryptographic Failures**: credenciales en claro que no deberían existir.
+
+Lo practico en mi laboratorio y lo conecto con mi ruta de aprendizaje: cada vulnerabilidad tiene su checkpoint de práctica. La teoría se olvida; el contexto se recuerda.
+
+¿Cuál es la vulnerabilidad web más infravalorada para ti? Yo tengo un candidato claro… 👇
+
+#OWASP #WebSecurity #Pentesting #BugBounty #Seguridad #RedTeam`},
+ {w:8,t:'Mi plan de estudio del eJPT',
+  h:'Me preparo para el eJPT: esto es exactamente lo que estoy haciendo. 📚',
+  c:'La ruta de la app con el progreso de checkpoints o el plan de estudio. Honestidad: el eJPT está **en preparación**, no conseguido.',
+  b:`**Me preparo para el eJPT: esto es exactamente lo que estoy haciendo. 📚**
+
+Soy autodidacta y no tengo títulos que me avalen, así que mi plan para el eJPT es 100% práctico:
+
+1. **Ruta guiada de red team con 18 checkpoints**: reconocimiento → explotación → informe. Cada checkpoint tiene teoría, comando exacto, interpretación y práctica en laboratorio.
+2. **Laboratorios diarios**: OverTheWire Bandit (nivel 27), TryHackMe y HackTheBox.
+3. **Práctica real con herramientas**: nmap, gobuster, Burp Suite, OSINT… y automatización de informes.
+4. **Examen simulado propio**: la app me genera un examen con preguntas de cada fase y me da la puntuación con recomendaciones de repaso.
+5. **Construir en público**: cada hallazgo que aprendo, lo publico (como este post).
+
+Cuando complete los 18 checkpoints, Aion me emite un **informe de progreso exportable** con habilidades y recomendaciones — mi "certificado" de que lo hago, no de que lo digo.
+
+¿Qué certificación de entrada recomiendas para alguien sin formación reglada? 👇
+
+#eJPT #Certificación #Pentesting #RedTeam #Estudio #Seguridad`},
+ {w:9,t:'Seguridad por diseño',
+  h:'Si no puedes probar que tu control de seguridad protege, no protege. 🔐',
+  c:'El resultado de la suite (482 ok · 0 fallos) o el informe de cobertura de mutación mostrando qué checks protegen de verdad.',
+  b:`**Si no puedes probar que tu control de seguridad protege, no protege. 🔐**
+
+La semana pasada alguien me preguntó: *"¿cómo sabes que tus claves API están a salvo?"*. No dije "porque cifro". Lo demostré:
+
+- **WebCrypto de verdad**: AES-GCM 256 con clave derivada por PBKDF2-SHA256 (120.000 iteraciones). La contraseña nunca se guarda: se pide cada sesión para desbloquear.
+- **El puente local endurecido**: solo escucha en 127.0.0.1, valida Host y Origin contra falsificaciones, y exige token en cada petición.
+- **482 tests + pruebas de mutación**: no basta con tener tests; quito una línea de seguridad y **compruebo que el test falla**. Si el test no se entera, el test no protege.
+
+Eso es "seguridad por diseño": el control no es una feature que se añade al final, es la **prueba de que funciona**. Y cualquiera puede verificarlo: el repo es público.
+
+¿Haces pruebas de mutación en tus proyectos? ¿O tus tests solo te dicen lo que quieres oír? 👇
+
+#SeguridadPorDiseño #WebCrypto #DevSecOps #OpenSource #Pentesting #Testing`},
+ {w:10,t:'Recapitulación: 10 semanas construyendo en público',
+  h:'10 semanas, 10 publicaciones y una ruta de red team con 18 checkpoints. 🏁',
+  c:'Un "mapa" visual de lo publicado (capturas de cada semana en una cuadrícula) + logros: 482 tests, 18 checkpoints, Bandit 27.',
+  b:`**10 semanas, 10 publicaciones y una ruta de red team con 18 checkpoints. 🏁**
+
+Esto es lo que he construido en público este trimestre:
+
+- 🛡️ **Aion Sincro**: asistente de IA open-source para pentest y red team — 5 motores gratis, voz local con Piper, informes MD/PDF/Word, auditoría ISO 27001 y una suite con **482 tests**.
+- 🗺️ **Ruta Red Team**: 18 checkpoints con examen y certificación de progreso exportable.
+- 🕵️ **OSINT local**: análisis de dominios, emails y contenido oculto sin subir nada a internet.
+- 🧾 **Informes profesionales**: plantillas de reconocimiento, pentest y ejecutivo; parsers de nmap, Burp, Nessus y gobuster.
+- 🎓 **Preparación eJPT**: examen simulado propio, Bandit nivel 27 y constancia diaria.
+
+Lo más valioso no es el código: es **haber aprendido en público**. Cada post era un checkpoint de mi propio camino. Si alguien con 0 títulos puede hacer esto en 2,5 meses, imagínate con constancia un año.
+
+¿Qué debería aprender o construir ahora? El siguiente capítulo lo elegimos entre todos. 👇
+
+#RedTeam #OpenSource #Pentesting #Aprendizaje #eJPT #InfoSec`}
+];
+/* ---------- Asistente de primera configuración ---------- */
+// Se muestra cuando no hay ningún motor real configurado (provider demo sin claves)
+// y guía paso a paso: Mistral → Piper → Terminal → listo. Persistencia:
+//  - localStorage 'aion_setup_done' → solo se marca al completar el asistente.
+//  - sessionStorage 'aion_setup_skip_session' → si lo cierras con Escape/backdrop,
+//    no vuelve a saltar en esta sesión pero aparece de nuevo al reiniciar la app.
+let setupStep=0, setupKeyOk=false;
+function needsSetup(){
+  if(store.provider!=='demo') return false;
+  if(store.crypto&&store.encSecrets&&!cryptoUnlocked) return false; // claves cifradas: solo desbloquear
+  const hasKey=['mistral','groq','openrouter','huggingface'].some(p=>p==='huggingface'?(store.hfToken||'').trim():!!(store[p+'Key']||'').trim());
+  return !hasKey;
+}
+function syncSetupBtnUI(){
+  // El botón 🚀 Inicio queda siempre visible para volver a abrir el asistente
+  // cuando quieras (el README lo promete); el auto-arranque sí depende de needsSetup().
+  const b=$('#btnSetup'); if(b) b.style.display='';
+}
+function openSetup(){
+  const o=$('#setupOverlay'); if(!o) return;
+  setupStep=0; setupKeyOk=!!(store.mistralKey||'').trim()&&(!store.crypto||cryptoUnlocked); renderSetup();
+  o.classList.add('show');
+}
+function closeSetup(){ const o=$('#setupOverlay'); if(o) o.classList.remove('show'); }
+function renderSetup(){
+  const steps=['setupStep0','setupStep1','setupStep2','setupStep3','setupStep4'];
+  steps.forEach((id,i)=>{ const el=$('#'+id); if(el) el.style.display=i===setupStep?'':'none'; });
+  const dots=$('#setupDots'); if(dots) dots.innerHTML=steps.map((_,i)=>`<span class="setup-dot${i===setupStep?' on':''}">${i+1}</span>`).join('');
+  const back=$('#setupBack'), next=$('#setupNext'), fin=$('#setupFinish');
+  if(back) back.style.display=setupStep>0?'':'none';
+  if(fin) fin.style.display=setupStep===4?'':'none';
+  if(next){ next.style.display=setupStep===4?'none':''; next.disabled=setupStep===1&&!setupKeyOk; }
+  if(setupStep===4) renderSetupDone();
+}
+function setupGo(n){ setupStep=Math.max(0,Math.min(4,n)); renderSetup(); }
+function setupTestMistral(){
+  const k=($('#setupMistralKey').value||'').trim(), st=$('#setupKeyStatus');
+  if(!st) return;
+  st.className='setup-status busy'; st.textContent='Comprobando conexión con Mistral…';
+  if(!k){ st.className='setup-status err'; st.textContent='❌ Pega primero tu API Key de Mistral (console.mistral.ai → API Keys).'; return; }
+  tFetch(PROVIDERS.mistral.base+'/models',{headers:{Authorization:'Bearer '+k}})
+    .then(r=>r.ok?r.json():Promise.reject(new Error(r.status===401?'Clave inválida (401)':'HTTP '+r.status)))
+    .then(()=>{
+      store.mistralKey=k; store.provider='mistral'; store.model=store.modelByProvider.mistral||PROVIDERS.mistral.models[0];
+      if(store.crypto&&cryptoUnlocked) reEncryptSecrets().then(()=>{ saveStore(); refreshProviderUI(); }).catch(()=>{ toast('⚠️ No se pudo re-cifrar el almacén — la clave queda solo para esta sesión',3600); });
+      else { saveStore(); refreshProviderUI(); }
+      setupKeyOk=true;
+      st.className='setup-status ok'; st.textContent='✅ ¡Conexión correcta! Motor Mistral configurado.';
+      renderSetup();
+    })
+    .catch(e=>{ setupKeyOk=false; st.className='setup-status err'; st.textContent='❌ '+e.message; renderSetup(); });
+}
+function setupPiperCheck(){
+  const st=$('#setupPiperStatus'); if(!st) return;
+  st.className='setup-status busy'; st.textContent='Comprobando servidor Piper local…';
+  piperPing(ok=>{
+    st.className=ok?'setup-status ok':'setup-status warn';
+    st.textContent=ok
+      ?'✅ ¡Piper local detectado! Voz neuronal 100% local y gratis.'
+      :'⚠️ Piper no está activo. Es opcional: Aion usará la voz del sistema. Para activarlo ejecuta windows/instalar-piper.cmd (Windows) o linux/instalar-piper.sh (Linux) — ver README.';
+    renderSetup();
+  });
+}
+async function setupTermCheck(){
+  const st=$('#setupTermStatus'); if(!st) return;
+  st.className='setup-status busy'; st.textContent='Comprobando puente local (127.0.0.1:8765)…';
+  await termPing();
+  st.className=termConnected?'setup-status ok':'setup-status warn';
+  st.textContent=termConnected
+    ?'✅ ¡Puente conectado! Aion puede ejecutar comandos en tu terminal.'
+    :'⚠️ Puente no detectado. Inícialo con python bridge.py (o node bridge.mjs) y pega su token en ⚙️ Ajustes → Terminal. Opcional: la app funciona igual sin él.';
+  renderSetup();
+}
+function renderSetupDone(){
+  const ul=$('#setupDoneList'); if(!ul) return;
+  const items=[];
+  items.push(store.provider!=='demo'?'<li><b>Motor</b> — conectado ('+esc((PROVIDERS[store.provider]||{}).label||store.provider)+')</li>':(store.crypto?'<li><b>Motor</b> — claves cifradas guardadas (desbloquéalas en 🔒)</li>':'<li><b>Motor</b> — modo Demo (conecta Mistral/Groq/Ollama cuando quieras)</li>'));
+  items.push(store.piperOnline?'<li><b>Voz Piper</b> — activa ✅</li>':'<li><b>Voz</b> — voz del sistema (Piper opcional)</li>');
+  items.push(termConnected?'<li><b>Terminal</b> — puente conectado ✅</li>':'<li><b>Terminal</b> — sin puente (opcional, la app funciona igual)</li>');
+  ul.innerHTML=items.join('');
+}
+function setupFinish(){
+  // Si aún no hay motor conectado, no marcar 'done' permanente: el asistente
+  // vuelve a ofrecerse al reiniciar (hasta que se configure un motor).
+  try{
+    if(needsSetup()) sessionStorage.setItem('aion_setup_skip_session','1');
+    else { localStorage.setItem('aion_setup_done','1'); sessionStorage.removeItem('aion_setup_skip_session'); }
+  }catch(_){}
+  closeSetup();
+  syncSetupBtnUI();
+  toast(needsSetup()?'🚀 ¡Lista! Puedes conectarla cuando quieras con 🚀 Inicio o ⚙️ Ajustes':'🚀 ¡Listo! Aion Sincro está configurada. Escribe o háblame.');
+  chime();
+}
+function maybeOpenSetup(){
+  if(!needsSetup()) return;
+  try{ if(localStorage.getItem('aion_setup_done')==='1'||sessionStorage.getItem('aion_setup_skip_session')==='1') return; }catch(_){}
+  const w=$('#welcome'); if(w&&w.classList.contains('show')) return; // la historia de Ark & Jimmy va primero
+  const o=$('#setupOverlay'); if(o&&!o.classList.contains('show')) setTimeout(()=>{
+    // Re-chequeo en el momento de abrir: evita reabrir si ya se configuró un motor
+    // o se completó/omitió el asistente mientras el timer estaba en vuelo (carrera).
+    try{ if(!needsSetup()||localStorage.getItem('aion_setup_done')==='1'||sessionStorage.getItem('aion_setup_skip_session')==='1') return; }catch(_){ if(!needsSetup()) return; }
+    openSetup();
+  },1600);
+}
+let liCur=0;
+function openLinkedin(){
+  const o=$('#linkedinOverlay'); if(!o) return;
+  renderLinkedinGrid();
+  viewLinkedinPost(liCur); // visor sincronizado con la tarjeta seleccionada al abrir
+  o.classList.add('show');
+}
+function renderLinkedinGrid(){
+  const g=$('#liGrid'); if(!g) return;
+  g.innerHTML=LINKEDIN_POSTS.map((p,i)=>`<div class="li-item${i===liCur?' on':''}" onclick="viewLinkedinPost(${i})"><div class="li-week">Semana ${p.w}</div><div class="li-title">${esc(p.t)}</div><div class="li-hook">${esc(p.h)}</div></div>`).join('');
+}
+function viewLinkedinPost(i){
+  const p=LINKEDIN_POSTS[i]; if(!p) return;
+  liCur=i; renderLinkedinGrid();
+  const t=$('#liText'); if(t) t.textContent=p.b;
+  const v=$('#liVTitle'); if(v) v.textContent='Semana '+p.w+' · '+p.t;
+  const c=$('#liCapture'); if(c) c.textContent='📸 Captura sugerida — '+p.c;
+}
+function copyLinkedinPost(){
+  const p=LINKEDIN_POSTS[liCur]; if(!p) return;
+  (navigator.clipboard?navigator.clipboard.writeText(p.b):Promise.reject())
+    .then(()=>toast('📋 Publicación copiada — pégala en LinkedIn'))
+    .catch(()=>{ const ta=document.createElement('textarea'); ta.value=p.b; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('📋 Publicación copiada — pégala en LinkedIn'); });
+}
+function exportLinkedinPost(){
+  const p=LINKEDIN_POSTS[liCur]; if(!p) return;
+  downloadMarkdown('# '+p.t+'\n\n'+p.b,'post-linkedin-semana-'+p.w);
+}
+function generateLinkedinPost(){
+  const topic=($('#liTopic').value||'').trim();
+  const o=$('#linkedinOverlay'); if(o) o.classList.remove('show');
+  switchTab('chat');
+  handleUserText(topic?'Escribe un post de LinkedIn sobre «'+topic+'»':'Escribe un post de LinkedIn');
+}
+function openOsint(){
+  const o=$('#osintOverlay'); if(!o) return;
+  o.classList.add('show');
+  setTimeout(()=>{ const i=$('#osintInput'); if(i) i.focus(); },80);
+}
+// Validación estricta por tipo: el puente ejecuta con shell=True, así que solo
+// admitimos caracteres seguros (igual que nmapRescan). Nada de ; | & ` $ > < etc.
+const OSINT_SAFE={
+  user:/^[A-Za-z0-9_.\-]{2,64}$/,
+  email:/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/,
+  phone:/^[0-9+()\- ]{6,20}$/,
+  domain:/^[A-Za-z0-9.\-]{3,253}$/,
+};
+const OSINT_FLAG={user:'--user',email:'--email',phone:'--phone',domain:'--domain'};
+function osintBuildCmd(type,val){
+  const flag=OSINT_FLAG[type]||'--user';
+  if(type==='phone') val=val.replace(/[^0-9+]/g,'');
+  let cmd='python aion_osint.py '+flag+' "'+val+'" --json';
+  if(type==='user'){
+    const lim=Math.max(1,parseInt($('#osintLimit').value,10)||10);
+    cmd+=' --limit '+lim;
+  }
+  return cmd;
+}
+function osintParseJson(out){
+  // La salida JSON viene precedida de la línea '❯ comando' del terminal y puede
+  // tener ruido; buscamos el primer '{' y el último '}' y parseamos ese bloque.
+  const s=String(out||'');
+  const a=s.indexOf('{'), b=s.lastIndexOf('}');
+  if(a<0||b<=a) return null;
+  try{ return JSON.parse(s.slice(a,b+1)); }
+  catch(_){ return null; }
+}
+function osintRender(res,type,val){
+  const en=isEnglish();
+  if(!res||res.error) return '<div class="osint-err">⚠ '+esc(res&&res.error||(en?'no results':'sin resultados'))+'</div>';
+  const L={
+    query:en?'Results for':'Resultados para',
+    hits:en?'Accounts found':'Cuentas encontradas',
+    possible:en?'Possible (200 but name not confirmed)':'Posibles (200 sin confirmar nombre)',
+    none:en?'No match':'Sin coincidencia',
+    errs:en?'errors/blocked':'errores/bloqueos',
+    grav:en?'Gravatar profile':'Perfil Gravatar',
+    found:en?'FOUND':'ENCONTRADO',
+    nofound:en?'not found':'no encontrado',
+    e164:en?'E.164':'E.164',
+    country:en?'Country':'País',
+    robots:en?'robots.txt (Disallow)':'robots.txt (Disallow)',
+    wayback:en?'Archived pages (Wayback Machine)':'Páginas archivadas (Wayback Machine)',
+    hidden:en?'Hidden content found (exists in back, not linked)':'Contenido oculto (existe en el back, sin enlazar)',
+    search:en?'Manual search engines':'Buscadores manuales',
+    note:en?'Legal: use only on your own data or with explicit authorization.':'Legal: usa solo sobre datos propios o con autorización explícita.',
+    q:en?'query':'consulta',
+  };
+  let h='<div class="osint-head">'+L.query+' <b>'+esc(val)+'</b></div>';
+  if(type==='user'){
+    (res.hits||[]).forEach(x=>{ h+='<a class="osint-hit" href="'+esc(x.url)+'" target="_blank" rel="noopener"><b>'+esc(x.site)+'</b><span>'+esc(x.url)+'</span></a>'; });
+    if((res.posibles||[]).length) h+='<div class="osint-sub">'+L.possible+'</div>';
+    (res.posibles||[]).forEach(x=>{ h+='<a class="osint-pos" href="'+esc(x.url)+'" target="_blank" rel="noopener">'+esc(x.site)+'</a>'; });
+    if(!(res.hits||[]).length&&!(res.posibles||[]).length) h+='<div class="osint-dim">'+L.none+'</div>';
+    h+='<div class="osint-dim">'+L.none+': '+esc(res.sin_resultado||0)+' · '+L.errs+': '+esc((res.errores||[]).length)+'</div>';
+    (res.errores||[]).forEach(e=>{ h+='<div class="osint-dim">— '+esc(e.site)+' (HTTP '+esc(e.status)+')</div>'; });
+  }
+  else if(type==='email'){
+    (res.checks||[]).forEach(c=>{
+      h+='<div class="osint-hit"><b>'+L.grav+' — '+(c.encontrado?L.found:L.nofound)+'</b>'+(c.nombre?'<span>'+esc(c.nombre)+(c.ubicacion?' · '+esc(c.ubicacion):'')+'</span>':'')+(c.perfil?'<span>'+esc(c.perfil)+'</span>':'')+'</div>';
+    });
+    h+='<div class="osint-sub">'+L.search+'</div>';
+    (res.buscadores||[]).forEach(b=>{ h+='<a class="osint-pos" href="'+esc(b)+'" target="_blank" rel="noopener">'+esc(b)+'</a>'; });
+  }
+  else if(type==='phone'){
+    h+='<div class="osint-hit"><b>'+L.e164+': '+esc(res.e164||'')+'</b>'+(res.pais?'<span>'+L.country+': '+esc(res.pais[0])+' (+'+esc(res.pais[1])+')</span>':'')+'</div>';
+    if(res.nota) h+='<div class="osint-dim">'+esc(res.nota)+'</div>';
+  }
+  else if(type==='domain'){
+    h+='<div class="osint-sub">'+L.robots+' (HTTP '+esc((res.robots||{}).status)+')</div>';
+    ((res.robots||{}).disallow||[]).forEach(d=>{ h+='<div class="osint-pos">'+esc(d)+'</div>'; });
+    h+='<div class="osint-sub">'+L.wayback+' ('+esc((res.wayback||[]).length)+')</div>';
+    (res.wayback||[]).slice(0,20).forEach(w=>{ h+='<div class="osint-dim">['+esc(w.timestamp)+'] HTTP '+esc(w.status)+' '+esc(w.url)+'</div>'; });
+    h+='<div class="osint-sub">'+L.hidden+' ('+esc((res.oculto||[]).length)+')</div>';
+    (res.oculto||[]).forEach(o=>{ h+='<div class="osint-hit"><b>HTTP '+esc(o.status)+' ('+esc(o.bytes)+' B) '+esc(o.path)+'</b><span>'+esc(o.type||'')+' · '+esc(o.origen||'')+'</span></div>'; });
+  }
+  h+='<div class="osint-note">⚖️ '+L.note+'</div>';
+  return h;
+}
+function osintRun(){
+  const type=$('#osintType').value, raw=($('#osintInput').value||'').trim();
+  if(!OSINT_SAFE[type]||!OSINT_SAFE[type].test(raw)){ toast(isEnglish()?'❌ Invalid value for the selected type':'❌ Valor no válido para el tipo seleccionado','3200'); return; }
+  const cmd=osintBuildCmd(type,raw);
+  const out=$('#osintOut');
+  if(termBusy){ toast('⏳ El terminal está ocupado — espera a que termine el comando actual','3200'); return; }
+  if(out) out.innerHTML='<div class="osint-busy">⏳ '+esc(cmd)+' …</div>';
+  if(!termConnected){ if(out) out.innerHTML='<div class="osint-err">⚠ '+(isEnglish()?'Bridge disconnected — start bridge.py or bridge.mjs and run in the Terminal tab:':'Puente desconectado — inicia bridge.py o bridge.mjs y ejecuta en la pestaña Terminal:')+'<pre>'+esc(cmd)+'</pre></div>'; return; }
+  termPrintText('🕵️ OSINT: '+cmd,'ai');
+  termRun(cmd,(finalOut)=>{
+    const res=osintParseJson(finalOut);
+    if(!out) return;
+    if(res===null){ out.innerHTML='<div class="osint-err">⚠ '+(isEnglish()?'Could not parse the output. Run it manually in the Terminal tab:':'No se pudo interpretar la salida. Ejecútalo manualmente en la pestaña Terminal:')+'<pre>'+esc(cmd)+'</pre></div>'; return; }
+    out.innerHTML=osintRender(res,type,raw);
+  });
+}
 function bind(){
   renderLearn();
   startAutoLock(); // bloqueo automático por inactividad (claves se bloquean solas)
@@ -3802,7 +4788,8 @@ function bind(){
     $('#boot').classList.add('gone');
     setTimeout(()=>{
       $('#boot').remove();
-      if(historySeen()){ chime(); maybeWake(); return; }
+      syncSetupBtnUI();
+      if(historySeen()){ chime(); maybeWake(); maybeOpenSetup(); return; }
       const w=$('#welcome'); if(w) w.classList.add('show');
     },620);
   };
@@ -3812,7 +4799,7 @@ function bind(){
     const w=$('#welcome'); if(!w) return;
     stopStoryNarration();
     markHistorySeen();
-    w.classList.remove('show'); chime(); maybeWake();
+    w.classList.remove('show'); chime(); maybeWake(); maybeOpenSetup();
   };
   $('#btnStory').onclick=()=>{
     const w=$('#welcome'); if(!w) return;
@@ -3833,9 +4820,34 @@ function bind(){
   $('#certExportPdf').onclick=()=>{ const md=certMarkdown(); exportPdf(md,'Certificado Ruta Red Team'); };
   $('#btnISO').onclick=openISO;
   $('#btnCloseISO').onclick=()=>{ const o=$('#isoOverlay'); if(o) o.classList.remove('show'); };
+  $('#btnOsint').onclick=openOsint;
+  $('#btnCloseOsint').onclick=()=>{ const o=$('#osintOverlay'); if(o) o.classList.remove('show'); };
+  $('#btnSetup').onclick=openSetup;
+  $('#setupBack').onclick=()=>setupGo(setupStep-1);
+  $('#setupNext').onclick=()=>setupGo(setupStep+1);
+  $('#setupFinish').onclick=setupFinish;
+  $('#setupTestBtn').onclick=setupTestMistral;
+  $('#setupMistralKey').addEventListener('keydown',e=>{ if(e.key==='Enter') setupTestMistral(); });
+  $('#setupAltMotor').onclick=()=>{ closeSetup(); openSettings(); };
+  $('#setupPiperBtn').onclick=setupPiperCheck;
+  $('#setupPiperHelp').onclick=()=>{ toast('📘 Piper: windows/instalar-piper.cmd o linux/instalar-piper.sh (ver README)'); };
+  $('#setupTermBtn').onclick=setupTermCheck;
+  $('#setupTermHelp').onclick=()=>{ toast('📘 Puente: python bridge.py — pega el token en ⚙️ Ajustes → Terminal'); };
+  $('#btnLinkedin').onclick=openLinkedin;
+  $('#btnCloseLi').onclick=()=>{ const o=$('#linkedinOverlay'); if(o) o.classList.remove('show'); };
+  $('#liCopyBtn').onclick=copyLinkedinPost;
+  $('#liMdBtn').onclick=exportLinkedinPost;
+  $('#liGenBtn').onclick=generateLinkedinPost;
+  $('#liTopic').addEventListener('keydown',e=>{ if(e.key==='Enter') generateLinkedinPost(); });
+  $('#osintRunBtn').onclick=osintRun;
+  $('#osintType').onchange=()=>{ const t=$('#osintType').value; const i=$('#osintInput'); if(!i) return; i.value=''; i.placeholder=t==='user'?'p. ej. knklinux':(t==='email'?'p. ej. persona@dominio.com':(t==='phone'?'p. ej. +34 612 345 678':'p. ej. ejemplo.com')); };
+  $('#osintInput').addEventListener('keydown',e=>{ if(e.key==='Enter') osintRun(); });
   $('#isoExportMd').onclick=()=>{ const md=isoReportMd(); downloadMarkdown(md,'informe-auditoria-iso'); };
   $('#isoExportPdf').onclick=()=>{ const md=isoReportMd(); exportPdf(md,'Informe Auditoría ISO'); };
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const o=$('#isoOverlay'); if(o&&o.classList.contains('show')) o.classList.remove('show'); } });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const o=$('#osintOverlay'); if(o&&o.classList.contains('show')) o.classList.remove('show'); } });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const o=$('#linkedinOverlay'); if(o&&o.classList.contains('show')) o.classList.remove('show'); } });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const o=$('#setupOverlay'); if(o&&o.classList.contains('show')){ o.classList.remove('show'); try{ sessionStorage.setItem('aion_setup_skip_session','1'); }catch(_){} } } });
   $('#btnResetLearn').onclick=()=>{ if(!confirm('¿Reiniciar todo el progreso de la Ruta Red Team?')) return; learnSave({}); renderLearn(); toast('↺ Progreso de la ruta reiniciado'); };
   $('#micBtn').onclick=toggleMic;
   $('#sendBtn').onclick=()=>handleUserText($('#textInput').value);
@@ -3892,12 +4904,17 @@ function bind(){
   };
   $('#btnLock').onclick=e=>{ e.stopPropagation(); const pop=$('#lockPop'); if(pop){ pop.classList.toggle('show'); const p=$('#lockPass'); if(p&&cryptoUnlocked===false&&pop.classList.contains('show')){ p.focus(); } } };
   $('#lockPass').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); const b=$('#lockUnlockBtn'); if(b&&b.style.display!=='none') b.click(); } });
+  const setRemember=v=>{ store.rememberUnlock=!!v; if(!v) rememberUnlockClear(); saveStore(); syncRememberUnlockUI();
+    if(v&&cryptoUnlocked) toast('🔁 Se aplicará en el próximo desbloqueo — bloquea y desbloquea para guardar la clave ahora',3800); };
+  $('#lockRemember').onchange=e=>setRemember(e.target.checked);
+  $('#setRememberUnlock').onchange=e=>setRemember(e.target.checked);
   $('#lockUnlockBtn').onclick=async()=>{
     const pass=$('#lockPass').value;
     if(!pass){ toast('⚠ Escribe la contraseña para desbloquear'); return; }
     const s=await decryptSecrets(pass,store.encSecrets);
     if(!s){ toast('❌ Contraseña incorrecta'); $('#lockPass').value=''; return; }
     applySecrets(s); cryptoUnlocked=true; cryptoKey=await deriveKey(pass,b642buf(store.encSecrets.salt));
+    if(store.rememberUnlock) rememberUnlockSave(pass); else rememberUnlockClear();
     ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(id=>{ const el=$('#'+id); if(el) el.value=store[id]||''; });
     $('#lockPass').value=''; const pop=$('#lockPop'); if(pop) pop.classList.remove('show');
     syncCryptoUI(); saveStore(); avatarSecurityFx('unlock'); markActivity(); toast('🔓 Claves desbloqueadas para esta sesión');
@@ -3920,6 +4937,7 @@ function bind(){
       collectSettings(true);
       store.encSecrets=await encryptSecrets(pass);
       store.crypto=true; cryptoUnlocked=true; cryptoKey=await deriveKey(pass,b642buf(store.encSecrets.salt));
+      if(store.rememberUnlock) rememberUnlockSave(pass); else rememberUnlockClear();
       $('#cryptoPass').value=''; saveStore(); syncCryptoUI(); avatarSecurityFx('unlock'); markActivity();
       toast('🔐 Claves cifradas con AES-GCM 256 ✔');
     }else if(!cryptoUnlocked){
@@ -3928,12 +4946,13 @@ function bind(){
       const s=await decryptSecrets(pass,store.encSecrets);
       if(!s){ toast('❌ Contraseña incorrecta'); $('#cryptoPass').value=''; return; }
       applySecrets(s); cryptoUnlocked=true; cryptoKey=await deriveKey(pass,b642buf(store.encSecrets.salt));
+      if(store.rememberUnlock) rememberUnlockSave(pass); else rememberUnlockClear();
       ['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(id=>{ const el=$('#'+id); if(el) el.value=store[id]||''; }); // rellenar inputs para que 'Guardar' no los vacíe
       $('#cryptoPass').value=''; syncCryptoUI(); saveStore(); avatarSecurityFx('unlock'); markActivity();
       toast('🔓 Claves desbloqueadas para esta sesión');
     }else{
       if(!confirm('¿Desactivar el cifrado? Las claves volverán a guardarse en texto plano.')) return;
-      store.crypto=false; store.encSecrets=null; cryptoUnlocked=false; cryptoKey=null;
+      store.crypto=false; store.encSecrets=null; cryptoUnlocked=false; cryptoKey=null; rememberUnlockClear();
       saveStore(); syncCryptoUI(); toast('Cifrado desactivado — claves en texto plano');
     }
   };
@@ -3974,7 +4993,7 @@ function bind(){
 }
 function openSettings(){
   $('#settings').classList.add('open'); $('#backdrop').classList.add('show');
-  syncCryptoUI();
+  syncCryptoUI(); // ya sincroniza syncRememberUnlockUI() internamente
   $('#provider').value=store.provider; $('#modelInput').value=store.model||'';
   $('#ollamaUrl').value=store.ollamaUrl; $('#groqKey').value=store.groqKey;
   $('#openrouterKey').value=store.openrouterKey; $('#hfToken').value=store.hfToken; $('#mistralKey').value=store.mistralKey;
@@ -4009,6 +5028,8 @@ function collectSettings(noSave){
   store.piperUrl=$('#piperUrl').value.trim()||'http://127.0.0.1:8766';
   store.piperToken=$('#piperToken').value.trim();
   store.autoLockMin=Math.max(0,parseInt($('#autoLockMin').value,10)||0);
+  store.rememberUnlock=!!($('#setRememberUnlock')||{}).checked;
+  if(!store.rememberUnlock) rememberUnlockClear();
   store.wakeWord=($('#wakeWordSel').value||'aion').toLowerCase();
   store.pdfWatermark=$('#btnPdfWatermark').classList.contains('on');
   store.pdfWatermarkText=$('#pdfWatermarkText').value.trim()||'CONFIDENCIAL';
@@ -4190,17 +5211,84 @@ async function runIntegrityCheck(notify){
 }
 
 /* ---------- Arranque ---------- */
+/* ---------- Puesta en marcha automática ----------
+   Al cargar, la app se configura sola cuando puede:
+   1) Adopta el token del puente si el lanzador sirve un fichero 'token' en el
+      mismo origen (windows/aion-sincro.cmd lo persiste y bridge.py se inicia
+      con él → sin 403 al reiniciar).
+   2) Si el proveedor quedó en 'demo' pero hay una clave real disponible,
+      pasa a ese motor automáticamente.
+   3) Reintenta el ping del puente y de Piper (arrancan en paralelo y tardan).
+   4) Si hay cifrado activo pero bloqueado, avisa: las claves están ahí, solo
+      hay que desbloquearlas (no es modo demo). */
+async function autoConfigure(){
+  // 0) Desbloqueo recordado: si el usuario activó 'recordar desbloqueo durante la
+  //    sesión', la clave derivada vive en sessionStorage y sobrevive a recargas
+  //    de la pestaña — se restaura sin volver a pedir la contraseña.
+  if(store.rememberUnlock&&store.crypto&&store.encSecrets&&!cryptoUnlocked){
+    await tryRememberedUnlock();
+  }
+  // 1) Token del puente servido por el lanzador (mismo origen)
+  try{
+    if(!store.bridgeToken && !store.crypto){
+      const r=await fetch('token',{cache:'no-store'});
+      if(r.ok){ const t=(await r.text()).trim(); if(t){ store.bridgeToken=t; saveStore(); } }
+    }
+  }catch(_){}
+  // 2) Auto-proveedor: demo → motor real si hay clave (sin cifrado o desbloqueado)
+  if(store.provider==='demo' && (!store.crypto||cryptoUnlocked)){
+    const real=['mistral','groq','openrouter','huggingface'].find(p=>p==='huggingface'?(store.hfToken||'').trim():!!(store[p+'Key']||'').trim());
+    if(real){
+      store.provider=real;
+      store.model=store.modelByProvider[real]||PROVIDERS[real].models[0];
+      saveStore(); refreshProviderUI();
+      toast('⚡ Motor restaurado automáticamente: '+real,3200);
+    }
+  }
+  // 3) Puente: reintentos (hasta 5× ~0.7 s) y luego chequeo de integridad
+  for(let i=0;i<5;i++){ await termPing(); if(termConnected) break; await sleep(700); }
+  runIntegrityCheck(false);
+  // Piper: reintentos (hasta 4×)
+  for(let i=0;i<4;i++){
+    const ok=await new Promise(res=>piperPing(res));
+    if(ok) break; await sleep(700);
+  }
+  syncPiperUI();
+  // 4) Aviso si las claves están cifradas pero bloqueadas (no es demo)
+  if(store.crypto&&!cryptoUnlocked&&store.provider!=='demo'&&store.encSecrets){
+    setTimeout(()=>toast('🔒 Tienes claves cifradas guardadas — desbloquéalas en ⚙️ Ajustes para usar '+store.provider,6000),1600);
+  }
+}
 (function boot(){
   loadStore();
   let w=0; const bar=$('#bootBar');
   const iv=setInterval(()=>{ w+=Math.random()*22; if(w>=100){w=100;clearInterval(iv);}
     bar.style.width=w+'%'; },120);
-  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncProxyUI(); syncCryptoUI(); termPing();
-  termPing().then(()=>runIntegrityCheck(false));
-  piperPing(()=>syncPiperUI());
+  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncProxyUI(); syncCryptoUI();
+  autoConfigure();
   captureWelcomeES();
   renderWelcomeLang();
   syncStoryBtnUI();
+  // PWA: registro del service worker (solo en http/https; file:// no aplica) + botón de instalación
+  let deferredPrompt=null;
+  if('serviceWorker' in navigator && /^https?:/.test(location.protocol)){
+    navigator.serviceWorker.register('sw.js').catch(err=>console.warn('SW:',err&&err.message));
+    window.addEventListener('beforeinstallprompt',e=>{
+      e.preventDefault(); deferredPrompt=e;
+      const b=$('#btnInstall'); if(b) b.style.display='';
+    });
+    window.addEventListener('appinstalled',()=>{
+      const b=$('#btnInstall'); if(b) b.style.display='none';
+    });
+    $('#btnInstall').onclick=async()=>{
+      if(!deferredPrompt) return;
+      deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null;
+      const b=$('#btnInstall'); if(b) b.style.display='none';
+    };
+    if(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches){
+      const b=$('#btnInstall'); if(b) b.style.display='none';
+    }
+  }
   document.body.dataset.state='idle';
   bind(); initRecog();
   if(!store.model) store.model=store.modelByProvider[store.provider]||'hermes3';

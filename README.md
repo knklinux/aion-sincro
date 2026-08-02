@@ -86,10 +86,110 @@ y su huella, para reconocerse en cualquier futuro:
 2. Pulsa **▶ INICIAR AION SINCRÓ**.
 3. Habla, escribe o usa las tarjetas del panel de bienvenida.
 
+### ⚡ Asistente de primera configuración
+
+Si al arrancar no hay **ningún motor de IA configurado** (modo Demo sin claves),
+Aion abre automáticamente el **asistente de primera configuración** (botón **🚀 Inicio**
+de la cabecera para abrirlo cuando quieras), que te guía paso a paso:
+
+1. **🧠 Motor de IA** — pega tu **API Key de Mistral** (gratis en
+   `console.mistral.ai → API Keys`) y pulsa **🔌 Probar conexión** para verificar
+   que funciona antes de continuar. La clave se **cifra con WebCrypto**
+   (AES-GCM 256) al guardarse.
+2. **🗣️ Voz local** — comprueba si el servidor **Piper** está activo y, si no,
+   te indica cómo instalarlo (`windows/instalar-piper.cmd` / `linux/instalar-piper.sh`).
+   Paso opcional: sin Piper Aion usa la voz del sistema.
+3. **🔌 Terminal** — comprueba el **puente local** (`bridge.py` / `bridge.mjs`)
+   para ejecutar comandos en tu consola. Paso opcional: la app funciona igual sin él.
+4. **✨ ¡Listo!** — resumen de lo conectado y botón **🚀 Empezar a usar Aion**.
+
+> 💡 **Persistencia del asistente**: al pulsar **🚀 Empezar a usar Aion** solo se
+> marca como completado de forma permanente si hay un motor conectado; si aún no
+> hay ninguno, se guarda solo para la sesión y el asistente reaparece al reiniciar
+> la app. Cerrarlo con `Escape` también lo silencia solo para esa sesión. El botón
+> **🚀 Inicio** queda siempre visible para volver a abrirlo cuando quieras.
+
 > 📌 El reconocimiento de voz funciona en `localhost` o `HTTPS`:
 > ```bash
 > python -m http.server 8000   # luego abre http://localhost:8000
 > ```
+
+### 📱 PWA — instala Aion Sincro como aplicación (sin tienda, con modo offline)
+
+Aion Sincro es una **PWA instalable**: una vez servida por HTTP, Chrome/Edge muestran el
+botón **⬇️ Instalar** en la barra superior y la app se instala como aplicación nativa
+(ventana propia, sin pestañas), con el icono en el escritorio / menú de inicio.
+
+- **Cómo instalarla:** sirve la app (`python -m http.server 8000`), ábrela en
+  Chrome/Edge y pulsa **⬇️ Instalar** (o el icono ➕/instalar del navegador).
+- **Modo offline:** el service worker (`sw.js`) cachea el núcleo de la app
+  (`index.html`, manifest, iconos) — la interfaz y los modos locales
+  (Ruta, Evaluación, Laboral, ISO) siguen funcionando sin internet.
+  Los puentes (`127.0.0.1:8765`), el proxy y Piper (`127.0.0.1:8766`) quedan
+  **fuera del alcance del service worker** por seguridad: nada de claves,
+  tokens ni tráfico de herramientas se cachea jamás.
+- **Iconos:** `icons/aion-192.png`, `icons/aion-512.png` y `icons/aion-maskable-512.png`
+  (generados con `python gen_pwa_icons.py`, sin dependencias).
+- **Nota:** el registro del service worker solo se activa sobre `http(s)`
+  (`file://` no aplica, igual que el micrófono).
+
+### 🤖 Aplicación Android (APK con Capacitor)
+
+El repo incluye el **esqueleto Android** en [`mobile/`](mobile/): la configuración
+mínima de [Capacitor](https://capacitorjs.com/) para envolver `index.html` en un
+**APK** instalable, con **permiso de micrófono para la hotword** ya preparado.
+
+**Requisitos:** Node 18+, Java 17 (JDK) y Android Studio con el SDK
+(platform + build-tools).
+
+**Flujo completo (una sola vez):**
+
+```bash
+cd mobile
+npm install
+npm run setup   # copia la app a www/ + npx cap add android + patch de permisos + sync
+```
+
+`setup` encadena 4 pasos (también ejecutables por separado):
+
+1. `npm run build:web` — copia `index.html`, `manifest.webmanifest`, `sw.js` e
+   `icons/` a `mobile/www/` (lo que se empaqueta en el APK).
+2. `npx cap add android` — genera el proyecto nativo `mobile/android/`.
+3. `npm run patch:manifest` — inyecta en `AndroidManifest.xml` los permisos
+   `RECORD_AUDIO` (micrófono → hotword «Aion»), `INTERNET` y
+   `MODIFY_AUDIO_SETTINGS`, además de `usesCleartextTraffic` para el puente
+   local (idempotente: no duplica si ya están).
+4. `npx cap sync android` — copia `www/` al proyecto nativo.
+
+**Abrir / construir el APK:**
+
+```bash
+npm run cap:open   # abre Android Studio (Run ▶ sobre el dispositivo/emulador)
+npm run apk        # genera app-debug.apk con Gradle directamente (requiere `setup` una vez)
+```
+
+> 💡 `capacitor.config.json` activa `webContentsDebuggingEnabled` (DevTools remoto
+> de Chrome vía `chrome://inspect`) — es una **conveniencia de desarrollo**;
+> desactívala antes de distribuir un APK de producción.
+
+**Cómo llegar al puente / Piper desde el móvil:** el puente escucha SOLO en
+`127.0.0.1:8765` (decisión de seguridad: ningún `--host 0.0.0.0`, ni Host ni
+Origin forjados) — y en el móvil, `127.0.0.1` es el propio teléfono. La vía
+correcta es ejecutar el puente **dentro del móvil**: instala
+[Termux](https://termux.dev/), clona el repo y lanza `python bridge.py --token
+TU_TOKEN` allí; luego en **Ajustes → Terminal local** deja `http://127.0.0.1:8765`
+y pega el mismo token. Lo mismo aplica a Piper (`piper_server.py`).
+
+**Hotword y voz:** el permiso `RECORD_AUDIO` se concede (es lo que pide Android)
+pero el WebView integrado **no implementa la Web Speech API**, así que en el APK
+la app mostrará *"Tu navegador no soporta reconocimiento de voz"* — es lo
+esperado en el esqueleto. La hotword «Aion» funciona de verdad en el navegador
+Chrome del teléfono (Web Speech API completa); para reconocimiento continuo
+nativo dentro del APK se añadirá más adelante
+`@capacitor-community/speech-recognition` (ver IDEAS.md).
+
+> ⚠️ **Aviso legal:** las mismas reglas de siempre — el modo Pentest solo sobre
+> sistemas autorizados. Aion Sincro es una herramienta de aprendizaje y trabajo.
 
 ### 🐧 Instalación en Linux / macOS
 
@@ -134,16 +234,20 @@ lanzador:
 1. Sirve la app en `http://127.0.0.1:8080` (necesario para el micrófono —
    Web Speech solo funciona en `localhost`/HTTPS).
 2. Arranca el puente de terminal (`bridge.py`, o `bridge.mjs` si no hay
-   Python) en `127.0.0.1:8765` — usando el **token persistente** de
-   instalación si existe.
-3. Abre el navegador automáticamente y deja ambas ventanas minimizadas.
+   Python) en `127.0.0.1:8765` — usando un **token persistente** en el
+   fichero `token` (se genera la primera vez y se reutiliza siempre, tanto
+   en modo instalado como en modo repo).
+3. Si hay Piper instalado (`.venv-piper`), **arranca también el servidor de
+   voz** en `127.0.0.1:8766`, así la voz local queda activa al abrir.
+4. Abre el navegador automáticamente y deja las ventanas minimizadas.
 
-> 🔑 **Primera vez**: el instalador guarda el token en
-> `%LOCALAPPDATA%\AionSincro\token` y lo imprime al terminar. Pégalo en
-> **Ajustes → Terminal local → Token del puente** (sin él, el puente
-> rechaza todo con 403). Si arrancas el puente a mano, él genera y
-> muestra su propio `TOKEN DE CONEXIÓN` en la ventana *"Aion Sincro
-> Bridge"*.
+> 🔑 **El token ya no hay que pegarlo**: el lanzador lo guarda en `token` y
+> el puente se inicia con él, así el token es **estable entre arranques**
+> (antes el puente generaba uno nuevo en cada lanzamiento → 403). Además la
+> app lo adopta sola al cargar (`fetch('token')` desde el mismo origen
+> localhost). Si arrancas el puente a mano, él sigue generando y mostrando
+> su propio `TOKEN DE CONEXIÓN` en la ventana *"Aion Sincro Bridge"* —
+> pégalo en **Ajustes → Terminal local → Token del puente**.
 
 **Puertos configurables** — usa variables de entorno antes de arrancar:
 
@@ -323,6 +427,25 @@ profesionales.
 lo dice y ofrece alternativas legales (TryHackMe, HackTheBox, laboratorios
 propios). Declara tu ámbito en Ajustes.
 
+### 📄 Informes profesionales exportables (Markdown / PDF / Word)
+
+En el **Modo Laboral** cada informe generado (reconocimiento, pentest, ejecutivo,
+hallazgos, ISO, examen) recibe una barra de exportación con tres formatos:
+
+- **📥 Markdown** — archivo `.md` puro.
+- **📄 PDF** — impresión limpia del navegador (portada corporativa y marca de
+  agua opcionales en Ajustes).
+- **📝 Word (.docx)** — documento OOXML real generado **100 % en el navegador,
+  sin dependencias**: cabecera corporativa en todas las páginas (organización
+  + título + sello de confidencialidad en rojo), portada opcional con la
+  marca de Ajustes, tablas de hallazgos, negritas, listas, bloques de código
+  y **marca de agua VML nativa de Word** (visible al imprimir).
+
+Todo el texto que toca el usuario se escapa como XML antes de insertarse en el
+`.docx` (barrera anti-inyección), igual que en la vista de PDF. La exportación
+respeta el idioma de informes (`reportLang`) y el branding de **Ajustes →
+Informes**.
+
 ---
 
 ## ⌨️ Atajos
@@ -342,6 +465,15 @@ para endurecerlo en **[SECURITY.md](SECURITY.md)**: sin XSS (`textContent` en
 todo), confirmación de comandos, puente limitado a `127.0.0.1` con
 Host/Origin + token obligatorio, y robustez del puente (UTF-8 Windows,
 tuberías Node, stdin ignorado).
+
+> 🔁 **Recordar desbloqueo durante la sesión** (opt-in en Ajustes → Cifrado o en
+> el popup del candado): guarda la **clave derivada** (nunca la contraseña) en
+> `sessionStorage` de la pestaña para no volver a desbloquear al recargar.
+> Sobrevive a recargas de la misma pestaña pero se borra al **cerrarla**, al
+> **bloquear** las claves (manual o por inactividad) o al **desactivar** el
+> cifrado. Es un tradeoff deliberado: cualquier script del mismo origen podría
+> leer la clave durante la vida de la pestaña (equivalente a tenerla en
+> memoria) — detalle en [SECURITY.md](SECURITY.md).
 
 ## 🧪 Pruebas automatizadas
 
@@ -418,8 +550,8 @@ El proyecto se creó para que lo **hagas tuyo**:
 ### Roadmap sugerido
 
 - [ ] Proxy de claves opcional para uso en nube.
-- [ ] Módulo de aprendizaje guiado (rutas de estudio red team).
-- [ ] Guardado de sesiones e informes (exportar markdown).
+- [x] Módulo de aprendizaje guiado (rutas de estudio red team).
+- [x] Guardado de sesiones e informes (exportar markdown/PDF/Word).
 - [ ] Skills/comandos personalizados del usuario.
 - [ ] Soporte de modelo de visión para capturas de pantalla.
 

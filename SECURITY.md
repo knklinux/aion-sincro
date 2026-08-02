@@ -38,10 +38,15 @@ máquina). Sus componentes y superficie de ataque:
   aleatorio (`secrets`/`crypto`) y lo imprime en consola; cada petición `/run`
   y `/kill` debe incluirlo. También puedes fijar el tuyo con `--token CLAVE`.
   La app guarda el token solo en tu navegador.
-- **Token OBLIGATORIO por defecto**: al iniciar, el puente genera un token
-  aleatorio (`secrets`/`crypto`) y lo imprime en consola; cada petición `/run`
-  y `/kill` debe incluirlo. También puedes fijar el tuyo con `--token CLAVE`.
-  La app guarda el token solo en tu navegador.
+- **Token persistente con el lanzador** (`windows/aion-sincro.cmd`): en modo
+  repo o instalado, el lanzador crea el fichero `token` en la raíz (generado
+  con `secrets.token_hex(16)` o `crypto.randomBytes`) y arranca el puente con
+  `--token` de ese fichero. Así el token es **estable entre arranques** y la
+  app lo adopta sola al cargar con un `fetch('token')` del mismo origen
+  localhost. El fichero `token` está en `.gitignore` (nunca se versiona).
+  Nota: si editas la app para servirla con una carpeta raíz distinta,
+  asegúrate de que `token` no sea accesible desde una ruta pública no deseada
+  — se sirve solo por el origen local del lanzador.
 - **Body limitado a 1 MB** en ambos puentes (Python y Node).
 
 ### En el proxy de claves (proxy.py — opcional)
@@ -177,6 +182,30 @@ ejemplo, no una clave real.
    `X-Frame-Options` para endurecer el navegador.
 9. **Cifrar las claves en `localStorage`** (WebCrypto con passphrase derivada
    del usuario) en lugar de texto plano.
+
+### Recordar desbloqueo durante la sesión (opt-in)
+
+La opción **🔁 Recordar desbloqueo durante la sesión** (Ajustes → Cifrado, o el
+popup del candado 🔒) guarda la **clave derivada RAW** (nunca la contraseña) en
+`sessionStorage` (`aion_remember_key`), para que al **recargar la pestaña** Aion
+se desbloquee sola sin volver a pedir la passphrase.
+
+**Alcance y limpieza:**
+- Sobrevive únicamente a recargas de **la misma pestaña**; `sessionStorage` se
+  borra al cerrar la pestaña (no es `localStorage`: no persiste entre sesiones).
+- Se limpia al **bloquear** las claves (manual o bloqueo automático por
+  inactividad) y al **desactivar** el cifrado.
+- Si el blob cifrado cambia o la clave guardada es inválida, se descarta
+  automáticamente y se vuelve a pedir la contraseña.
+
+**Tradeoff de seguridad (aceptado y documentado):** la clave derivada en
+`sessionStorage` puede ser leída por cualquier script del mismo origen durante
+la vida de la pestaña — riesgo **equivalente a mantener la clave en memoria**
+(una XSS en la pestaña ya comprometería las claves en uso), con un matiz: persiste
+**entre recargas de la misma pestaña**, nunca entre cierres ni entre pestañas. No
+amplía la superficie de ataque respecto al desbloqueo en memoria más allá de esa
+ventana; solo elimina la fricción de la recarga. Por eso es **opt-in** y la
+contraseña maestra nunca se almacena.
 10. **Firma/checksum del puente**: verificación de integridad de `bridge.py`/
     `bridge.mjs` antes de arrancar (evita modificación por malware local).
 

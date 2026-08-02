@@ -279,7 +279,7 @@ check(`syncStoryBtnUI() definida`, /function\s+syncStoryBtnUI\s*\(/.test(script)
 check(`marca 'historia_vista' solo en helpers`, (script.match(/'historia_vista'/g)||[]).length===2);
 check(`btnStory marca historia_vista`, /\$\('#btnStory'\)\.onclick=\(\)=>\{[\s\S]*?markHistorySeen\(\);/.test(script));
 check(`welcomeBtn marca historia_vista`, /\$\('#welcomeBtn'\)\.onclick=\(\)=>\{[\s\S]*?markHistorySeen\(\);/.test(script));
-check(`boot respeta historia_vista`, /if\(historySeen\(\)\)\{ chime\(\); maybeWake\(\); return; \}/.test(script));
+check(`boot respeta historia_vista`, /if\(historySeen\(\)\)\{ chime\(\); maybeWake\(\); maybeOpenSetup\(\); return; \}/.test(script));
 // Wake word personalizado: selector en Ajustes, persistencia y detección dinámica
 check("store persiste wakeWord:'aion' por defecto", /wake:false, wakeWord:'aion',/.test(script));
 check("selector #wakeWordSel presente en Ajustes", html.includes('id="wakeWordSel"'));
@@ -395,8 +395,8 @@ const REQUIRED_FNS = [
 for (const fn of REQUIRED_FNS) {
   check(`function ${fn} presente`, new RegExp(`function\\*?\\s+${fn}\\s*\\(`).test(script));
 }
-// Candado de cifrado en el header: indicador visual + desbloqueo rápido sin Ajustes
-check("syncCryptoUI actualiza el candado del header", /function\s+syncCryptoUI\s*\([\s\S]*?lb\.classList\.toggle\('visible',on\);[\s\S]*?lb\.classList\.toggle\('locked',on&&!unlocked\);/.test(script));
+// Candado de cifrado en el header: indicador visual + desbloqueo rápido sin Ajustes  check("syncCryptoUI actualiza el candado del header", /function\s+syncCryptoUI\s*\([\s\S]*?lb\.classList\.toggle\('visible',on\);[\s\S]*?lb\.classList\.toggle\('locked',on&&!unlocked\);/.test(script));
+  check("testProvider de OpenRouter valida con /auth/key (no /models público)", /function\s+testProvider\s*\([^)]*\)[\s\S]*?p==='openrouter'[\s\S]*?\/auth\/key/.test(script) && !/openrouter:[^\n]*\/models/.test(script));
 check("lockSecrets() purga claves sin desactivar cifrado", /function\s+lockSecrets\s*\([\s\S]*?cryptoUnlocked=false; cryptoKey=null;[\s\S]*?saveStore\(\); syncCryptoUI\(\);/.test(script));
 check("lockSecrets purga las claves de memoria", script.includes("['groqKey','openrouterKey','hfToken','mistralKey','bridgeToken','piperToken','proxyToken'].forEach(k=>{ store[k]=''; const el=$('#'+k); if(el) el.value=''; })"));
 // Transición de seguridad del avatar: pulso rojo al bloquear, respiración verde al desbloquear
@@ -476,6 +476,72 @@ check("exportación ISO reutiliza downloadMarkdown/exportPdf", /\$\('#isoExportM
 check("Escape cierra el overlay ISO", /e\.key==='Escape'\)\{\s*const o=\$\('#isoOverlay'\); if\(o&&o\.classList\.contains\('show'\)\) o\.classList\.remove\('show'\);/.test(script));
 check("comando 'iso/auditoría' abre la herramienta", /\/\\biso\\b\|27001\|auditor\[ií\]a\|normativa\|normativo\|cumplimiento\|sgs\[ií\]\/\.test\(q\)\)\{ openISO\(\);/.test(script));
 check("ISO_NORMS es un dataset válido (4 temas, controles estructurados)", (()=>{ const m=script.match(/const ISO_NORMS=(\[[\s\S]*?\]);\s*const ISO_WEIGHTS/); if(!m) return false; try{ const arr=new Function('return '+m[1]+';')(); return Array.isArray(arr)&&arr[0]&&arr[0].themes&&arr[0].themes.length===4&&arr[0].themes.every(t=>t.controls&&t.controls.length>=8); }catch(_){ return false; } })());
+// Herramienta OSINT local (aion_osint.py vía puente)
+check("botón btnOsint en el header", html.includes('id="btnOsint"'));
+check("overlay #osintOverlay presente", html.includes('id="osintOverlay"'));
+check("selector de tipo OSINT con 4 modos (user/email/phone/domain)", html.includes('<option value="user">') && html.includes('<option value="email">') && html.includes('<option value="phone">') && html.includes('<option value="domain">'));
+check("input de valor y botón Buscar", html.includes('id="osintInput"') && html.includes('id="osintRunBtn"') && html.includes('id="osintLimit"'));
+check("openOsint() definida y abre el overlay", /function\s+openOsint\s*\([\s\S]*?classList\.add\('show'\)/.test(script));
+check("osintRun() definida", /function\s+osintRun\s*\(/.test(script));
+check("osintParseJson() definida (extrae el bloque JSON)", /function\s+osintParseJson\s*\([\s\S]*?indexOf\('\{'\).*lastIndexOf\('\}'/.test(script));
+check("osintRender() definida y escapa todo el contenido (XSS)", /function\s+osintRender\s*\([\s\S]*?esc\(/.test(script));
+check("validación estricta por tipo (anti-inyección, puente shell=True)", /const OSINT_SAFE=\{[\s\S]*?user:\/\^\[A-Za-z0-9_.\\-\]\{2,64\}\$\//.test(script) && script.includes("OSINT_SAFE[type].test(raw)"));
+check("osintBuildCmd() construye python aion_osint.py --json", script.includes("python aion_osint.py '") && script.includes(" --json") && script.includes("--limit"));
+check("osintRun sin puente muestra el comando manual", script.includes("Puente desconectado") && script.includes("inicia bridge.py o bridge.mjs"));
+check("osintRun protege contra terminal ocupado (spinner no se congela)", /if\(termBusy\)\{ toast\('⏳ El terminal está ocupado/.test(script));
+check("Escape cierra el overlay OSINT", /e\.key==='Escape'\)\{\s*const o=\$\('#osintOverlay'\); if\(o&&o\.classList\.contains\('show'\)\) o\.classList\.remove\('show'\);/.test(script));
+check("aviso legal de uso en el overlay", html.includes("⚖️ Uso legal: solo datos propios o con autorización (Art. 197 C.P.)"));
+
+// ---------- LinkedIn: overlay de 10 publicaciones semanales ----------
+check("botón btnLinkedin en el header", html.includes('id="btnLinkedin"'));
+check("overlay #linkedinOverlay presente", html.includes('id="linkedinOverlay"'));
+check("10 posts embebidos en LINKEDIN_POSTS (semanas 1-10)", /const LINKEDIN_POSTS=\[[\s\S]*?w:10,/.test(script) && (script.match(/w:\d+/g)||[]).length>=10);
+check("openLinkedin() y renderLinkedinGrid() definidas", /function\s+openLinkedin\s*\(/.test(script) && /function\s+renderLinkedinGrid\s*\(/.test(script));
+check("viewLinkedinPost() muestra texto con textContent (sin innerHTML de posts)", /function\s+viewLinkedinPost\s*\([\s\S]*?t\.textContent=p\.b/.test(script));
+check("copyLinkedinPost() usa el portapapeles con fallback", /function\s+copyLinkedinPost\s*\([\s\S]*?navigator\.clipboard/.test(script) && /document\.execCommand\('copy'\)/.test(script));
+check("exportLinkedinPost() exporta a Markdown", /function\s+exportLinkedinPost\s*\([\s\S]*?downloadMarkdown/.test(script));
+check("generateLinkedinPost() envía el tema al chat", /function\s+generateLinkedinPost\s*\([\s\S]*?handleUserText/.test(script));
+check("Escape cierra el overlay LinkedIn", /e\.key==='Escape'\)\{\s*const o=\$\('#linkedinOverlay'\); if\(o&&o\.classList\.contains\('show'\)\) o\.classList\.remove\('show'\);/.test(script));
+check("demoBrain responde a 'post de linkedin'", /post de linkedin|publicaci[oó]n de linkedin/.test(script) && script.includes("Modo LinkedIn") && script.includes("📢"));
+check("sin XSS en el visor: el grid usa esc()", /renderLinkedinGrid\s*\([\s\S]*?\$\{esc\(p\.t\)\}/.test(script));
+
+// ---------- Asistente de primera configuración ----------
+check("botón #btnSetup en el header", html.includes('id="btnSetup"'));
+check("overlay #setupOverlay con 5 pasos", html.includes('id="setupOverlay"') && html.includes('id="setupStep4"'));
+check("needsSetup() detecta motor sin configurar", /function\s+needsSetup\s*\(/.test(script) && /store\.provider==='demo'/.test(script));
+check("syncSetupBtnUI() mantiene visible el botón 🚀 Inicio", /function\s+syncSetupBtnUI\s*\([\s\S]*?style\.display=''/.test(script));
+check("openSetup()/closeSetup()/setupGo() definidas", /function\s+openSetup\s*\(/.test(script) && /function\s+closeSetup\s*\(/.test(script) && /function\s+setupGo\s*\(/.test(script));
+check("setupTestMistral() guarda la clave y cambia a Mistral", /function\s+setupTestMistral\s*\([\s\S]*?store\.provider='mistral'/.test(script));
+check("setupPiperCheck() usa piperPing", /function\s+setupPiperCheck\s*\([\s\S]*?piperPing/.test(script));
+check("setupTermCheck() usa termPing", /function\s+setupTermCheck\s*\([\s\S]*?termPing/.test(script));
+check("setupFinish() marca aion_setup_done", /function\s+setupFinish\s*\([\s\S]*?aion_setup_done/.test(script));
+check("maybeOpenSetup() respeta historia y sesión", /function\s+maybeOpenSetup\s*\([\s\S]*?aion_setup_skip_session/.test(script));
+check("Escape cierra el overlay de configuración y marca la sesión", /e\.key==='Escape'\)\{\s*const o=\$\('#setupOverlay'\); if\(o&&o\.classList\.contains\('show'\)\)\{ o\.classList\.remove\('show'\); try\{ sessionStorage\.setItem\('aion_setup_skip_session'/.test(script));
+check("demoBrain responde a 'configúrame' sin falsos positivos", /config\[uú\]rame|primera configuraci[oó]n|asistente de (configuraci[oó]n|arranque)|configurar (aion|la app|el asistente|mis claves)/.test(script) && script.includes('asistente de primera configuración'));
+check("auto-open en boot cuando no hay motor", /maybeOpenSetup\(\);/.test(script));
+
+// ---------- Recordar desbloqueo durante la sesión (sessionStorage) ----------
+check("store default rememberUnlock:false", /rememberUnlock:false/.test(script));
+check("checkbox en lockPop y en Ajustes", html.includes('id="lockRemember"') && html.includes('id="setRememberUnlock"'));
+check("deriveKey soporta clave extraíble para guardar en sesión", /async function deriveKey\s*\(pass,salt,extractable=\w+\)/.test(script));
+check("helpers REMEMBER_KEY/Get/Set/Clear usan sessionStorage", /const REMEMBER_KEY='aion_remember_key'/.test(script) && /sessionStorage\.getItem\(REMEMBER_KEY\)/.test(script) && /sessionStorage\.removeItem\(REMEMBER_KEY\)/.test(script));
+check("rememberUnlockSave exporta la clave RAW (nunca la contraseña)", /async function rememberUnlockSave\s*\(pass\)[\s\S]*?exportKey\('raw',k\)/.test(script));
+check("tryRememberedUnlock re-importa y descifra sin contraseña", /async function tryRememberedUnlock\s*\([\s\S]*?importKey\('raw',raw,\{name:'AES-GCM'\},false/.test(script) && /applySecrets\(s\)/.test(script));
+check("los 3 puntos de desbloqueo guardan la clave si está marcado", /if\(store\.rememberUnlock\) rememberUnlockSave\(pass\); else rememberUnlockClear\(\);/.test(script) && /rememberUnlockClear\(\);/.test(script));
+check("lockSecrets olvida el desbloqueo recordado", /function lockSecrets\s*\([\s\S]*?rememberUnlockClear\(\);/.test(script));
+check("desactivar cifrado limpia la clave recordada", /store\.crypto=false; store\.encSecrets=null; cryptoUnlocked=false; cryptoKey=null; rememberUnlockClear\(\);/.test(script));
+check("autoConfigure intenta el desbloqueo recordado al arrancar", /async function autoConfigure\(\)\{[\s\S]*?await tryRememberedUnlock\(\);/.test(script));
+check("syncRememberUnlockUI sincroniza ambos checkboxes", /function syncRememberUnlockUI\s*\([\s\S]*?\$\('#lockRemember'\)/.test(script) && /\$\('#setRememberUnlock'\)/.test(script));
+check("collectSettings persiste rememberUnlock", /store\.rememberUnlock=!!\(\$\('#setRememberUnlock'\)\|\|\{\}\)\.checked/.test(script));
+
+// ---------- Puesta en marcha automática (autoConfigure) ----------
+check("autoConfigure() definida y llamada en boot()", /function\s+autoConfigure\s*\(/.test(script) && /autoConfigure\(\);/.test(script));
+check("adopta el token del puente servido por el lanzador (fetch 'token')", /fetch\('token',\{cache:'no-store'\}\)/.test(script) && /store\.bridgeToken=t; saveStore\(\);/.test(script));
+check("auto-proveedor: pasa de demo a un motor real si hay clave", /store\.provider==='demo'[\s\S]*find\(p=>p==='huggingface'/.test(script) && /⚡ Motor restaurado automáticamente/.test(script));
+check("reintentos del ping del puente (hasta 5×)", /for\(let i=0;i<5;i\+\+\)\{ await termPing\(\); if\(termConnected\) break; await sleep\(700\); \}/.test(script));
+check("reintentos del ping de Piper (hasta 4×)", /for\(let i=0;i<4;i\+\+\)\{[\s\S]*piperPing\(res\)/.test(script));
+check("aviso si hay claves cifradas pero bloqueadas (no es demo)", /🔒 Tienes claves cifradas guardadas/.test(script) && /desbloquéalas en ⚙️ Ajustes/.test(script));
+
 // Barreras de seguridad: sin eval(), sin document.write, y el texto del usuario
 // siempre se escapa con esc() antes de entrar al DOM (nunca ${text} directo).
 check("sin eval(", !/\beval\s*\(/.test(script));
@@ -487,7 +553,7 @@ check("sin interpolación directa de variables de usuario en innerHTML", !/inner
 console.log("\n[5] Cifrado WebCrypto de claves (AES-GCM 256 + PBKDF2)");
 // Estático: parámetros criptográficos correctos y claves nunca en claro
 check("PBKDF2-SHA256 con 120000 iteraciones", /iterations:120000,hash:'SHA-256'/.test(script));
-check("AES-GCM de 256 bits no-extraíble", /\{name:'AES-GCM',length:256\},false,\['encrypt','decrypt'\]/.test(script));
+check("AES-GCM de 256 bits no-extraíble por defecto", /async function deriveKey\s*\(pass,salt,extractable=false\)[\s\S]*?\{name:'AES-GCM',length:256\},extractable,\['encrypt','decrypt'\]/.test(script) && /encryptSecrets|decryptSecrets|reEncryptSecrets/.test(script));
 check("salt aleatorio de 16 bytes", /getRandomValues\(new Uint8Array\(16\)\)/.test(script));
 check("iv aleatorio de 12 bytes", /getRandomValues\(new Uint8Array\(12\)\)/.test(script));
 check("clave no-extraíble en importKey", /importKey\('raw'[\s\S]*?'PBKDF2',false,\['deriveKey'\]\)/.test(script));
@@ -727,6 +793,46 @@ await (async () => {
     }
   }
 
+  // ---------- DOCX dinámico: buildDocx genera un .docx real en memoria ----------
+  console.log("\n[DOCX] Generación real de un documento Word (ZIP OOXML)");
+  const docxFns = ["docxEscape", "zipCrc32", "zipEntry", "zipBuild", "mdToDocxBody", "buildDocx"];
+  const docxSrcs = docxFns.map(n => [n, extractFn(script, n)]);
+  check("funciones DOCX extraíbles del <script>", docxSrcs.every(([, s]) => !!s));
+  if (docxSrcs.every(([, s]) => !!s)) {
+    try {
+      const src = `"use strict"; const store=arguments[0]; function reportIsEn(){return false;} function reportTitle(md){const m=String(md||'').match(/^#\\s+(.+)$/m); return m?m[1].trim():'informe-aion';}
+        ${docxSrcs.map(([, s]) => s).join("\n")};
+        return {buildDocx,docxEscape,zipCrc32,mdToDocxBody};`;
+      const fns = new Function(src)({ pdfCover: true, pdfWatermark: true, pdfCompany: "Acme Corp", pdfWatermarkText: "CONFIDENCIAL", lang: "es-ES" });
+      const sample = "# Informe de Pentest\n\n## 1. Resumen ejecutivo\n\n**Alcance:** 10.0.0.0/24\n\n| Puerto | Servicio | Severidad |\n|---|---|---|\n| 22 | ssh | media |\n| 80 | http | baja |\n\n- Hallazgo 1\n- Hallazgo 2\n\n> Nota: solo uso autorizado.\n";
+      const bytes = fns.buildDocx(sample, "Informe de Pentest", { en: false, company: "Acme Corp", confidential: "CONFIDENCIAL", cover: true, watermark: true });
+      check("buildDocx devuelve Uint8Array", bytes instanceof Uint8Array && bytes.length > 500);
+      const zipHead = String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]);
+      check("firma ZIP válida (PK\x03\x04)", zipHead === "PK\x03\x04", "got: " + JSON.stringify(zipHead));
+      const latin = Buffer.from(bytes).toString("latin1");
+      check("ZIP contiene [Content_Types].xml", latin.includes("[Content_Types].xml"));
+      check("ZIP contiene word/document.xml", latin.includes("word/document.xml"));
+      check("ZIP contiene header1.xml (cabecera corporativa)", latin.includes("word/header1.xml"));
+      check("cabecera: organización en header", latin.includes("Acme Corp"));
+      check("cabecera: sello de confidencialidad", latin.includes("CONFIDENCIAL"));
+      check("documento XML con tabla convertida", latin.includes("<w:tbl>") && latin.includes("<w:tr>"));
+      check("documento XML con título y estilos", latin.includes("Informe de Pentest") && latin.includes("CoverTitle") && latin.includes("Heading1"));
+      check("marca de agua VML presente", latin.includes("v:textpath"));
+      check("zipCrc32 calcula CRC determinista", fns.zipCrc32(new Uint8Array([1, 2, 3, 4])) === 0xB63CFBCD);
+      const esc = fns.docxEscape("<a>&\"x\"</a>");
+      check("docxEscape escapa XML (barrera XSS)", esc === "&lt;a&gt;&amp;&quot;x&quot;&lt;/a&gt;", "got: " + esc);
+      const mdBody = fns.mdToDocxBody("**negrita** y normal\n\n| A | B |\n|---|---|\n| 1 | 2 |\n");
+      check("mdToDocxBody: negrita a runs bold", mdBody.includes("<w:b/>") && mdBody.includes("negrita"));
+      check("mdToDocxBody: tabla a w:tbl con encabezado sombreado", mdBody.includes("<w:tbl>") && mdBody.includes("EEF4FB"));
+      const xssBody = fns.mdToDocxBody("<script>&amp; \"comilla\"");
+      check("mdToDocxBody: escapa TODO el texto (fix XSS/XML)", !xssBody.includes("<script>") && xssBody.includes("&lt;script&gt;") && xssBody.includes("&amp;amp;") && xssBody.includes("&quot;comilla&quot;"));
+      const boldSafe = fns.mdToDocxBody("**<b>** texto & ");
+      check("mdToDocxBody: bold con contenido peligroso escapado", !boldSafe.includes("<b>") && boldSafe.includes("&lt;b&gt;") && boldSafe.includes("&amp;"));
+    } catch (e) {
+      check("generación DOCX dinámica ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
+    }
+  }
+
   // ---------- Verificación de integridad (arranque) ----------
   console.log("\n[Integridad] Verificación automática en el arranque");
   check("panel de integridad en #boot", html.includes('id="bootInt"') && html.includes('id="biAppDot"') && html.includes('id="biSecretsDot"'));
@@ -734,10 +840,93 @@ await (async () => {
   check("runIntegrityCheck definida", /function\s+runIntegrityCheck/.test(script));
   check("localIntegrity (fallback sin puente)", /function\s+localIntegrity/.test(script));
   check("endpoint /integrity vía puente", script.includes("BRIDGE+'/integrity'"));
-  check("arranque ejecuta runIntegrityCheck", script.includes("termPing().then(()=>runIntegrityCheck(false))"));
+  check("arranque ejecuta runIntegrityCheck (vía autoConfigure, sin doble ping)", /autoConfigure\(\);/.test(script) && script.includes("runIntegrityCheck(false)") && !script.includes("termPing().then(()=>runIntegrityCheck(false))"));
   check("botón re-ejecuta la verificación", script.includes("$('#btnIntegrity').onclick=()=>runIntegrityCheck(true)"));
   check("localIntegrity revisa claves en claro", script.includes("const fields=['mistralKey','groqKey','openrouterKey','hfToken','bridgeToken','piperToken','proxyToken']") && script.includes("fields.forEach(k=>{ if(s[k]) leaks.push(k); })"));
   check("estados de fila (ok/err/busy)", script.includes("'bi-dot '+state") && script.includes("setBiRow('biApp','busy'") );
+
+  // ---------- PWA: manifest + service worker + instalación ----------
+  console.log("\n[PWA] Instalable y offline");
+  const manifestSrc = fs.existsSync(path.join(ROOT, "manifest.webmanifest")) ? fs.readFileSync(path.join(ROOT, "manifest.webmanifest"), "utf8") : "";
+  const swSrc = fs.existsSync(path.join(ROOT, "sw.js")) ? fs.readFileSync(path.join(ROOT, "sw.js"), "utf8") : "";
+  check("manifest.webmanifest existe y es JSON válido", (() => { try { JSON.parse(manifestSrc); return manifestSrc.length > 0; } catch { return false; } })());
+  check("manifest: campos esenciales PWA", /"name"\s*:/.test(manifestSrc) && /"short_name"/.test(manifestSrc) && /"start_url"\s*:\s*".\/index.html"/.test(manifestSrc) && /"display"\s*:\s*"standalone"/.test(manifestSrc) && /"theme_color"/.test(manifestSrc));
+  check("manifest: iconos 192/512 + maskable", (manifestSrc.match(/"src"\s*:\s*"icons\/aion-/g) || []).length >= 2 && manifestSrc.includes("maskable"));
+  check("sw.js existe con caché versionada", /const CACHE_NAME\s*=\s*"aion-sincro-v\d+"/.test(swSrc));
+  check("sw.js precachea el núcleo (index + manifest + iconos)", swSrc.includes("./index.html") && swSrc.includes("manifest.webmanifest") && swSrc.includes("aion-512.png"));
+  check("sw.js: navegación network-first con fallback offline", /req\.mode\s*===\s*['"]navigate['"]/.test(swSrc) && /caches\.match\(['"]\.\/index\.html['"]\)/.test(swSrc));
+  check("sw.js: no cachea orígenes ajenos (guarda real de código)", swSrc.includes("if (url.origin !== self.location.origin) return;") && /caches\s*\.match\(req\)/.test(swSrc));
+  check("sw.js: limpieza de cachés antiguas en activate", /caches\s*\.keys\(\)/.test(swSrc) && /caches\s*\.delete\(k\)/.test(swSrc) && swSrc.includes("clients.claim"));
+  check("index.html enlaza el manifest", html.includes('rel="manifest" href="manifest.webmanifest"'));
+  check("index.html: theme-color y apple-touch-icon", html.includes('name="theme-color"') && html.includes('rel="apple-touch-icon" href="icons/aion-192.png"'));
+  check("index.html: botón de instalación PWA en el header", html.includes('id="btnInstall"') && html.includes('⬇️ Instalar'));
+  check("index.html: registra sw.js solo en http(s)", /navigator\.serviceWorker\.register\('sw\.js'\)/.test(script) && script.includes("location.protocol"));
+  check("index.html: beforeinstallprompt muestra el botón", script.includes("beforeinstallprompt") && script.includes("deferredPrompt=e"));
+  check("index.html: appinstalled oculta el botón", script.includes("appinstalled") && script.includes("(display-mode: standalone)"));
+  check("iconos PWA existen en disco", ["icons/aion-192.png", "icons/aion-512.png", "icons/aion-maskable-512.png"].every(f => fs.existsSync(path.join(ROOT, f))));
+  check("gen_pwa_icons.py presente (iconos reproducibles)", fs.existsSync(path.join(ROOT, "gen_pwa_icons.py")));
+  check("README documenta la instalación PWA", /PWA/.test(fs.readFileSync(path.join(ROOT, "README.md"), "utf8")));
+
+  // ---------- DOCX: exportación a Word (.docx) ----------
+  console.log("\n[DOCX] Exportación a Word con cabecera corporativa");
+  check("exportDocx definida", /function\s+exportDocx\s*\(/.test(script));
+  check("buildDocx definida (pura, devuelve Uint8Array)", /function\s+buildDocx\s*\(/.test(script));
+  check("ZIP en JS puro: zipCrc32/zipEntry/zipBuild", /function\s+zipCrc32\s*\(/.test(script) && /function\s+zipEntry\s*\(/.test(script) && /function\s+zipBuild\s*\(/.test(script));
+  check("mdToDocxBody convierte markdown a XML de Word", /function\s+mdToDocxBody\s*\(/.test(script));
+  check("escape XML para barrera XSS", /function\s+docxEscape\s*\([^)]*\)\{[\s\S]*?\.replace\(\/&\/g,'&amp;'\)/.test(script));
+  check("documento OOXML con namespaces w/r", script.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document') && script.includes('xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'));
+  check("cabecera corporativa en header1.xml (org + título + conf)", script.includes('word/header1.xml') && script.includes('CoverOrg') && script.includes('B22222'));
+  check("marca de agua VML nativa de Word", script.includes('v:textpath') && script.includes('urn:schemas-microsoft-com:vml'));
+  check("usa branding de Ajustes (pdfCompany/pdfWatermarkText/pdfCover)", /store\.pdfCompany/.test(script) && /store\.pdfWatermarkText/.test(script) && /store\.pdfCover/.test(script));
+  check("barra de informe ofrece Word (.docx)", html.includes('Word (.docx)') && script.includes("b2b.onclick=()=>exportDocx(text, reportTitle(text))"));
+  check("bilingüe: portada respeta reportIsEn", script.includes("en?'Report generated with Aion Sincro · ':'Informe generado con Aion Sincro · '"));
+  check("CoverOrg: spacing en pPr (OOXML válido)", /CoverOrg[\s\S]{0,500}?<w:pPr><w:spacing w:before="3000"\/>/.test(script) && !/<w:rPr>[\s\S]{0,140}?<w:spacing/.test(script));
+
+  // ---------- Android (Capacitor): esqueleto del APK ----------
+  console.log("\n[Android] Esqueleto Capacitor para el APK");
+  const pkgPath = path.join(ROOT, "mobile", "package.json");
+  const capPath = path.join(ROOT, "mobile", "capacitor.config.json");
+  const pkgSrc = fs.existsSync(pkgPath) ? fs.readFileSync(pkgPath, "utf8") : "";
+  const capSrc = fs.existsSync(capPath) ? fs.readFileSync(capPath, "utf8") : "";
+  const patchSrc = fs.existsSync(path.join(ROOT, "mobile", "patch-manifest.js")) ? fs.readFileSync(path.join(ROOT, "mobile", "patch-manifest.js"), "utf8") : "";
+  const bwSrc = fs.existsSync(path.join(ROOT, "mobile", "build-web.js")) ? fs.readFileSync(path.join(ROOT, "mobile", "build-web.js"), "utf8") : "";
+  check("mobile/package.json existe y es JSON válido", (() => { try { return JSON.parse(pkgSrc).name === "aion-sincro-android"; } catch { return false; } })());
+  check("package.json: dependencias de Capacitor", /@capacitor\/core/.test(pkgSrc) && /@capacitor\/android/.test(pkgSrc) && /@capacitor\/cli/.test(pkgSrc));
+  check("package.json: scripts del flujo Android", /"setup"/.test(pkgSrc) && /"apk"/.test(pkgSrc) && /"patch:manifest"/.test(pkgSrc));
+  check("capacitor.config.json válido con appId/name/webDir", (() => { try { const c = JSON.parse(capSrc); return c.appId && c.appName && c.webDir === "www" && c.android && c.android.allowMixedContent === true; } catch { return false; } })());
+  check("build-web.js copia index.html+manifest+sw+icons a www", bwSrc.includes("index.html") && bwSrc.includes("manifest.webmanifest") && bwSrc.includes("sw.js") && bwSrc.includes("icons"));
+  check("patch-manifest.js: RECORD_AUDIO (micrófono/hotword)", patchSrc.includes("RECORD_AUDIO"));
+  check("patch-manifest.js: INTERNET + MODIFY_AUDIO_SETTINGS", patchSrc.includes("INTERNET") && patchSrc.includes("MODIFY_AUDIO_SETTINGS"));
+  check("patch-manifest.js: cleartext para el puente local", /android:usesCleartextTraffic\s*=\s*"true"/.test(patchSrc));
+  check("patch-manifest.js: idempotente", patchSrc.includes("ya tenía los permisos") && patchSrc.includes("includes(p)"));
+  check("README documenta el flujo Android (Capacitor)", /Capacitor/.test(fs.readFileSync(path.join(ROOT, "README.md"), "utf8")) && /npm run setup/.test(fs.readFileSync(path.join(ROOT, "README.md"), "utf8")));
+  check(".gitignore cubre mobile/www y mobile/android", (() => { const g = fs.readFileSync(path.join(ROOT, ".gitignore"), "utf8"); return /mobile\/www\//.test(g) && /mobile\/android\//.test(g); })());
+
+  // ---------- Lanzador Windows: fix del arranque del acceso directo ----------
+  console.log("\n[Windows] Lanzador del acceso directo (fix arranque)");
+  const launcherSrc = fs.existsSync(path.join(ROOT, "windows", "aion-sincro.cmd")) ? fs.readFileSync(path.join(ROOT, "windows", "aion-sincro.cmd"), "utf8") : "";
+  const serveJs = fs.existsSync(path.join(ROOT, "windows", "serve.js")) ? fs.readFileSync(path.join(ROOT, "windows", "serve.js"), "utf8") : "";
+  const installCmd = fs.existsSync(path.join(ROOT, "windows", "install.cmd")) ? fs.readFileSync(path.join(ROOT, "windows", "install.cmd"), "utf8") : "";
+  check("windows/serve.js existe (respaldo sin Python)", serveJs.length > 0);
+  check("lanzador usa node %~dp0serve.js (resuelve en repo e instalado)", launcherSrc.includes("%~dp0serve.js") && !/node -e "const http/.test(launcherSrc));
+  check("lanzador usa timeout.exe con ruta completa (retardo real, sin GNU timeout)", launcherSrc.includes("%SystemRoot%\\System32\\timeout.exe /t 1 /nobreak") && launcherSrc.includes("%SystemRoot%\\System32\\timeout.exe /t 2 /nobreak") && !launcherSrc.includes("timeout /t") && !launcherSrc.includes("ping -n"));
+  check("serve.js: solo 127.0.0.1 (micrófono/Web Speech)", serveJs.includes('"127.0.0.1"'));
+  check("serve.js: barrera de path traversal", serveJs.includes("f.startsWith(ROOT + path.sep)"));
+  check("serve.js: decodeURIComponent con try/catch (sin crash por URL malformada)", serveJs.includes("decodeURIComponent") && serveJs.includes("catch"));
+  check("install.cmd copia serve.js a la instalación", installCmd.includes("serve.js"));
+
+  // ---------- CV automático: generar_cv.py (fuente única de verdad: LINKEDIN.md) ----------
+  console.log("\n[CV] Generador de currículum desde LINKEDIN.md");
+  const cvPy = fs.existsSync(path.join(ROOT, "generar_cv.py")) ? fs.readFileSync(path.join(ROOT, "generar_cv.py"), "utf8") : "";
+  const linkedinMd = fs.existsSync(path.join(ROOT, "LINKEDIN.md")) ? fs.readFileSync(path.join(ROOT, "LINKEDIN.md"), "utf8") : "";
+  check("generar_cv.py existe", cvPy.length > 0);
+  check("LINKEDIN.md existe (fuente de verdad del CV)", linkedinMd.length > 0);
+  check("el generador lee LINKEDIN.md como fuente única", cvPy.includes("SRC = os.path.join(HERE, \"LINKEDIN.md\")"));
+  check("escapado HTML con esc() (sin XSS en el CV)", /def esc\(s\):[\s\S]*?html\.escape\(s, quote=True\)/.test(cvPy));
+  check("prints ASCII (sin UnicodeEncodeError en consola Windows)", cvPy.includes("CV HTML ->") && cvPy.includes("CV PDF  ->") && !cvPy.includes("CV HTML →"));
+  check("motores PDF: weasyprint o headless Edge/Chrome (todo local)", cvPy.includes("from weasyprint import HTML") && cvPy.includes("--print-to-pdf"));
+  check("parser de certificaciones tolera 'Certificaciones' sin tilde", /re\.search\(r"Certificaci\\w\+", head, flags=re\.I\)/.test(cvPy));
+  check("pie del CV cita la fuente y el script generador", cvPy.includes("Generado desde <b>LINKEDIN.md</b>") && cvPy.includes("generar_cv.py"));
 
   // ---------- Resumen ----------
   console.log("\n" + "=".repeat(60));
