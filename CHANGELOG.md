@@ -14,6 +14,19 @@ Trabajo validado en local, aún sin commit en `main`: *(sección vacía — todo
 
 ---
 
+## ✨ Lote 2026-08-01 (tarde) — OSINT y calidad
+
+> Commits publicados entre el lanzamiento inicial y el lote siguiente, que
+> quedaron sin agrupar en secciones propias. Documentados aquí para que el
+> changelog refleje todo lo que hay en `main`.
+
+- `40aac6f` — **feat:** **módulo OSINT** (`aion_osint.py` con suite `test_aion_osint.py` y lanzadores `linux/aion-osint` / `windows/aion-osint.cmd`) + plantillas Laboral ejecutivo/hallazgos/curl + fix de proxy y Piper.
+- `a7d890b` — **feat:** **test de mutación real** de `saveStore` (`test_mutacion.py`, copia temporal de `index.html` con la limpieza WebCrypto quitada para verificar que el check cae) + soporte `AION_HTML` en `test_app.js` + paso `[3/3]` en `test_all.cmd`/`test_all.sh`.
+- `9f983c2` — **docs:** perfil de LinkedIn de Arkaitz (`LINKEDIN.md`) para la primera oportunidad en ciberseguridad.
+- `9e159ea` — **docs:** `LINKEDIN.md` — eJPT *en preparación* + guía de 10 publicaciones semanales de pentesting.
+
+---
+
 ## ✨ Lote 2026-08-02 — configuración, seguridad y perfil profesional
 
 ### 🚀 Primera configuración y comodidad
