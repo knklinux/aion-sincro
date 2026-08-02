@@ -362,10 +362,22 @@ check("continuousCycle() definida", /function\s+continuousCycle\s*\(/.test(scrip
   check("sonidos usan WebAudio sin archivos externos (catch silencioso)", script.includes("window.AudioContext||window.webkitAudioContext") && /function\s+chimePause[\s\S]*?\}catch\(_\)\{\}/.test(script) && /function\s+chimeResume[\s\S]*?\}catch\(_\)\{\}/.test(script));
   // Sonido de 'turno completado': tono neutro al captar la frase con auto-parada
   check("chimeDone() definido (tono breve y neutro)", script.includes("function chimeDone(){") && script.includes("window.AudioContext||window.webkitAudioContext"));
-  check("chimeDone() usa una sola nota corta neutra (440 Hz)", script.includes("o.frequency.value=440") && script.includes("o.stop(t+.28)"));
+  check("chimeDone() usa una sola nota corta neutra (440 Hz via chimeTone)", script.includes("function chimeDone(){ chimeTone([[440,0]],.22,.13); }"));
   check("chimeDone() suena en la auto-parada del turno (sin romper setListening)", /if\(store\.autoStopMic&&listening\)\{ setListening\(false\); chimeDone\(\); \}/.test(script));
   check("chimeDone() solo con auto-parada de voz (antes de handleUserText)", /if\(store\.autoStopMic&&listening\)\{ setListening\(false\); chimeDone\(\); \}\s*voiceInputFlag=true;\s*handleUserText\(final\);/.test(script));
   check("chimeDone() no se engancha en los caminos de wake word (única llamada en la auto-parada)", (script.match(/chimeDone\(\);\s*\}/g)||[]).length===1 && script.includes("if(store.autoStopMic&&listening){ setListening(false); chimeDone(); }"));
+  // Control de volumen de los chimes (Ajustes → Voz)
+  check("store default chimeVol:70 y chimeMute:false", script.includes("turnTimeout:4, chimeVol:70, chimeMute:false,"));
+  check("chimeVolFactor() respeta mute y volumen (0-1)", script.includes("function chimeVolFactor(){") && script.includes("if(store.chimeMute) return 0;") && script.includes("Math.max(0,Math.min(1,(+store.chimeVol||70)/100))"));
+  check("chimeTone() aplica el factor de volumen central", /function\s+chimeTone\s*\(notes, dur, vol\)\{[\s\S]*?chimeVolFactor\(\)\*vol/.test(script));
+  check("chime/chimePause/chimeResume/chimeDone usan chimeTone()", (script.match(/function\s+chime\w*\s*\(\s*\)\{ chimeTone\(/g)||[]).length>=3);
+  check("Ajustes: slider de volumen de sonidos (0-100)", html.includes('id="chimeVol"') && html.includes('id="chimeVolOut"') && html.includes('min="0" max="100"'));
+  check("Ajustes: botón para silenciar los sonidos", html.includes('id="btnChimeMute"'));
+  check("bind: btnChimeMute alterna store.chimeMute", /btnChimeMute'\)\.onclick=\(\)=>\{[\s\S]*?store\.chimeMute=!store\.chimeMute;/.test(script));
+  check("bind: chimeVol guarda el valor al mover el slider", /\$\('#chimeVol'\)\.oninput=e=>\{store\.chimeVol=Math\.max\(0,Math\.min\(100,\+e\.target\.value\|\|70\)\);/.test(script));
+  check("collectSettings persiste chimeVol y chimeMute", /store\.chimeVol=Math\.max\(0,Math\.min\(100,parseInt\(\$\('#chimeVol'\)\.value,10\)\|\|70\)\);/.test(script) && /store\.chimeMute=!!\$\('#btnChimeMute'\)\.classList\.contains\('on'\);/.test(script));
+  check("openSettings inicializa chimeVol y syncChimeUI", /\$\('#chimeVol'\)\.value=store\.chimeVol\|\|70;/.test(script) && /syncChimeUI\(\);/.test(script));
+  check("syncChimeUI() se llama en el arranque", /syncContinuousUI\(\); syncChimeUI\(\);/.test(script));
   // Límite de silencio adaptativo según contexto (nmap/ISO/laboral → más largo)
   check("turnTimeoutAdaptado() definida", /function\s+turnTimeoutAdaptado\s*\(/.test(script));
   check("adaptativo: base es el turnTimeout configurado (2-5 s)", /const base=Math\.max\(2,Math\.min\(5,\+store\.turnTimeout\|\|4\)\);/.test(script));

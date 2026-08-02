@@ -1179,6 +1179,12 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
         <div class="field rangeRow" id="fieldTurnTimeout" style="margin-top:8px"><label>⏱️ Límite de silencio en tu turno</label><input type="range" id="turnTimeout" min="2" max="5" step="0.5" value="4"><output id="turnTimeoutOut">4.0 s</output></div>
         <div class="hint">Si no dices nada durante este tiempo en conversación continua, Aion <b>pausa el ciclo sola</b> y te espera en silencio (pulsa el micrófono o di el wake word para retomar). Evita que se quede escuchando eternamente.</div>
       </div>
+      <div class="field">
+        <button class="toggle" id="btnChimeMute" style="width:100%;justify-content:center"><span class="tk"></span> 🔊 Sonidos del ciclo (turno nuevo · frase captada · pausa)</button>
+        <div class="hint">Los chimes te avisan por audio del estado del turno: <b>ascendente</b> al abrirse tu turno, <b>neutro</b> cuando captan tu frase, <b>doble pit</b> al pausar por silencio. Respeta el volumen del sistema; aquí puedes <b>silenciarlos</b> o ajustar su volumen.</div>
+        <div class="field rangeRow" id="fieldChimeVol" style="margin-top:8px"><label>🔊 Volumen de los sonidos</label><input type="range" id="chimeVol" min="0" max="100" step="5" value="70"><output id="chimeVolOut">70%</output></div>
+        <div class="hint">0% = silencio total. El volumen final es el de tu sistema × este porcentaje.</div>
+      </div>
       </div>
       <div class="field" id="fieldVoxtralEmotion" hidden>
         <label>🎭 Emoción voxtral</label>
@@ -1644,7 +1650,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const store={
   provider:'demo', model:'hermes3', modelByProvider:{},
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
-  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, autoStopMic:true, breve:true, continuous:false, turnTimeout:4, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion', autoStart:false, pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:'', reportLang:'es',
+  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, autoStopMic:true, breve:true, continuous:false, turnTimeout:4, chimeVol:70, chimeMute:false, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion', autoStart:false, pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:'', reportLang:'es',
   pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, autoLockMin:0, rememberUnlock:false, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
 };
 
@@ -5257,6 +5263,11 @@ function bind(){
     store.breve=!store.breve; syncBreveUI(); saveStore();
     toast(store.breve?'⚡ Respuestas breves activadas: conversación más fluida':'⚡ Respuestas breves desactivadas');
   };
+  $('#btnChimeMute').onclick=()=>{
+    store.chimeMute=!store.chimeMute; syncChimeUI(); saveStore();
+    toast(store.chimeMute?'🔇 Sonidos del ciclo silenciados':'🔊 Sonidos del ciclo activados');
+  };
+  $('#chimeVol').oninput=e=>{store.chimeVol=Math.max(0,Math.min(100,+e.target.value||70));$('#chimeVolOut').textContent=store.chimeVol+'%';};
   $('#btnContinuous').onclick=()=>{
     store.continuous=!store.continuous; syncContinuousUI(); saveStore();
     toast(store.continuous?'🔄 Conversación continua: habla y Aion te responde por turnos sin pulsar nada':'🔄 Conversación continua desactivada');
@@ -5408,6 +5419,8 @@ function openSettings(){
   $('#piperLength').value=store.piperLength; $('#piperLengthOut').textContent=store.piperLength.toFixed(2);
   $('#piperNoise').value=store.piperNoise; $('#piperNoiseOut').textContent=store.piperNoise.toFixed(2);
   $('#turnTimeout').value=store.turnTimeout||4; $('#turnTimeoutOut').textContent=(store.turnTimeout||4).toFixed(1)+' s';
+  $('#chimeVol').value=store.chimeVol||70; $('#chimeVolOut').textContent=(store.chimeVol||70)+'%';
+  syncChimeUI();
   $('#pentestScope').value=store.pentestScope;
   $('#bridgeToken').value=store.bridgeToken;
   $('#piperUrl').value=store.piperUrl||'http://127.0.0.1:8766';
@@ -5439,6 +5452,8 @@ function collectSettings(noSave){
   if(!store.rememberUnlock) rememberUnlockClear();
   store.wakeWord=($('#wakeWordSel').value||'aion').toLowerCase();
   store.turnTimeout=Math.max(2,Math.min(5,parseFloat($('#turnTimeout').value)||4));
+  store.chimeVol=Math.max(0,Math.min(100,parseInt($('#chimeVol').value,10)||70));
+  store.chimeMute=!!$('#btnChimeMute').classList.contains('on');
   store.pdfWatermark=$('#btnPdfWatermark').classList.contains('on');
   store.pdfWatermarkText=$('#pdfWatermarkText').value.trim()||'CONFIDENCIAL';
   store.pdfCover=$('#btnPdfCover').classList.contains('on');
@@ -5453,6 +5468,7 @@ function syncAutoLangUI(){ const b=$('#btnAutoLang'); if(b)b.classList.toggle('o
 function syncAutoStopMicUI(){ const b=$('#btnAutoStopMic'); if(b)b.classList.toggle('on',store.autoStopMic); }
 function syncBreveUI(){ const b=$('#btnBreve'); if(b)b.classList.toggle('on',store.breve); }
 function syncContinuousUI(){ const b=$('#btnContinuous'); if(b)b.classList.toggle('on',store.continuous); }
+function syncChimeUI(){ const b=$('#btnChimeMute'); if(b)b.classList.toggle('on',!!store.chimeMute); const v=$('#chimeVol'); if(v)v.value=store.chimeVol||70; const o=$('#chimeVolOut'); if(o)o.textContent=(store.chimeVol||70)+'%'; }
 function syncPdfUI(){ const a=$('#btnPdfWatermark'); if(a)a.classList.toggle('on',store.pdfWatermark); const b=$('#btnPdfCover'); if(b)b.classList.toggle('on',store.pdfCover); }
 function syncAutoStartUI(){ const b=$('#btnAutoStart'); if(b)b.classList.toggle('on',store.autoStart); }
 function refreshModelsViaProxy(){
@@ -5524,60 +5540,36 @@ function syncSincroniaUI(){
   if($('#btnSincroniaSet')) $('#btnSincroniaSet').classList.toggle('on',store.sincronia);
 }
 
-/* ---------- Chime de inicio (Web Audio, sin archivos) ---------- */
-function chime(){
+/* ---------- Chimes (Web Audio, sin archivos) ----------
+   Todos los sonidos de Aion pasan por chimeTone(), que aplica el volumen
+   configurable (store.chimeVol, 0-100) y el silencio (store.chimeMute).
+   El volumen respeta el del sistema: Web Audio sale por el master del
+   dispositivo, y este factor es un atenuador propio adicional. */
+function chimeVolFactor(){
+  if(store.chimeMute) return 0;
+  return Math.max(0,Math.min(1,(+store.chimeVol||70)/100));
+}
+function chimeTone(notes, dur, vol){
+  if(chimeVolFactor()<=0) return;
   try{
     const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const t=ctx.currentTime;
-    [[523.25,0],[659.25,.12],[783.99,.24],[1046.5,.38]].forEach(([f,d])=>{
+    const t=ctx.currentTime; const v=chimeVolFactor()*vol;
+    notes.forEach(([f,d])=>{
       const o=ctx.createOscillator(),g=ctx.createGain();
       o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);
-      g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.16,t+d+.02);
-      g.gain.exponentialRampToValueAtTime(.001,t+d+.8);o.start(t+d);o.stop(t+d+.9);
+      g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(v,t+d+.02);
+      g.gain.exponentialRampToValueAtTime(.001,t+d+dur);o.start(t+d);o.stop(t+d+dur+.1);
     });
   }catch(_){}
 }
-/* Sonidos de transición del ciclo de conversación continua (WebAudio puro,
-   sin archivos): el estado del turno se percibe también por audio.
+function chime(){ chimeTone([[523.25,0],[659.25,.12],[783.99,.24],[1046.5,.38]],.8,.16); }
+/* Sonidos de transición del ciclo de conversación continua:
    - chimePause(): doble pit corto descendente — el ciclo se pausa por silencio.
-   - chimeResume(): tono ascendente — se reabre el micrófono para tu turno. */
-function chimePause(){
-  try{
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const t=ctx.currentTime;
-    [[392,0],[311.13,.16]].forEach(([f,d])=>{ // Sol4 → Mi♭4: corto y descendente
-      const o=ctx.createOscillator(),g=ctx.createGain();
-      o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);
-      g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.14,t+d+.015);
-      g.gain.exponentialRampToValueAtTime(.001,t+d+.22);o.start(t+d);o.stop(t+d+.3);
-    });
-  }catch(_){}
-}
-function chimeResume(){
-  try{
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const t=ctx.currentTime;
-    [[392,0],[523.25,.12],[659.25,.24]].forEach(([f,d])=>{ // Sol4 → Do5 → Mi5: ascendente
-      const o=ctx.createOscillator(),g=ctx.createGain();
-      o.type='sine';o.frequency.value=f;o.connect(g);g.connect(ctx.destination);
-      g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(.15,t+d+.015);
-      g.gain.exponentialRampToValueAtTime(.001,t+d+.3);o.start(t+d);o.stop(t+d+.4);
-    });
-  }catch(_){}
-}
-function chimeDone(){
-  /* Tono breve y neutro: suena cuando la auto-parada capta tu frase y Aion
-     empieza a pensar — confirmación auditiva de que te ha oído aunque no
-     mires la pantalla. Una sola nota corta, sin subir ni bajar. */
-  try{
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const t=ctx.currentTime;
-    const o=ctx.createOscillator(),g=ctx.createGain();
-    o.type='sine';o.frequency.value=440;o.connect(g);g.connect(ctx.destination);
-    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.13,t+.015);
-    g.gain.exponentialRampToValueAtTime(.001,t+.22);o.start(t);o.stop(t+.28);
-  }catch(_){}
-}
+   - chimeResume(): tono ascendente — se reabre el micrófono para tu turno.
+   - chimeDone(): tono breve y neutro — tu frase fue captada, Aion piensa. */
+function chimePause(){ chimeTone([[392,0],[311.13,.16]],.22,.14); } // Sol4 → Mi♭4
+function chimeResume(){ chimeTone([[392,0],[523.25,.12],[659.25,.24]],.3,.15); } // Sol4 → Do5 → Mi5
+function chimeDone(){ chimeTone([[440,0]],.22,.13); } // La4 breve y neutro
 
 /* ---------- Verificación de integridad (arranque) ---------- */
 let integrityChecked=false;
@@ -5721,7 +5713,7 @@ async function autoConfigure(){
   let w=0; const bar=$('#bootBar');
   const iv=setInterval(()=>{ w+=Math.random()*22; if(w>=100){w=100;clearInterval(iv);}
     bar.style.width=w+'%'; },120);
-  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncAutoStopMicUI(); syncBreveUI(); syncContinuousUI(); syncTtsUI(); syncProxyUI(); syncCryptoUI(); syncAutoStartUI();
+  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncAutoStopMicUI(); syncBreveUI(); syncContinuousUI(); syncChimeUI(); syncTtsUI(); syncProxyUI(); syncCryptoUI(); syncAutoStartUI();
   autoConfigure();
   captureWelcomeES();
   renderWelcomeLang();
