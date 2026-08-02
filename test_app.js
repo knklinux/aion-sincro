@@ -878,6 +878,15 @@ await (async () => {
   check("sw.js precachea el núcleo (index + manifest + iconos)", swSrc.includes("./index.html") && swSrc.includes("manifest.webmanifest") && swSrc.includes("aion-512.png"));
   check("sw.js: navegación network-first con fallback offline", /req\.mode\s*===\s*['"]navigate['"]/.test(swSrc) && /caches\.match\(['"]\.\/index\.html['"]\)/.test(swSrc));
   check("sw.js: no cachea orígenes ajenos (guarda real de código)", swSrc.includes("if (url.origin !== self.location.origin) return;") && /caches\s*\.match\(req\)/.test(swSrc));
+
+  // ---------- Favicon real (.ico) para modo app nativo de Edge ----------
+  const ico = fs.existsSync(path.join(ROOT, "favicon.ico")) ? fs.readFileSync(path.join(ROOT, "favicon.ico")) : Buffer.alloc(0);
+  check("favicon.ico existe y es un ICO válido (cabecera 00 00 01 00)", ico.length >= 6 && ico[0] === 0 && ico[1] === 0 && ico[2] === 1 && ico[3] === 0);
+  check("favicon.ico contiene múltiples tamaños (>=5 frames)", ico.length >= 6 && ico.readUInt16LE(4) >= 5);
+  check("index.html enlaza favicon.ico como icono principal", /<link rel=\"icon\" href=\"favicon\.ico\"/.test(html));
+  check("manifest: id estable 'aion-sincro' (identidad PWA)", /\"id\"\s*:\s*\"aion-sincro\"/.test(manifestSrc));
+  check("título propio de la app en <title>", /<title>Aion Sincro · Compañera de Pentest y Red Team<\/title>/.test(html));
+  check("lanzador abre en modo app con --app= (ventana nativa)", fs.existsSync(path.join(ROOT, "windows", "aion-sincro.cmd")) && fs.readFileSync(path.join(ROOT, "windows", "aion-sincro.cmd"), "utf8").includes("--app=http://127.0.0.1:%PORT_APP%/index.html"));
   check("sw.js: limpieza de cachés antiguas en activate", /caches\s*\.keys\(\)/.test(swSrc) && /caches\s*\.delete\(k\)/.test(swSrc) && swSrc.includes("clients.claim"));
   check("index.html enlaza el manifest", html.includes('rel="manifest" href="manifest.webmanifest"'));
   check("index.html: theme-color y apple-touch-icon", html.includes('name="theme-color"') && html.includes('rel="apple-touch-icon" href="icons/aion-192.png"'));
