@@ -293,6 +293,25 @@ cd aion-sincro\windows
 install.cmd
 ```
 
+**Instalador unificado (`.exe`, Inno Setup)** — para el usuario final que
+quiere **un solo paso**: el ejecutable instala la app, genera el token,
+crea el acceso directo, **ancla el lanzador a la barra de tareas** y
+**activa el arranque automático** al iniciar Windows, todo sin permisos de
+administrador. Para compilarlo en tu máquina:
+
+```bat
+cd aion-sincro\windows
+compilar-instalador.cmd     rem instala Inno Setup via winget si falta
+```
+
+Genera `windows\dist\AionSincro-Setup.exe` (la fuente es
+`windows\aion-sincro-setup.iss`). Al desinstalar, limpia el acceso
+directo, desancla la barra de tareas y quita el arranque automático.
+
+> 💡 **Compilar desde CI**: el `.iss` usa rutas relativas, así que basta con
+> `iscc windows\aion-sincro-setup.iss` en un runner de Windows para
+> publicar el instalador en cada release.
+
 **Arrancar con doble clic** — después de instalar (o si ya tienes el acceso
 directo), haz doble clic en **`Aion Sincro.lnk`** del Escritorio. El
 lanzador:

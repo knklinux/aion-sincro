@@ -1093,6 +1093,40 @@ await (async () => {
   check("README: documenta anclar a la barra de tareas", readme.includes("anclar-barra-tareas.ps1") && readme.includes("Anclar a la barra de tareas"));
   check("README: explica el metodo del menu Inicio", readme.includes("menú Inicio")||readme.includes("menu Inicio"));
 
+  // ---------- Instalador unificado (Inno Setup) ----------
+  const issExists = fs.existsSync("windows/aion-sincro-setup.iss");
+  check("Instalador Inno .iss existe", issExists);
+  const iss = issExists ? fs.readFileSync("windows/aion-sincro-setup.iss","utf8") : "";
+  check("ISS: instala en LocalAppData\\AionSincro", iss.includes("DefaultDirName={localappdata}\\AionSincro"));
+  check("ISS: sin permisos de admin (PrivilegesRequired=lowest)", iss.includes("PrivilegesRequired=lowest"));
+  check("ISS: copia index.html y bridge.py", iss.includes('Source: "..\\index.html"') && iss.includes('Source: "..\\bridge.py"'));
+  check("ISS: copia el lanzador y los scripts PS1", iss.includes('Source: "aion-sincro.cmd"') && iss.includes('Source: "crear-acceso-directo.ps1"') && iss.includes('Source: "anclar-barra-tareas.ps1"') && iss.includes('Source: "crear-arranque-automatico.ps1"'));
+  check("ISS: copia el icono y el VBS", iss.includes('Source: "aion-sincro.ico"') && iss.includes('Source: "aion-sincro-startup.vbs"'));
+  check("ISS: [Run] genera el token con crear-token.ps1", iss.includes("crear-token.ps1"));
+  check("ISS: [Run] crea acceso directo", iss.includes("crear-acceso-directo.ps1"));
+  check("ISS: [Run] ancla a la barra de tareas", iss.includes("anclar-barra-tareas.ps1"));
+  check("ISS: [Run] instala arranque automatico (-Install)", iss.includes("crear-arranque-automatico.ps1\"\" -Install"));
+  check("ISS: [Run] ofrece abrir la app al terminar", iss.includes("postinstall nowait skipifsilent"));
+  check("ISS: [UninstallRun] desancla y quita el arranque", iss.includes("[UninstallRun]") && iss.includes("-Remove"));
+  check("ISS: [UninstallRun] borra el acceso directo del Escritorio", iss.includes("GetFolderPath('Desktop')") && iss.includes("Aion Sincro.lnk"));
+  check("ISS: [UninstallDelete] limpia token y venv", iss.includes("[UninstallDelete]") && iss.includes("token") && iss.includes(".venv-piper"));
+  check("ISS: OutputBaseFilename=AionSincro-Setup", iss.includes("OutputBaseFilename=AionSincro-Setup"));
+  check("ISS: AppId es un GUID estable", /AppId=\{\{[0-9A-Fa-f-]{36}\}/.test(iss));
+  check("crear-token.ps1 existe", fs.existsSync("windows/crear-token.ps1"));
+  const tokenPs1 = fs.existsSync("windows/crear-token.ps1") ? fs.readFileSync("windows/crear-token.ps1","utf8") : "";
+  check("crear-token.ps1: genera GUID sin guiones (32 hex)", tokenPs1.includes("ToString(\"N\")"));
+  check("crear-token.ps1: reutiliza si ya existe", tokenPs1.includes("Test-Path $tokenFile"));
+  check("compilar-instalador.cmd existe", fs.existsSync("windows/compilar-instalador.cmd"));
+  const comp = fs.existsSync("windows/compilar-instalador.cmd") ? fs.readFileSync("windows/compilar-instalador.cmd","utf8") : "";
+  check("compilador: extrae %ProgramFiles(x86)% a variable (evita romper for)", comp.includes("set \"PF86=%ProgramFiles(x86)%\""));
+  check("ISS: ASCII puro (cmd/ISCC leen ANSI)", !/[áéíóúñÁÉÍÓÚÑ¿¡]/.test(iss));
+  check("crear-token.ps1: ASCII puro", !/[áéíóúñÁÉÍÓÚÑ¿¡]/.test(tokenPs1));
+  check("compilador: busca ISCC.exe", comp.includes("ISCC.exe") && comp.includes("Inno Setup 6"));
+  check("compilador: instala Inno con winget si falta", comp.includes("winget install") && comp.includes("JRSoftware.InnoSetup"));
+  check("compilador: compila aion-sincro-setup.iss", comp.includes("aion-sincro-setup.iss"));
+  check("dist/ en .gitignore (instalador compilado no se sube)", (fs.existsSync(".gitignore")?fs.readFileSync(".gitignore","utf8"):"").includes("dist/"));
+  check("README: documenta el instalador unificado .exe", readme.includes("compilar-instalador.cmd") && readme.includes("AionSincro-Setup.exe"));
+
   // ---------- Boton 📎 Leer archivo en el chat ----------
   check("boton btnReadFile en el HTML", html.includes('id="btnReadFile"'));
   check("CSS de btnReadFile", html.includes("#btnReadFile{width:46px"));
