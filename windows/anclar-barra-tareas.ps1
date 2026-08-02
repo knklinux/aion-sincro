@@ -97,6 +97,10 @@ Write-Host "=== Anclando Aion Sincro (metodo menu Inicio) ==="
 $ws = New-Object -ComObject WScript.Shell
 $lnk = $ws.CreateShortcut($startMenuLnk)
 $lnk.TargetPath = $launcher
+# IMPORTANTE: limpiar Arguments SIEMPRE. Si el acceso anterior tenia args
+# viejos (p. ej. "/c ""...cmd""") y no se borran aqui, al guardar sobre el
+# mismo .lnk persisten y el clic invoca cmd dos veces (doble arranque).
+$lnk.Arguments = ""
 $lnk.WorkingDirectory = $appDir
 $lnk.IconLocation = $icon
 $lnk.Description = "Aion Sincro - Companion de Pentest y Red Team (arranca servicios + app)"

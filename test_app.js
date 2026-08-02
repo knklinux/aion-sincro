@@ -1088,6 +1088,9 @@ await (async () => {
   check("anclar: soporta -Remove para desanclar", pinSrc.includes("$Remove") && pinSrc.includes("-Remove"));
   check("anclar: limpia el acceso antiguo de User Pinned\\TaskBar", pinSrc.includes("User Pinned\\TaskBar") && pinSrc.includes("Remove-Item $oldTaskbarLnk"));
   check("anclar: icono aion-sincro.ico", pinSrc.includes("aion-sincro.ico"));
+  check("anclar: limpia Arguments al regenerar (evita doble cmd /c)", pinSrc.includes("$lnk.Arguments = \"\""));
+  const cadSrc = fs.existsSync("windows/crear-acceso-directo.ps1") ? fs.readFileSync("windows/crear-acceso-directo.ps1","utf8") : "";
+  check("crear-acceso-directo: limpia Arguments al regenerar", cadSrc.includes("$lnk.Arguments       = \"\""));
   check("anclar: ASCII puro (PowerShell 5.1)", !/[áéíóúñÁÉÍÓÚÑ¿¡]/.test(pinSrc));
   const readme=fs.readFileSync("README.md","utf8");
   check("README: documenta anclar a la barra de tareas", readme.includes("anclar-barra-tareas.ps1") && readme.includes("Anclar a la barra de tareas"));

@@ -59,6 +59,10 @@ if (-not (Test-Path $icoPath)) {
 $ws  = New-Object -ComObject WScript.Shell
 $lnk = $ws.CreateShortcut($lnkPath)
 $lnk.TargetPath      = Join-Path $src "aion-sincro.cmd"
+# Limpiar Arguments SIEMPRE: si el acceso anterior arrastraba args viejos
+# (p. ej. "/c ""...cmd"""), persistirian al guardar y el clic haria un
+# doble arranque de cmd (sintoma: una linea suelta "/c" en startup.log).
+$lnk.Arguments       = ""
 $lnk.WorkingDirectory = $appDir
 $lnk.IconLocation    = "$icoPath,0"
 $lnk.Description     = "Aion Sincro - Companera de Pentest y Coarquitecta del Plan de Rescate"
