@@ -1087,6 +1087,18 @@ await (async () => {
   check("README: documenta anclar a la barra de tareas", readme.includes("anclar-barra-tareas.ps1") && readme.includes("Anclar a la barra de tareas"));
   check("README: explica el metodo del menu Inicio", readme.includes("menú Inicio")||readme.includes("menu Inicio"));
 
+  // ---------- Boton 📎 Leer archivo en el chat ----------
+  check("boton btnReadFile en el HTML", html.includes('id="btnReadFile"'));
+  check("CSS de btnReadFile", html.includes("#btnReadFile{width:46px"));
+  check("function handleFileRead definida", script.includes("async function handleFileRead"));
+  check("handleFileRead usa bridgeRead", /const r=await bridgeRead\(rpath\)/.test(script));
+  check("handleFileRead muestra contenido truncado a 4000", script.includes("slice(0,4000)") && script.includes("archivo truncado"));
+  check("handleFileRead analiza con streamChat", script.includes("for await(const chunk of streamChat(store.provider") );
+  check("handleFileRead controla error de lectura", script.includes("No pude leer") && script.includes("r.error"));
+  check("handler btnReadFile con prompt", /\$\('#btnReadFile'\)\.onclick/.test(script) && script.includes("prompt('"));
+  check("handler llama a handleFileRead", script.includes("handleFileRead(path.trim())"));
+  check("handler valida ruta vacia", script.includes("if(path&&path.trim())"));
+
   // ---------- Resumen ----------
   console.log("\n" + "=".repeat(60));
   console.log(`RESULTADO: ${PASS} ok · ${FAIL} fallos`);

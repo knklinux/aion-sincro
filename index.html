@@ -360,6 +360,8 @@ body[data-state="listening"] .micBtn{background:radial-gradient(circle at 34% 30
 #textInput{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 16px;
   font-size:14px;outline:none;transition:.2s}
 #textInput:focus{border-color:rgba(245,165,36,.5);box-shadow:0 0 0 3px rgba(245,165,36,.1)}
+#btnReadFile{width:46px;flex:none;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);font-size:17px;color:var(--dim);cursor:pointer;transition:.2s}
+#btnReadFile:hover{border-color:rgba(245,165,36,.55);color:#ffd9a8;background:rgba(245,165,36,.08);transform:translateY(-1px)}
 #sendBtn{padding:0 20px;border-radius:12px;background:linear-gradient(135deg,#d97706,#92400e);
   color:#fff;font-size:14px;font-weight:600;transition:.2s;box-shadow:0 4px 18px rgba(217,119,6,.35)}
 #sendBtn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(217,119,6,.5)}
@@ -1099,6 +1101,7 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
   <footer class="controls">
     <button class="micBtn" id="micBtn" title="Mantén Espacio o pulsa para hablar" aria-label="Hablar o detener">🎙️</button>
     <div id="inputRow">
+      <button id="btnReadFile" title="📎 Leer un archivo del proyecto y analizarlo" aria-label="Leer un archivo del proyecto">📎</button>
       <input id="textInput" type="text" placeholder="Escribe o habla… (ej: ¿Quién eres?)" autocomplete="off">
       <button id="sendBtn" aria-label="Enviar mensaje">Enviar</button>
     </div>
@@ -3265,6 +3268,70 @@ async function bridgeRead(rpath){
     return await resp.json();
   }catch(e){ return {ok:false,error:e.message}; }
 }
+async function handleFileRead(rpath){
+  // Botón 📎 del chat: lee un archivo via el puente (/read) y lo analiza
+  // con el motor activo, mostrando el contenido en el chat como contexto.
+  rpath=(rpath||'').trim(); if(!rpath||streaming)return;
+  $('#textInput').value='';
+  streaming=true; stopSpeak();
+  abortCtrl=new AbortController();
+  setState('thinking'); $('#micBtn').textContent='✕'; $('#micBtn').title='Detener';
+  addMsg('user','📎 Leer archivo: '+esc(rpath));
+  const typing=addTyping();
+  store.history.push({role:'user',content:'📎 Leer archivo: '+rpath});
+  const r=await bridgeRead(rpath);
+  if(!r.ok){
+    typing.closest('.msg').remove();
+    const body=addMsg('ai','');
+    body.textContent='❌ No pude leer «'+esc(rpath)+'»: '+esc(r.error)+'.';
+    body.closest('.msg').classList.add('sys');
+    store.history.push({role:'assistant',content:body.textContent});
+    setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
+    streaming=false;
+    return;
+  }
+  // Mostrar el contenido (truncado a 4000 para no saturar el chat)
+  typing.closest('.msg').remove();
+  const body=addMsg('ai','');
+  const truncated=r.content.length>4000?r.content.slice(0,4000)+'\n\n── [archivo truncado: '+(r.content.length-4000)+' bytes más] ──':r.content;
+  body.textContent='📂 '+r.path+' ('+r.size+' bytes):\n\n'+truncated;
+  store.history.push({role:'assistant',content:body.textContent});
+  // Analizar el contenido con el motor activo.
+  // OJO: la historia ya contiene el contenido del archivo como mensaje
+  // assistant; usamos ...h (NO h.slice(0,-1)) para que el LLM reciba el
+  // archivo de verdad y pueda analizarlo.
+  const typing2=addTyping();
+  const h=store.history.slice(-14);
+  try{
+    const search=await runTools('analiza '+rpath);
+    const messages=[{role:'system',content:systemPrompt()},...h,{role:'user',content:search+'\n\nAnaliza el contenido del archivo '+rpath+' que acabo de mostrarte (mensaje anterior con el contenido): qué contiene, para qué sirve y qué hallazgos relevantes tiene para pentesting o red team si aplica.'}];
+    typing2.closest('.msg').remove();
+    const abody=addMsg('ai','');
+    const cursor=document.createElement('span');cursor.className='stream-cursor';abody.appendChild(cursor);
+    let acc='';
+    for await(const chunk of streamChat(store.provider,messages,abortCtrl.signal)){
+      acc+=chunk; cursor.before(document.createTextNode(chunk)); cursor.remove(); abody.appendChild(cursor);
+      $('#chatLog').scrollTop=$('#chatLog').scrollHeight;
+    }
+    cursor.remove();
+    if(!acc) abody.textContent='(Sin respuesta)';
+    else store.history.push({role:'assistant',content:acc});
+    setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
+    if(acc){ renderTermChips(abody, acc); speak(acc); }
+  }catch(err){
+    typing2.closest('.msg').remove();
+    if(err.name==='AbortError'){ $('#micBtn').textContent='🎙️'; return; }
+    const abody=addMsg('ai','');
+    abody.closest('.msg').classList.add('sys');
+    abody.closest('.msg').querySelector('.who').textContent='⚠ SISTEMA';
+    abody.textContent=providerError(store.provider,err);
+    setState('error'); $('#micBtn').textContent='🎙️';
+    // No hacemos pop: el contexto del archivo es legítimo y útil.
+  }finally{
+    streaming=false;
+    if(!speaking&&!listening&&document.body.dataset.state!=='error') setState('idle');
+  }
+}
 function termSubmit(){
   const input=$('#termInput');
   if(termBusy){ termKill(); return; }
@@ -5199,6 +5266,10 @@ function bind(){
   $('#btnResetLearn').onclick=()=>{ if(!confirm('¿Reiniciar todo el progreso de la Ruta Red Team?')) return; learnSave({}); renderLearn(); toast('↺ Progreso de la ruta reiniciado'); };
   $('#micBtn').onclick=toggleMic;
   $('#sendBtn').onclick=()=>handleUserText($('#textInput').value);
+  $('#btnReadFile').onclick=()=>{
+    const path=prompt('📎 Ruta del archivo (relativa al proyecto):','');
+    if(path&&path.trim()) handleFileRead(path.trim());
+  };
   $('#textInput').addEventListener('keydown',e=>{ if(e.key==='Enter')handleUserText($('#textInput').value); });
   $('#btnClear').onclick=clearChat;
   $('#btnTerminal').onclick=()=>{ switchTab('term'); termPing(); };
