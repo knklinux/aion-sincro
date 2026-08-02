@@ -4251,13 +4251,13 @@ function initRecog(){
         const resto=(m[3]||'').replace(/^[\s,.;:!¿?]+/,'').trim();
         if(resto.length>=2){
           // Frase completa: «Aion, abre el terminal» → ejecuta la petición directamente.
-          chime(); toast('🎙️ Ejecutando: '+resto);
+          chimeWake(); toast('🎙️ Ejecutando: '+resto);
           $('#textInput').value=resto;
           voiceInputFlag=true;
           setTimeout(()=>{ if(!streaming&&!speaking) handleUserText(resto); },400);
         }else{
           // Solo el wake word → queda a la escucha para la petición.
-          chime(); toast('🎙️ Te escucho. ¿Qué necesitas?');
+          chimeWake(); toast('🎙️ Te escucho. ¿Qué necesitas?');
           setTimeout(()=>{ if(!streaming&&!speaking) setListening(true); },300);
         }
       }
@@ -4271,7 +4271,7 @@ function initRecog(){
         const resto=(m[3]||'').replace(/^[\s,.;:!¿?]+/,'').trim();
         if(resto.length>=2){
           setListening(false); // Aion corta la escucha y toma la palabra
-          chime(); toast('🔔 Aion interrumpe: '+resto);
+          chimeWake(); toast('🔔 Aion interrumpe: '+resto);
           $('#textInput').value=resto;
           voiceInputFlag=true;
           setTimeout(()=>{ if(!streaming&&!speaking) handleUserText(resto); },300);
@@ -5570,6 +5570,7 @@ function chime(){ chimeTone([[523.25,0],[659.25,.12],[783.99,.24],[1046.5,.38]],
 function chimePause(){ chimeTone([[392,0],[311.13,.16]],.22,.14); } // Sol4 → Mi♭4
 function chimeResume(){ chimeTone([[392,0],[523.25,.12],[659.25,.24]],.3,.15); } // Sol4 → Do5 → Mi5
 function chimeDone(){ chimeTone([[440,0]],.22,.13); } // La4 breve y neutro
+function chimeWake(){ chimeTone([[523.25,0],[783.99,.1],[1046.5,.2]],.24,.15); } // Do5 → Sol5 → Do6: despertar ascendente
 
 /* ---------- Verificación de integridad (arranque) ---------- */
 let integrityChecked=false;

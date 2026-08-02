@@ -366,6 +366,14 @@ check("continuousCycle() definida", /function\s+continuousCycle\s*\(/.test(scrip
   check("chimeDone() suena en la auto-parada del turno (sin romper setListening)", /if\(store\.autoStopMic&&listening\)\{ setListening\(false\); chimeDone\(\); \}/.test(script));
   check("chimeDone() solo con auto-parada de voz (antes de handleUserText)", /if\(store\.autoStopMic&&listening\)\{ setListening\(false\); chimeDone\(\); \}\s*voiceInputFlag=true;\s*handleUserText\(final\);/.test(script));
   check("chimeDone() no se engancha en los caminos de wake word (única llamada en la auto-parada)", (script.match(/chimeDone\(\);\s*\}/g)||[]).length===1 && script.includes("if(store.autoStopMic&&listening){ setListening(false); chimeDone(); }"));
+  // Tono de despertar de la hotword (chimeWake) — audio confirma que Aion te escucha
+  check("chimeWake() definido (Do5→Sol5→Do6 ascendente)", script.includes("function chimeWake(){ chimeTone([[523.25,0],[783.99,.1],[1046.5,.2]],.24,.15); }"));
+  check("chimeWake() usa chimeTone (mismo volumen central que los demás chimes)", /function\s+chimeWake\(\)\{ chimeTone\(/.test(script));
+  check("chimeWake() suena en la frase completa del wake word («Aion, abre…»)", /chimeWake\(\); toast\('🎙️ Ejecutando: '\+resto\);/.test(script));
+  check("chimeWake() suena al detectar solo el wake word (a la escucha)", /chimeWake\(\); toast\('🎙️ Te escucho\. ¿Qué necesitas\?'\);/.test(script));
+  check("chimeWake() suena en la interrupción mutua (Aion interrumpe)", /setListening\(false\);\s*\/\/[^\n]*\s*chimeWake\(\); toast\('🔔 Aion interrumpe: '\+resto\);/.test(script));
+  check("chimeWake() se llama 3 veces (3 caminos del wake word, no más)", (script.match(/chimeWake\(\); toast\('/g)||[]).length===3);
+  check("chimeWake() no sustituye a chimeResume/chimePause (cada sonido su propio momento)", script.includes("function chimeWake(){") && script.includes("function chimeResume(){") && script.includes("function chimePause(){") && script.includes("function chimeDone(){"));
   // Control de volumen de los chimes (Ajustes → Voz)
   check("store default chimeVol:70 y chimeMute:false", script.includes("turnTimeout:4, chimeVol:70, chimeMute:false,"));
   check("chimeVolFactor() respeta mute y volumen (0-1)", script.includes("function chimeVolFactor(){") && script.includes("if(store.chimeMute) return 0;") && script.includes("Math.max(0,Math.min(1,(+store.chimeVol||70)/100))"));
