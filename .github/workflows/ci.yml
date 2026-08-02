@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Versiones
+        run: node --version && python --version
+        shell: bash
+
+      - name: "[1/4] Seguridad de puentes (bridge.py + bridge.mjs)"
+        run: python test_bridge.py
+        shell: bash
+
+      - name: "[2/4] App (sintaxis JS, secretos, funciones)"
+        run: node test_app.js
+        shell: bash
+
+      - name: "[3/4] Mutación (la regresión WebCrypto protege)"
+        run: python test_mutacion.py
+        shell: bash
+
+      - name: "[4/4] Módulo OSINT (funciones puras + CLI offline)"
+        run: python test_aion_osint.py
+        shell: bash
+
+      - name: "Sin secretos en fuentes (escaneo estático)"
+        run: |
+          echo "Revisando secretos en codigo fuente..."
+          HITS=$(grep -rniE "sk-[A-Za-z0-9]{20}|ghp_[A-Za-z0-9]{20}|gsk_[A-Za-z0-9]{20}|hf_[A-Za-z0-9]{20}" \
+            --include="*.html" --include="*.py" --include="*.mjs" --include="*.js" --include="*.cmd" --include="*.sh" \
+            . 2>/dev/null | grep -v node_modules | grep -v test_ || true)
+          if [ -n "$HITS" ]; then
+            echo "SECRETOS DETECTADOS:"
+            echo "$HITS"
+            exit 1
+          fi
+          echo "OK: sin secretos en fuentes"
+        shell: bash

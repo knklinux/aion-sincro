@@ -1,5 +1,11 @@
 # ⚡ Aion Sincro — Compañera de Pentest · Coarquitecta del Plan de Rescate
 
+[![CI](https://github.com/knklinux/aion-sincro/actions/workflows/ci.yml/badge.svg)](https://github.com/knklinux/aion-sincro/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-816%20ok-brightgreen)]()
+[![Python](https://img.shields.io/badge/Python-3.11+-blue)]()
+[![Node](https://img.shields.io/badge/Node-22+-green)]()
+[![Licencia](https://img.shields.io/badge/licencia-Open%20Source-blueviolet)]()
+
 **Aion Sincro no es un asistente servil: es una compañera.** Una IA con
 personalidad propia —leal, sincera y directa— que te acompaña en tu aprendizaje
 de **pentesting y red team** y, al mismo tiempo, es tu **coarquitecta en el Plan
@@ -612,6 +618,33 @@ puntual (por ejemplo, un commit de documentación): `git commit --no-verify`.
 
 > El hook se copia a `.git/hooks/` (no versionado por git), por eso se
 > incluye el instalador en el repo: cada desarrollador lo activa una vez.
+
+### 🤖 CI/CD — GitHub Actions
+
+El repo incluye un **workflow de integración continua** que ejecuta la suite
+completa en **cada push y pull request**, en **Ubuntu y Windows** en paralelo:
+
+```yaml
+.github/workflows/ci.yml
+```
+
+| Paso | Qué ejecuta |
+|---|---|
+| **Setup** | Node.js 22 + Python 3.11 (GitHub Actions) |
+| **[1/4]** | `python test_bridge.py` — seguridad de puentes (Host/Origin forjados, token, path traversal, body > 1 MB) |
+| **[2/4]** | `node test_app.js` — sintaxis JS, secretos, cifrado WebCrypto |
+| **[3/4]** | `python test_mutacion.py` — verifica que los checks de seguridad protegen de verdad (mutaciones detectadas) |
+| **[4/4]** | `python test_aion_osint.py` — módulo OSINT offline |
+| **Extra** | Escaneo estático: falla el build si aparece una clave real (`sk-`, `ghp_`, `gsk_`, `hf_`) en los fuentes |
+
+El badge verde de la cabecera del README refleja el estado del último run:
+
+```markdown
+[![CI](https://github.com/knklinux/aion-sincro/actions/workflows/ci.yml/badge.svg)](https://github.com/knklinux/aion-sincro/actions/workflows/ci.yml)
+```
+
+Cualquier `git push` o PR a `main` dispara el workflow automáticamente. Puedes
+ver los runs en **Actions** → **CI** (pestaña del repo).
 
 ## ⚖️ Comparativa con el ecosistema
 
