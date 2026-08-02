@@ -3334,7 +3334,7 @@ async function handleFileRead(paths, opts){
     const intro=files.length===1
       ? 'Analiza el contenido del archivo '+label+' que acabo de mostrarte (mensaje anterior con el contenido): qué contiene, para qué sirve y qué hallazgos relevantes tiene para pentesting o red team si aplica.'
       : 'Te he mostrado el contenido de '+files.length+' archivos: '+label+'. Analízalos: qué contiene cada uno, compáralos si aplica, qué hallazgos relevantes tienen para pentesting o red team, y si hay relación entre ellos.';
-    const messages=[{role:'system',content:systemPrompt()},...h,{role:'user',content:search+'\n\n'+intro}];
+    const messages=[{role:'system',content:systemPrompt()},...cleanMsgs(h),{role:'user',content:search+'\n\n'+intro}];
     typing2.closest('.msg').remove();
     const abody=addMsg('ai','');
     const cursor=document.createElement('span');cursor.className='stream-cursor';abody.appendChild(cursor);
@@ -4668,6 +4668,13 @@ async function* streamChat(provider,messages,signal){
   }
 }
 
+function cleanMsgs(h){
+  /* Los mensajes del historial llevan metadatos para el acta (via, ts) que
+     Mistral rechaza con HTTP 422. Antes de enviarlos al motor, devolvemos
+     solo {role, content} — el API espera exactamente ese formato. */
+  return (h||[]).map(m=>({role:m.role,content:m.content})).filter(m=>m.role&&typeof m.content==='string');
+}
+
 /* ---------- Conmutación automática de motor (failover) ----------
    Si el motor principal falla con un error de proveedor (HTTP 401/403/429/5xx,
    cuota agotada, rate-limit o caída de red), Aion reintenta la misma petición
@@ -4839,7 +4846,7 @@ async function handleUserText(text){
   const h=store.history.slice(-14);
   try{
     const search=await runTools(text);
-    const messages=[{role:'system',content:systemPrompt()},...h.slice(0,-1),{role:'user',content:search+'\n\n'+text}];
+    const messages=[{role:'system',content:systemPrompt()},...cleanMsgs(h.slice(0,-1)),{role:'user',content:search+'\n\n'+text}];
     typing.closest('.msg').remove();
     const body=addMsg('ai','');
     const cursor=document.createElement('span');cursor.className='stream-cursor';body.appendChild(cursor);

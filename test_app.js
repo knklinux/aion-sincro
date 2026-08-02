@@ -244,6 +244,12 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("voiceInputFlag se activa al hablar por el micrófono", /voiceInputFlag=true;\s*handleUserText\(final\);/.test(script) && script.includes("voiceInputFlag=true;"));
   check("respuestas del asistente guardan timestamp (ts:Date.now())", (script.match(/store\.history\.push\(\{role:'assistant',content:acc,ts:Date\.now\(\)\}\);/g)||[]).length>=2);
   check("sessionActaMd() definida", /function\s+sessionActaMd\s*\(/.test(script));
+  // Regresión del bug HTTP 422: los metadatos del acta (via, ts) rompen el API de Mistral
+  check("cleanMsgs() purga metadatos (via/ts) antes de enviar al motor", /function cleanMsgs\(h\)\{/.test(script) && script.includes("(h||[]).map(m=>({role:m.role,content:m.content}))"));
+  check("cleanMsgs() filtra mensajes sin content string", script.includes("filter(m=>m.role&&typeof m.content==='string')"));
+  check("cleanMsgs() usada en el chat principal (historial limpio)", script.includes("cleanMsgs(h.slice(0,-1))"));
+  check("cleanMsgs() usada en /read (historial limpio)", script.includes("cleanMsgs(h)"));
+  check("regresión 422: ningún streamChat recibe el historial con metadatos crudos", !/streamChatWithFailover\(\{role:'system'[\s\S]{0,120}?\.\.\.h\.slice\(0,-1\)/.test(script) && !/streamChatWithFailover\(\{role:'system'[\s\S]{0,120}?\.\.\.h\,\{role:'user'/.test(script));
   check("sessionActaMd() incluye estadísticas de sesión y transcripción", /## \$\{L\.meta\}[\s\S]*?## '\+L\.trans/.test(script) && /m\.via==='voice'\?' 🎙️':' 📝'/.test(script));
   check("sessionActaMd() escapa/vacía contenido sin romper Markdown", /String\(m\.content\)\.replace\(\/\\n\{3,\}/.test(script));
   check("botones de acta en el footer de la Ruta", html.includes('id="btnActaMd"') && html.includes('id="btnActaPdf"'));
