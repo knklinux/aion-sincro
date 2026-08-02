@@ -1387,6 +1387,8 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
       <div class="lf-left">
         <small id="learnProgress">0/0 checkpoints</small>
         <button id="btnCert" title="Genera tu certificado de la Ruta Red Team (informe de progreso exportable)">📜 Certificado</button>
+        <button id="btnActaMd" title="Exporta la transcripción de esta sesión como acta de práctica (Markdown)">📋 Acta (MD)</button>
+        <button id="btnActaPdf" title="Exporta la transcripción de esta sesión como acta de práctica (PDF)">📋 Acta (PDF)</button>
         <button id="btnResetLearn" title="Reiniciar todo el progreso de la ruta">↺ Reiniciar progreso</button>
       </div>
       <button id="btnCloseLearn">ENTENDER · CERRAR</button>
@@ -2758,6 +2760,55 @@ function certNameInput(){
   const el=$('#certName');
   return el?el.value.trim():'';
 }
+function sessionActaMd(){
+  /* Acta de la sesión de práctica: transcripción de la conversación (con
+     turnos de voz marcados con 🎙️), estadísticas de la sesión y resumen.
+     Se construye desde store.history — nunca persiste datos fuera del repo. */
+  const en=reportIsEn();
+  const h=store.history||[];
+  const fecha=new Date().toLocaleDateString(en?'en-US':(store.lang||'es-ES'),{year:'numeric',month:'long',day:'numeric'})
+    +' · '+new Date().toLocaleTimeString(en?'en-US':(store.lang||'es-ES'),{hour:'2-digit',minute:'2-digit'});
+  const voiceCount=h.filter(m=>m&&m.via==='voice').length;
+  const turns=h.filter(m=>m&&m.role==='user').length;
+  const msgs=h.filter(m=>m&&m.content).length;
+  const dur=pracSession()&&pracSession().start?Date.now()-pracSession().start:null;
+  const L={
+    title:en?'Practice Session — Minutes (Acta)':'Acta de Sesión de Práctica',
+    sub:en?'Voice conversation transcript · Aion Sincro':'Transcripción de la conversación por voz · Aion Sincro',
+    meta:en?'Session data':'Datos de la sesión',
+    fecha:en?'Date':'Fecha',
+    turns:en?'Turns':'Turnos',
+    voice:en?'Voice turns':'Turnos de voz',
+    msgs:en?'Messages':'Mensajes',
+    dur:en?'Active practice session':'Sesión de práctica activa',
+    streak:en?'Streak':'Racha',
+    avg:en?'Average time':'Tiempo medio',
+    trans:en?'Transcript':'Transcripción',
+    foot:en?'Minutes generated with Aion Sincro — free & open-source · authorized labs only.':'Acta generada con Aion Sincro — gratuito y de código abierto · solo laboratorios autorizados.'
+  };
+  let md=`# ${L.title}\n\n> ${L.sub}\n\n## ${L.meta}\n\n`;
+  md+=`| ${L.fecha} | ${fecha} |\n`;
+  md+=`| ${L.turns} | ${turns} |\n`;
+  md+=`| ${L.voice} (🎙️) | ${voiceCount} |\n`;
+  md+=`| ${L.msgs} | ${msgs} |\n`;
+  md+=`| ${L.streak} | 🔥 ${pracStreak()} ${en?'days':'días'} |\n`;
+  md+=`| ${L.avg} | ${fmtPrac(pracAvgMs())} |\n`;
+  if(dur) md+=`| ${L.dur} | ${fmtPrac(dur)} |\n`;
+  md+='\n## '+L.trans+'\n\n';
+  let n=0;
+  for(const m of h){
+    if(!m||!m.content) continue;
+    n++;
+    const who=m.role==='user'?(en?'**You**':'**Tú**'):(en?'**Aion**':'**Aion**');
+    const voice=m.via==='voice'?' 🎙️':' 📝';
+    const ts=m.ts?new Date(m.ts).toLocaleTimeString(en?'en-US':(store.lang||'es-ES'),{hour:'2-digit',minute:'2-digit'}):'';
+    const clean=String(m.content).replace(/\n{3,}/g,'\n\n').trim();
+    md+=`### ${n}. ${who}${voice}${ts?' · '+ts:''}\n\n${clean}\n\n`;
+  }
+  if(!n) md+='_'+(en?'No conversation recorded yet.':'Aún no hay conversación registrada.')+'_\n\n';
+  md+='---\n*'+L.foot+'*\n';
+  return md;
+}
 function renderCert(){
   const body=$('#certBody'); if(!body) return;
   const en=isEnglish(); const st=certStats();
@@ -3254,7 +3305,7 @@ async function handleFileRead(paths, opts){
     }
     cursor.remove();
     if(!acc) abody.textContent='(Sin respuesta)';
-    else store.history.push({role:'assistant',content:acc});
+    else store.history.push({role:'assistant',content:acc,ts:Date.now()});
     setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
     if(acc){ renderTermChips(abody, acc); speak(acc); }
   }catch(err){
@@ -4147,6 +4198,7 @@ function renderTermChips(bodyEl,text){
 /* ---------- Reconocimiento de voz (Chrome/Edge, gratis) ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let recog=null, listening=false, wakeScan=false, wakeTimer=null, wakeDenied=false;
+let voiceInputFlag=false; // true cuando el turno del usuario viene del micrófono (para el acta)
 function initRecog(){
   if(!SR){ $('#micBtn').style.display='none';
     toast('Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge, o escribe directamente.'); return; }
@@ -4174,6 +4226,7 @@ function initRecog(){
           // Frase completa: «Aion, abre el terminal» → ejecuta la petición directamente.
           chime(); toast('🎙️ Ejecutando: '+resto);
           $('#textInput').value=resto;
+          voiceInputFlag=true;
           setTimeout(()=>{ if(!streaming&&!speaking) handleUserText(resto); },400);
         }else{
           // Solo el wake word → queda a la escucha para la petición.
@@ -4193,6 +4246,7 @@ function initRecog(){
           setListening(false); // Aion corta la escucha y toma la palabra
           chime(); toast('🔔 Aion interrumpe: '+resto);
           $('#textInput').value=resto;
+          voiceInputFlag=true;
           setTimeout(()=>{ if(!streaming&&!speaking) handleUserText(resto); },300);
           return;
         }
@@ -4206,6 +4260,7 @@ function initRecog(){
       /* Auto-parada: al terminar de hablar, el micrófono se detiene solo
          (store.autoStopMic) — no hace falta pulsarlo para que pare. */
       if(store.autoStopMic&&listening) setListening(false);
+      voiceInputFlag=true;
       handleUserText(final);
     }
   };
@@ -4564,7 +4619,8 @@ async function handleUserText(text){
   setState('thinking'); $('#micBtn').textContent='✕'; $('#micBtn').title='Detener';
   addMsg('user',esc(text));
   const typing=addTyping();
-  store.history.push({role:'user',content:text});
+  store.history.push({role:'user',content:text,via:voiceInputFlag?'voice':'text',ts:Date.now()});
+  voiceInputFlag=false;
   /* Comando /read: «lee X», «analiza X», «léeme X», «abre X».
      Aion lee el archivo via el puente y lo incluye como contexto
      en el chat para poder discutirlo contigo. */
@@ -4666,7 +4722,7 @@ async function handleUserText(text){
     }
     cursor.remove();
     if(!acc){ body.textContent='(Sin respuesta)'; store.history.pop(); }
-    else store.history.push({role:'assistant',content:acc});
+    else store.history.push({role:'assistant',content:acc,ts:Date.now()});
     setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
     if(acc){ renderTermChips(body, acc); speak(acc); }
   }catch(err){
@@ -5019,6 +5075,8 @@ function bind(){
   $('#evalRetake').onclick=()=>{ evalState.done=false; evalState.answers={}; evalSave(); renderEval(); };
   $('#btnCert').onclick=openCert;
   $('#btnCloseCert').onclick=()=>{ const o=$('#certOverlay'); if(o) o.classList.remove('show'); };
+  $('#btnActaMd').onclick=()=>{ const md=sessionActaMd(); downloadMarkdown(md,'acta-sesion-practica'); };
+  $('#btnActaPdf').onclick=()=>{ const md=sessionActaMd(); exportPdf(md,'Acta de Sesión de Práctica'); };
   $('#certExportMd').onclick=()=>{ const md=certMarkdown(); downloadMarkdown(md,'certificado-ruta-red-team'); };
   $('#certExportPdf').onclick=()=>{ const md=certMarkdown(); exportPdf(md,'Certificado Ruta Red Team'); };
   $('#btnISO').onclick=openISO;

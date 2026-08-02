@@ -237,9 +237,17 @@ check("fmtPrac() formatea m:ss y h:mm", /function\s+fmtPrac\s*\([^)]*\)\{[\s\S]*
 check("pracStatsHtml() dibuja la barra con racha/media/sesiones", /function\s+pracStatsHtml\s*\([^)]*\)\{[\s\S]*?pracStreak\(\)[\s\S]*?prac-bar[\s\S]*?pracAvgMs\(\)/.test(script));
 check("renderLearn() antepone la barra de práctica", /body\.innerHTML=pracStatsHtml\(\)\+body\.innerHTML;/.test(script));
 check("learnPractice() inicia el temporizador", /function\s+learnPractice\s*\([^)]*\)\{[\s\S]*?pracStart\(id\);/.test(script));
-check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\([^)]*\)\{[\s\S]*?pracFinish\(id\)/.test(script));
-check("toast muestra el tiempo y la racha", script.includes("'✅ Completado en ')+fmtPrac(ms)") && script.includes("pracStreak()"));
-check("tick en vivo arranca/para con la Ruta", /btnLearn'\)\.onclick=\(\)=>\{ renderLearn\(\);.*classList\.add\('show'\)[\s\S]*?pracTickStart\(\);/.test(script) && /btnCloseLearn'\)\.onclick=\(\)=>\{ pracTickStop\(\);[\s\S]*?classList\.remove\('show'\);/.test(script));
+check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\([^)]*\)\{[\s\S]*?pracFinish\(id\)/.test(script));  check("toast muestra el tiempo y la racha", script.includes("'✅ Completado en ')+fmtPrac(ms)") && script.includes("pracStreak()"));
+  check("tick en vivo arranca/para con la Ruta", /btnLearn'\)\.onclick=\(\)=>\{ renderLearn\(\);.*classList\.add\('show'\)[\s\S]*?pracTickStart\(\);/.test(script) && /btnCloseLearn'\)\.onclick=\(\)=>\{ pracTickStop\(\);[\s\S]*?classList\.remove\('show'\);/.test(script));
+  // Acta de sesión de práctica: transcripción de voz exportable (MD/PDF)
+  check("turnos de voz marcados en el historial (via:'voice')", /store\.history\.push\(\{role:'user',content:text,via:voiceInputFlag\?'voice':'text',ts:Date\.now\(\)\}\);/.test(script));
+  check("voiceInputFlag se activa al hablar por el micrófono", /voiceInputFlag=true;\s*handleUserText\(final\);/.test(script) && script.includes("voiceInputFlag=true;"));
+  check("respuestas del asistente guardan timestamp (ts:Date.now())", (script.match(/store\.history\.push\(\{role:'assistant',content:acc,ts:Date\.now\(\)\}\);/g)||[]).length>=2);
+  check("sessionActaMd() definida", /function\s+sessionActaMd\s*\(/.test(script));
+  check("sessionActaMd() incluye estadísticas de sesión y transcripción", /## \$\{L\.meta\}[\s\S]*?## '\+L\.trans/.test(script) && /m\.via==='voice'\?' 🎙️':' 📝'/.test(script));
+  check("sessionActaMd() escapa/vacía contenido sin romper Markdown", /String\(m\.content\)\.replace\(\/\\n\{3,\}/.test(script));
+  check("botones de acta en el footer de la Ruta", html.includes('id="btnActaMd"') && html.includes('id="btnActaPdf"'));
+  check("btnActaMd/PDF exportan con sessionActaMd()", script.includes("$('#btnActaMd').onclick=()=>{ const md=sessionActaMd(); downloadMarkdown(md,'acta-sesion-practica'); };") && script.includes("$('#btnActaPdf').onclick=()=>{ const md=sessionActaMd(); exportPdf(md,'Acta de Sesión de Práctica'); };"));
 // Modo Laboral: informes profesionales exportables en Markdown/PDF
 check("LABORAL_SYSTEM definido con anatomía de informe", /const LABORAL_SYSTEM=`[\s\S]*?## 3\. Hallazgos[\s\S]*?REPORTE EJECUTIVO/.test(script));
 check("store persiste laboral:false", /laboral:false,/.test(script));
@@ -307,8 +315,7 @@ check("bind: btnBreve alterna store.breve", /\$\('#btnBreve'\)\.onclick=\(\)=>\{
 check("syncAutoStopMicUI definida y llamada en boot", /function\s+syncAutoStopMicUI/.test(script) && script.includes("syncAutoStopMicUI();"));
 check("syncBreveUI definida y llamada en boot", /function\s+syncBreveUI/.test(script) && script.includes("syncBreveUI();"));
 // Auto-parada: al terminar la frase, si autoStopMic está activo, setListening(false)
-check("auto-parada: final de frase detiene el micrófono solo", script.includes("if(store.autoStopMic&&listening) setListening(false);"));
-check("auto-parada: se aplica antes de procesar la frase", /if\(store\.autoStopMic&&listening\) setListening\(false\);\s*handleUserText\(final\);/.test(script));
+check("auto-parada: final de frase detiene el micrófono solo", script.includes("if(store.autoStopMic&&listening) setListening(false);"));  check("auto-parada: se aplica antes de procesar la frase", /if\(store\.autoStopMic&&listening\) setListening\(false\);\s*voiceInputFlag=true;\s*handleUserText\(final\);/.test(script));
 // Respuestas breves: instrucción en systemPrompt + cap de tokens en streamChat
 check("breve: systemPrompt añade MODO BREVE", script.includes("if(store.breve&&!store.laboral&&!store.pentest) base+="));
 check("breve: cap de max_tokens en streamChat", script.includes("if(store.breve&&!store.laboral&&!store.pentest&&provider!=='demo'&&provider!=='ollama'&&provider!=='huggingface')") && script.includes("if(!body.max_tokens) body.max_tokens=220;"));
