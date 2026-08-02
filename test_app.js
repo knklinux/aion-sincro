@@ -910,7 +910,7 @@ await (async () => {
   const installCmd = fs.existsSync(path.join(ROOT, "windows", "install.cmd")) ? fs.readFileSync(path.join(ROOT, "windows", "install.cmd"), "utf8") : "";
   check("windows/serve.js existe (respaldo sin Python)", serveJs.length > 0);
   check("lanzador usa node %~dp0serve.js (resuelve en repo e instalado)", launcherSrc.includes("%~dp0serve.js") && !/node -e "const http/.test(launcherSrc));
-  check("lanzador usa timeout.exe con ruta completa (retardo real, sin GNU timeout)", launcherSrc.includes("%SystemRoot%\\System32\\timeout.exe /t 1 /nobreak") && launcherSrc.includes("%SystemRoot%\\System32\\timeout.exe /t 2 /nobreak") && !launcherSrc.includes("timeout /t") && !launcherSrc.includes("ping -n"));
+  check("lanzador usa ping -n como retardo (funciona sin stdin, ideal para el VBS oculto)", launcherSrc.includes("%SystemRoot%\\System32\\ping.exe -n 2 127.0.0.1") && launcherSrc.includes("%SystemRoot%\\System32\\ping.exe -n 3 127.0.0.1") && !launcherSrc.includes("timeout /t"));
   check("serve.js: solo 127.0.0.1 (micrófono/Web Speech)", serveJs.includes('"127.0.0.1"'));
   check("serve.js: barrera de path traversal", serveJs.includes("f.startsWith(ROOT + path.sep)"));
   check("serve.js: decodeURIComponent con try/catch (sin crash por URL malformada)", serveJs.includes("decodeURIComponent") && serveJs.includes("catch"));
@@ -1033,6 +1033,19 @@ await (async () => {
   const cmd=fs.readFileSync("windows/aion-sincro.cmd","utf8");
   check("CMD en startup no abre navegador", cmd.includes('"%STARTUP_MODE%"=="0"') && cmd.includes("start \"\" \"http"));
   check("CMD en startup no muestra banner", cmd.includes('STARTUP_MODE%")=="0" (')||cmd.includes('STARTUP_MODE%"=="0" ('));
+  // ---------- Log de arranque (startup.log) ----------
+  check("CMD define STARTUP_LOG", cmd.includes('set "STARTUP_LOG='));
+  check("CMD rota el log si supera 256KB", /if exist \"%STARTUP_LOG%\" for .*GTR 262144 del/.test(cmd));
+  check("CMD tiene subrutina :log", cmd.includes(":log") && cmd.includes('exit /b 0'));
+  check("CMD :log escribe con marca de tiempo", cmd.includes('[%date% %time%]'));
+  check("CMD :log escribe en STARTUP_LOG", cmd.includes('>> "%STARTUP_LOG%" echo'));
+  check("CMD loguea la carpeta y los puertos", cmd.includes('call :log "Carpeta:') && cmd.includes('call :log "Puertos:'));
+  check("CMD loguea el servidor web", cmd.includes('call :log "Web:'));
+  check("CMD loguea el puente y su estado final", cmd.includes('call :log "Puente:') && cmd.includes('Puente: conectado en'));
+  check("CMD loguea Piper detectado/no detectado", cmd.includes('call :log "Piper: arrancado') && cmd.includes('call :log "Piper: no detectado'));
+  check("CMD loguea el fin de arranque", cmd.includes('call :log "Fin de arranque'));
+  check("CMD loguea en modo normal y startup", cmd.includes('arranque silencioso') && cmd.includes('call :log "Modo: %STARTUP_MODE%'));
+  check("startup.log en .gitignore", (fs.existsSync(".gitignore")?fs.readFileSync(".gitignore","utf8"):"").includes("startup.log"));
 
   // ---------- Fase 2.4: endpoint /read (leer archivos del proyecto) ----------
   check("bridgeRead definida", script.includes("async function bridgeRead"));

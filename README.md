@@ -322,6 +322,17 @@ set AION_APP_PORT=9090       rem web (por defecto 8080)
 set AION_BRIDGE_PORT=8766    rem puente (por defecto 8765)
 ```
 
+**🔍 Log de arranque (`startup.log`)** — el lanzador escribe siempre un log
+junto a la app (en `%LOCALAPPDATA%\AionSincro\startup.log` si está
+instalada, o en la raíz del repo en modo desarrollo) con **marca de tiempo**
+y el **estado de cada servicio**: web, puente (con su resultado final de
+conexión), Piper y el fin de arranque. Es la única forma de diagnosticar un
+fallo en el **arranque automático al iniciar Windows** (modo silencioso
+`AION_STARTUP=1`, sin ventana de consola): si la app no responde al hacer
+clic en el icono anclado, abre `startup.log` y mira la última línea de cada
+servicio. Se rota automáticamente si supera 256 KB y **no se sube al repo**
+(está en `.gitignore`).
+
 **Desinstalar** — detiene el servidor y el puente, borra la carpeta
 instalada, el token y el acceso directo:
 
