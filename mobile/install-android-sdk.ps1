@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Instalador automatizado de JDK 17 + Android SDK CLI tools para Windows.
   Prepara el entorno necesario para compilar el APK de Aion Sincro.
@@ -86,23 +86,42 @@ $javaCmd  = $null    if ($javaHome -and (Test-Path "$($javaHome)\bin\javac.exe")
 
 if (-not $javaCmd) {
     # Descargar e instalar Temurin JDK 17 MSI
-    $jdkUrl = "https://api.adoptium.net/v3/installer/latest/$JdkVersion/ga/windows/x64/jdk/hotspot/normal/eclipse"
+    # La API de Adoptium requiere User-Agent (devuelve 403 sin él).
+    # También probamos la descarga directa desde GitHub como fallback.
     $jdkMsi = "$($env:TEMP)\Temurin-jdk$($JdkVersion).msi"
 
-    Write-Info "Descargando Temurin JDK $JdkVersion..."
-    try {
-        # La API redirige al MSI real
-        Invoke-WebRequest -Uri $jdkUrl -OutFile $jdkMsi -UseBasicParsing
-    } catch {
-        # Fallback: URL directa conocida
-        $directUrl = "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jdk_x64_windows_hotspot_17.0.12_7.msi"
-        Write-Warn "API de Adoptium falló — intentando descarga directa desde GitHub..."
-        Invoke-WebRequest -Uri $directUrl -OutFile $jdkMsi -UseBasicParsing
+    # Construir URLs de descarga (API + fallback directo de GitHub)
+    $jdkUrls = @()
+    $jdkUrls += "https://api.adoptium.net/v3/installer/latest/$JdkVersion/ga/windows/x64/jdk/hotspot/normal/eclipse"
+    # Fallback: URL directa de GitHub (respeta $JdkVersion para la build conocida)
+    if ($JdkVersion -eq 17) {
+        $jdkUrls += "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jdk_x64_windows_hotspot_17.0.12_7.msi"
+    } elseif ($JdkVersion -eq 21) {
+        $jdkUrls += "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jdk_x64_windows_hotspot_21.0.5_11.msi"
+    } else {
+        Write-Warn "No hay URL de fallback para JDK $JdkVersion — solo se usará la API de Adoptium."
     }
 
-    if (-not (Test-Path $jdkMsi)) {
+    $downloaded = $false
+    foreach ($u in $jdkUrls) {
+        # Limpiar archivo residual del intento anterior
+        Remove-Item $jdkMsi -Force -ErrorAction SilentlyContinue
+        Write-Info "Descargando Temurin JDK $JdkVersion desde: $u"
+        try {
+            Invoke-WebRequest -Uri $u -OutFile $jdkMsi -UseBasicParsing -Headers @{"User-Agent"="AionSincro/1.0"}
+            if ((Test-Path $jdkMsi) -and (Get-Item $jdkMsi).Length -gt 50000000) {
+                $downloaded = $true
+                break
+            }
+        } catch {
+            Write-Warn "Falló descarga desde $u — probando siguiente..."
+        }
+    }
+
+    if (-not $downloaded) {
         Write-Err "No se pudo descargar el JDK. Verifica tu conexión a Internet."
         Write-Info "También puedes instalarlo manualmente desde: https://adoptium.net/download/"
+        Remove-Item $jdkMsi -Force -ErrorAction SilentlyContinue
         exit 1
     }
 
@@ -226,7 +245,7 @@ foreach ($p in $pathsToAdd) {
     if ($userPath -notcontains $p) {
         $userPathRaw += ";$p"
         $env:Path = "$env:Path;$p"
-        Write-Info "Anadido a PATH: $p"
+        Write-Info "Añadido a PATH: $p"
         $changed = $true
     }
 }
