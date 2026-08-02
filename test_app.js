@@ -313,10 +313,22 @@ check("auto-parada: se aplica antes de procesar la frase", /if\(store\.autoStopM
 check("breve: systemPrompt añade MODO BREVE", script.includes("if(store.breve&&!store.laboral&&!store.pentest) base+="));
 check("breve: cap de max_tokens en streamChat", script.includes("if(store.breve&&!store.laboral&&!store.pentest&&provider!=='demo'&&provider!=='ollama'&&provider!=='huggingface')") && script.includes("if(!body.max_tokens) body.max_tokens=220;"));
 // Interrupción mutua: el usuario corta a Aion con el micrófono mientras habla/pensa
-check("interrupción: toggleMic corta streaming/speaking y deja el micrófono listo", /if\(streaming\|\|speaking\)\{[\s\S]*?stopAll\(\);\s*setTimeout\(\(\)=>\{[\s\S]*?setListening\(true\);\s*\},180\);/.test(script));
+check("interrupción: toggleMic corta streaming/speaking y deja el micrófono listo", /if\(streaming\|\|speaking\)\{[\s\S]*?stopAll\(\);\s*clearTimeout\(continuousTimer\);\s*\/\/ salir del ciclo[\s\S]*?setTimeout\(\(\)=>\{[\s\S]*?setListening\(true\);\s*\},180\);/.test(script));
 // Interrupción mutua: Aion corta al usuario si oye el wake word con una petición durante la escucha
 check("interrupción: Aion corta al usuario con el wake word en escucha activa", script.includes("if(listening&&store.wake&&!wakeScan)") && script.includes("Aion interrumpe:"));
 check("interrupción: detiene la escucha antes de responder", /setListening\(false\);\s*\/\/ Aion corta la escucha y toma la palabra/.test(script));
+
+// --- Conversación continua (turnos automáticos por voz) ---
+check("store default continuous:false", script.includes("autoStopMic:true, breve:true, continuous:false,"));
+check("Ajustes: toggle de conversación continua presente", html.includes('id="btnContinuous"'));
+check("bind: btnContinuous alterna store.continuous", /\$\('#btnContinuous'\)\.onclick=\(\)=>\{[\s\S]*?store\.continuous=!store\.continuous;/.test(script));
+check("syncContinuousUI definida y llamada en boot", /function\s+syncContinuousUI/.test(script) && script.includes("syncContinuousUI();"));
+check("continuousCycle() definida", /function\s+continuousCycle\s*\(/.test(script));
+check("continuousCycle reabre el micrófono sola (setListening(true))", /continuousTimer=setTimeout\(\(\)=>\{[\s\S]*?setListening\(true\);/.test(script));
+check("continuousCycle solo si está activo y sin trabajo en curso", script.includes("if(!store.continuous) return;") && script.includes("!streaming&&!speaking&&!listening&&recog"));
+check("toggleMic sale del ciclo continuo al interrumpir", script.includes("clearTimeout(continuousTimer)"));
+check("conversación continua enganchada al terminar de hablar (Windows)", /speaking=false; setState\(streaming\?'thinking':'idle'\); continuousCycle\(\); \}\ };/.test(script));
+check("conversación continua enganchada al terminar (Voxtral y Piper)", (script.match(/speaking=false; setState\(streaming\?'thinking':'idle'\); continuousCycle\(\);/g)||[]).length>=3);
 
 // --- Informes PDF: marca de agua y portada corporativa ---
 check("store default pdfWatermark/pdfCover/pdfCompany", script.includes("pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:''"));
