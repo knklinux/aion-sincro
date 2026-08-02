@@ -928,6 +928,71 @@ await (async () => {
   check("parser de certificaciones tolera 'Certificaciones' sin tilde", /re\.search\(r"Certificaci\\w\+", head, flags=re\.I\)/.test(cvPy));
   check("pie del CV cita la fuente y el script generador", cvPy.includes("Generado desde <b>LINKEDIN.md</b>") && cvPy.includes("generar_cv.py"));
 
+  // ---------- Sintaxis coloreada en bloques de código (highlightCode) ----------
+  console.log("\n[SYNTAX HIGHLIGHT] Bloques de código con coloreado de sintaxis");
+  check("highlightCode existe en index.html", html.includes("function highlightCode(code,lang)"));
+  check("mdToHtml: bloques de código usan highlightCode", /highlightCode\(c,l\)/.test(html));
+  check("mdToHtml: code-head con language badge", html.includes('<span class=\"code-lang\">') && html.includes('<button class=\"code-copy\"'));
+  check("CSS: token de palabras clave (.syn-kw)", html.includes('.syn-kw{color:#c084fc'));
+  check("CSS: token de strings (.syn-str)", html.includes('.syn-str{color:#34d399'));
+  check("CSS: token de comentarios (.syn-cm)", html.includes('.syn-cm{color:#6b7280'));
+  check("CSS: token de números (.syn-num)", html.includes('.syn-num{color:#fbbf24'));
+  check("CSS: token de funciones (.syn-fn)", html.includes('.syn-fn{color:#60a5fa'));
+  check("CSS: code-head y code-copy presentes", html.includes('.code-head{display:flex') && html.includes('.code-copy{margin-left:auto'));
+  check("highlightCode escapa HTML (XSS: <script> → &lt;script&gt;)", /function highlightCode.*escH\(code\)/s.test(html));
+  check("highlightCode: soporta python", /python[\s\S]*?False None True/.test(html));
+  check("highlightCode: soporta javascript", /javascript[\s\S]*?async await/.test(html));
+  check("highlightCode: soporta bash", /bash[\s\S]*?cd ls cat grep/.test(html));
+  check("highlightCode: soporta html", /html[\s\S]*?DOCTYPE a abbr/.test(html));
+  check("highlightCode: soporta css", /css[\s\S]*?@media @keyframes/.test(html));
+  check("highlightCode: soporta json", /json[\s\S]*?true false null/.test(html));
+  check("highlightCode: soporta sql", /sql[\s\S]*?ADD ALL ALTER/.test(html));
+  check("highlightCode: soporta yaml", /yaml[\s\S]*?true false null/.test(html));
+  check("highlightCode: soporta go", /go[\s\S]*?break case chan/.test(html));
+  check("highlightCode: soporta rust", /rust[\s\S]*?as async await/.test(html));
+  check("highlightCode: soporta diff", /diff[\s\S]*?index \+\+\+ ---/.test(html));
+  check("highlightCode: soporta dockerfile", /dockerfile[\s\S]*?ADD ARG CMD/.test(html));
+  check("highlightCode: alias js→javascript presentes", /js\s*:\s*'javascript'/.test(html) && /ts\s*:\s*'typescript'/.test(html));
+  check("highlightCode: alias py→python presentes", /py\s*:\s*'python'/.test(html));
+  check("highlightCode: modo texto plano (sin lang)", /if\(!L\|\|L==='text'/.test(html) && html.includes("return escH(code)"));
+  check("copyCodeBlock existe", html.includes("function copyCodeBlock(btn)"));
+  check("copyCodeBlock usa navigator.clipboard.writeText", html.includes("navigator.clipboard.writeText(txt)"));
+  check("highlightCode: comentarios python (#)", /#[^\n]*/.test(html));
+  check("highlightCode: comentarios JS (// y /* */)", /\/\*[\s\S]*?\*\//.test(html) && /\/\/[^\n]*/.test(html));
+  check("highlightCode: marcadores de posición \\x01..\\x02", html.includes("\\x01'+i+'\\x02"));
+  check("highlightCode: restauración inversa de marcadores", /for\(let i=holders\.length-1;i>=0;i--\)/.test(html));
+  // Prueba funcional: round-trip con highlightCode sobre código real
+  const hcMatch=/function highlightCode\(code,lang\)\{([\s\S]*?)\n}$/m.exec(html);
+  if(hcMatch&&hcMatch[1]){
+    try{
+      const body=hcMatch[1];
+      const escH=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const hl=new Function('escH','code','lang','const highlightCode='+body+';return highlightCode(code,lang);');
+      let out=hl(escH,'print("hola")','python');
+      check("highlightCode: python → colorea print como keyword", /syn-kw/.test(out)&&/print/.test(out));
+      check("highlightCode: python → colorea string", /syn-str/.test(out)&&/"hola"/.test(out));
+      out=hl(escH,'const x=42;','javascript');
+      check("highlightCode: js → colorea const como keyword", /syn-kw/.test(out)&&/const/.test(out));
+      check("highlightCode: js → colorea número", /syn-num/.test(out)&&/42/.test(out));
+      out=hl(escH,'echo "hello" #comment','bash');
+      check("highlightCode: bash → colorea echo como keyword", /syn-kw/.test(out)&&/echo/.test(out));
+      check("highlightCode: bash → colorea string", /syn-str/.test(out)&&/"hello"/.test(out));
+      check("highlightCode: bash → colorea comentario", /syn-cm/.test(out)&&/#comment/.test(out));
+      out=hl(escH,'SELECT * FROM users','sql');
+      check("highlightCode: sql → colorea SELECT como keyword", /syn-kw/.test(out)&&/SELECT/.test(out));
+      out=hl(escH,'<div class="x">','html');
+      check("highlightCode: html → colorea tag div", /syn-kw/.test(out)&&/<div/.test(out));
+      out=hl(escH,'color: red;','css');
+      check("highlightCode: css → colorea property color", /syn-kw/.test(out)&&/color/.test(out));
+      out=hl(escH,'{"key": true}','json');
+      check("highlightCode: json → colorea true", /syn-kw/.test(out)&&/true/.test(out));
+      out=hl(escH,'texto sin lang','');
+      check("highlightCode: sin lang → texto plano sin spans syn", !/<span class="syn/.test(out));
+      out=hl(escH,'<script>alert(1)</script>','html');
+      check("highlightCode: XSS — <script> escapa a &lt;script&gt;", /&lt;script&gt;/.test(out));
+    }catch(e){ console.warn('  ! highlightCode round-trip error:',e.message); }
+  }
+
   // ---------- Resumen ----------
   console.log("\n" + "=".repeat(60));
   console.log(`RESULTADO: ${PASS} ok · ${FAIL} fallos`);

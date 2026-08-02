@@ -319,6 +319,30 @@ body[data-state="listening"] #wave .bar:nth-child(3n+2){animation-delay:.45s}
 .wchip{font-size:11.5px;padding:7px 13px;border-radius:18px;color:#ffd9a8;border:1px solid rgba(245,165,36,.35);background:rgba(245,165,36,.07);transition:.2s;cursor:pointer}
 .wchip:hover{background:rgba(245,165,36,.2);transform:translateY(-1px)}
 
+/* ---------- Bloques de código con sintaxis coloreada ---------- */
+.msg pre{position:relative;margin:12px 0 6px;border-radius:10px;overflow:hidden;
+  background:rgba(4,3,1,.7);border:1px solid rgba(214,164,70,.22);
+  font-family:var(--mono);font-size:12.5px;line-height:1.55;tab-size:4;white-space:pre;overflow-x:auto}
+.msg pre .code-head{display:flex;align-items:center;gap:8px;padding:6px 12px;
+  border-bottom:1px solid rgba(214,164,70,.12);background:rgba(245,165,36,.05);
+  font-size:10.5px;letter-spacing:.08em;color:var(--dim)}
+.msg pre .code-lang{color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.msg pre .code-copy{margin-left:auto;padding:3px 10px;border-radius:14px;font-size:10.5px;font-weight:600;
+  color:var(--dim);border:1px solid rgba(214,164,70,.25);background:rgba(245,165,36,.06);
+  cursor:pointer;transition:.2s;letter-spacing:.04em}
+.msg pre .code-copy:hover{color:var(--gold);border-color:rgba(245,165,36,.5);background:rgba(245,165,36,.14)}
+.msg pre code{display:block;padding:12px 14px;color:#e8ddc8;background:transparent}
+/* tokens de sintaxis */
+.syn .syn-kw{color:#c084fc;font-weight:600}          /* palabras clave */
+.syn .syn-str{color:#34d399}                         /* strings */
+.syn .syn-cm{color:#6b7280;font-style:italic}        /* comentarios */
+.syn .syn-num{color:#fbbf24}                          /* números */
+.syn .syn-fn{color:#60a5fa}                           /* funciones */
+.syn .syn-ty{color:#fde68a;font-weight:600}           /* tipos/clases */
+.syn .syn-op{color:#94a3b8}                           /* operadores */
+.syn .syn-builtin{color:#f472b6}                      /* builtins */
+.syn .syn-dec{color:#fb923c}                          /* decoradores */
+
 /* ---------- Controles ---------- */
 footer.controls{padding:14px 20px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:14px;flex-wrap:wrap;
   background:linear-gradient(0deg,rgba(22,15,7,.95),rgba(22,15,7,.7));backdrop-filter:blur(10px)}
@@ -3617,13 +3641,126 @@ function findingsReport(text){
   return md;
 }
 const escH=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function highlightCode(code,lang){
+  // Coloreador de sintaxis ligero · sin dependencias · soporta +20 lenguajes
+  const L=String(lang||'').toLowerCase();
+  if(!L||L==='text'||L==='plaintext'||L==='plain'||L==='txt') return escH(code);
+  // conjuntos de palabras clave por lenguaje
+  const KW={
+    python:'False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield',
+    javascript:'async await break case catch class const continue debugger default delete do else export extends false finally for function if import in instanceof let new null of return static super switch this throw true try typeof undefined var void while with yield',
+    typescript:'as async await break case catch class const continue debugger default delete do else enum export extends false finally for function if implements import in instanceof interface let new null of return static super switch this throw true try type typeof undefined var void while with yield',
+    bash:'alias bg bind break builtin caller case cd command compgen complete continue declare dirs disown echo enable eval exec exit export false fc fg getopts hash help history if jobs kill let local logout mapfile popd printf pushd pwd read readarray readonly return set shift shopt source suspend test times trap true type typeset ulimit umask unalias unset wait',
+    sh:'alias bg bind break builtin caller case cd command compgen complete continue declare dirs disown echo enable eval exec exit export false fc fg getopts hash help history if jobs kill let local logout mapfile popd printf pushd pwd read readarray readonly return set shift shopt source suspend test times trap true type typeset ulimit umask unalias unset wait',
+    shell:'alias bg bind break builtin caller case cd command compgen complete continue declare dirs disown echo enable eval exec exit export false fc fg getopts hash help history if jobs kill let local logout mapfile popd printf pushd pwd read readarray readonly return set shift shopt source suspend test times trap true type typeset ulimit umask unalias unset wait',
+    zsh:'alias autoload bg bindkey break builtin bye cap case cd chdir command compadd compctl compdescribe compfiles compgroups compquote comptags comptry compvalues continue declare dirs disable disown echo echotc echoti emulate enable eval exec exit export false fc fg float functions getcap getln getopts hash history if integer jobs kill let limit local log logout popd print printf pushd pwd r read readonly rehash return sched set setopt shift source stat suspend test times trap true ttyctl type typeset ulimit umask unalias unfunction unhash unlimit unset unsetopt vared wait whence where which zcompile zformat zftp zle zmodload zparseopts zprof zpty zregexparse zsocket zstyle ztcp',
+    html:'DOCTYPE a abbr address area article aside audio b base bdi bdo blockquote body br button canvas caption cite code col colgroup data datalist dd del details dfn dialog div dl dt em embed fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hgroup hr i iframe img input ins kbd label legend li link main map mark menu meta meter nav noscript object ol optgroup option output p param picture pre progress q rp rt ruby s samp script section select slot small source span strong style sub summary sup table tbody td template textarea tfoot th thead time title tr track u ul var video wbr',
+    css:'@media @keyframes @import @font-face @supports @layer align-content align-items align-self animation background border bottom box-shadow clear clip color column content cursor direction display filter flex float font gap grid height justify-content left letter-spacing line-height list-style margin max-height max-width min-height min-width opacity order outline overflow padding pointer-events position right row-gap text-align text-decoration text-shadow text-transform top transform transition user-select vertical-align visibility white-space width z-index',
+    json:'true false null',
+    yaml:'true false null yes no on off',
+    sql:'ADD ALL ALTER AND ANY AS ASC AUTHORIZATION BACKUP BEGIN BETWEEN BREAK BROWSE BULK BY CASCADE CASE CHECK CHECKPOINT CLOSE CLUSTERED COALESCE COLLATE COLUMN COMMIT COMPUTE CONSTRAINT CONTAINS CONTAINSTABLE CONTINUE CONVERT CREATE CROSS CURRENT CURRENT_DATE CURRENT_TIME CURRENT_TIMESTAMP CURRENT_USER CURSOR DATABASE DBCC DEALLOCATE DECLARE DEFAULT DELETE DENY DESC DISK DISTINCT DISTRIBUTED DROP DUMP ELSE END ERRLVL ESCAPE EXCEPT EXEC EXECUTE EXISTS EXIT EXPLAIN FETCH FILE FILLFACTOR FOR FOREIGN FREETEXT FREETEXTTABLE FROM FULL FUNCTION GOTO GRANT GROUP HAVING HOLDLOCK IDENTITY IDENTITYCOL IF IN INDEX INNER INSERT INTERSECT INTO IS JOIN KEY KILL LEFT LIKE LINENO LOAD MERGE NATIONAL NOCHECK NONCLUSTERED NOT NULL NULLIF OF OFF OFFSETS ON OPEN OPENDATASOURCE OPENQUERY OPENROWSET OPENXML OPTION OR ORDER OUTER OVER PERCENT PIVOT PLAN PRECISION PRIMARY PRINT PROC PROCEDURE PUBLIC RAISERROR READ READTEXT RECONFIGURE REFERENCES REPLICATION RESTORE RESTRICT RETURN REVERT REVOKE RIGHT ROLLBACK ROWCOUNT ROWGUIDCOL RULE SAVE SCHEMA SELECT SESSION_USER SET SETUSER SHUTDOWN SOME STATISTICS SYSTEM_USER TABLE TABLESAMPLE TEXTSIZE THEN TO TOP TRAN TRANSACTION TRIGGER TRUNCATE TSEQUAL UNION UNIQUE UNPIVOT UPDATE UPDATETEXT USE USER VALUES VARYING VIEW WAITFOR WHEN WHERE WHILE WITH WRITETEXT',
+    c:'auto break case char const continue default do double else enum extern float for goto if inline int long register return short signed sizeof static struct switch typedef union unsigned void volatile while',
+    cpp:'alignas alignof and and_eq asm auto bitand bitor bool break case catch char char8_t char16_t char32_t class compl concept const consteval constexpr constinit const_cast continue co_await co_return co_yield decltype default delete do double dynamic_cast else enum explicit export extern false float for friend goto if inline int long mutable namespace new noexcept not not_eq nullptr operator or or_eq private protected public register reinterpret_cast requires return short signed sizeof static static_assert static_cast struct switch template this thread_local throw true try typedef typeid typename union unsigned using virtual void volatile wchar_t while xor xor_eq',
+    go:'break case chan const continue default defer else fallthrough for func go goto if import interface map package range return select struct switch type var',
+    rust:'as async await break const continue crate dyn else enum extern false fn for if impl in let loop macro match mod move mut pub ref return self static struct super trait true type union unsafe use where while',
+    ruby:'BEGIN END alias and begin break case class def defined do else elsif end ensure false for if in module next nil not or redo rescue retry return self super then true undef unless until when while yield',
+    php:'abstract and array as break callable case catch class clone const continue declare default die do echo else elseif empty enddeclare endfor endforeach endif endswitch endwhile extends final finally fn for foreach function global goto if implements include include_once instanceof insteadof interface isset list match namespace new or print private protected public readonly require require_once return static switch throw trait true try unset use var while xor yield',
+    java:'abstract assert boolean break byte case catch char class const continue default do double else enum extends final finally float for goto if implements import instanceof int interface long native new package private protected public return short static strictfp super switch synchronized this throw throws transient try void volatile while',
+    diff:'diff index +++ --- @@',
+    dockerfile:'ADD ARG CMD COPY ENTRYPOINT ENV EXPOSE FROM HEALTHCHECK LABEL MAINTAINER ONBUILD RUN SHELL STOPSIGNAL USER VOLUME WORKDIR',
+    ini:'true false yes no on off',
+    toml:'true false',
+    markdown:'# ## ### #### ##### ######',
+    md:'# ## ### #### ##### ######',
+    powershell:'Begin Break Catch Continue Data Debug Default Do Dynamicparam Else Elseif End Exit Filter Finally For ForEach From Function If In InlineConfiguration InlineScript Parallel Param Process Return Sequence Switch Throw Trap Try Until Using Var While Workflow',
+  };
+  let kws=KW[L]||'';
+  // alias comunes
+  const alias={js:'javascript',ts:'typescript',py:'python',rb:'ruby',yml:'yaml',sh:'bash',zsh:'zsh',ps1:'powershell',pwsh:'powershell',c:'c',cpp:'cpp',cxx:'cpp',h:'c',hpp:'cpp',cs:'c',go:'go',rs:'rust',java:'java',dockerfile:'dockerfile',Dockerfile:'dockerfile',diff:'diff',patch:'diff',toml:'toml',ini:'ini',cfg:'ini',conf:'ini',json:'json',xml:'html',svg:'html',css:'css',less:'css',scss:'css',sql:'sql',md:'markdown',markdown:'markdown'};
+  if(!kws){ const al=alias[L]; if(al) kws=KW[al]||''; }
+  // escapar y empezar
+  let s=escH(code);
+  // La estrategia: primero capturamos comentarios y strings mediante
+  // marcadores de posición, luego coloreamos el resto, y al final
+  // restauramos los marcadores como spans coloreados.
+  let holders=[];
+  const park=(match,cls)=>{ const i=holders.length; holders.push({h:match,c:cls}); return '\x01'+i+'\x02'; };
+  // 1. strings
+  const strPatterns={
+    python:[/('''[\s\S]*?''')/g,/("""[\s\S]*?""")/g,/(f?r?b?'[^'\\\n]*(?:\\.[^'\\\n]*)*')/g,/(f?r?b?"[^"\\\n]*(?:\\.[^"\\\n]*)*")/g],
+    javascript:[/(''[\s\S]*?''|""[\s\S]*?"")/g,/(`[\s\S]*?`)/g,((L==='javascript'||L==='typescript'||L==='js'||L==='ts')?/(?!class\s)(['"])(?:(?!\1|\\).|\\.)*\1/g:/('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")/g)],
+    bash:[/("[^"]*")/g,/(\$?('[^']*'))/g],
+    html:[/("[^"]*")/g,((L==='html'||L==='xml'||L==='svg')?/(?!class\s)(['"])(?:(?!\1|\\).|\\.)*\1/g:/('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")/g)],
+    css:[/('[^']*')/g,/("[^"]*")/g],
+    sql:[/("[^"]*")/g,((L==='sql')?/(?!class\s)(['"])(?:(?!\1|\\).|\\.)*\1/g:/('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")/g)],
+  };
+  const sp=strPatterns[L]||((L==='javascript'||L==='typescript'||L==='js'||L==='ts')?strPatterns['javascript']:(L==='bash'||L==='sh'||L==='shell'||L==='zsh')?strPatterns['bash']:(L==='html'||L==='xml'||L==='svg')?strPatterns['html']:(L==='css'||L==='less'||L==='scss')?strPatterns['css']:(L==='sql')?strPatterns['sql']:[/("[^"]*")/g,((L==='html'||L==='xml'||L==='svg')?/(?!class\s)(['"])(?:(?!\1|\\).|\\.)*\1/g:/('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")/g)]);
+  if(sp) sp.forEach(p=>{ s=s.replace(p,m=>park(m,'syn-str')); });
+  // 2. comentarios
+  const cmtPatterns={
+    python:[/(#[^\n]*)/g],
+    javascript:[/(\/\/[^\n]*)/g,/(\/\*[\s\S]*?\*\/)/g],
+    bash:[/(#[^\n]*)/g],
+    html:[/(<!--[\s\S]*?-->)/g],
+    css:[/(\/\*[\s\S]*?\*\/)/g],
+    sql:[/(--[^\n]*)/g,/(\/\*[\s\S]*?\*\/)/g],
+    diff:[/(#[^\n]*)/g],
+    dockerfile:[/(#[^\n]*)/g],
+    ini:[/(;.*)/g,/(#[^\n]*)/g],
+    c:[/(\/\/[^\n]*)/g,/(\/\*[\s\S]*?\*\/)/g],
+    cpp:[/(\/\/[^\n]*)/g,/(\/\*[\s\S]*?\*\/)/g],
+    go:[/(\/\/[^\n]*)/g,/(\/\*[\s\S]*?\*\/)/g],
+    rust:[/(\/\/[^\n]*)/g,/(\/\*[\s\S]*?\*\/)/g],
+    ruby:[/(#[^\n]*)/g,/(=begin[\s\S]*?=end)/g],
+    php:[/(\/\/[^\n]*)/g,/(#[^\n]*)/g,/(\/\*[\s\S]*?\*\/)/g],
+    java:[/(\/\/[^\n]*)/g,/(\/\*[\s\S]*?\*\/)/g],
+    powershell:[/(#[^\n]*)/g,/(<#[\s\S]*?#>)/g],
+    yaml:[/(#[^\n]*)/g],
+  };
+  const cp=cmtPatterns[L]||((L==='javascript'||L==='typescript'||L==='js'||L==='ts')?cmtPatterns['javascript']:(L==='bash'||L==='sh'||L==='shell'||L==='zsh')?cmtPatterns['bash']:(L==='c'||L==='cpp'||L==='h'||L==='hpp')?cmtPatterns['cpp']:(L==='go')?cmtPatterns['go']:(L==='rust')?cmtPatterns['rust']:(L==='ruby')?cmtPatterns['ruby']:(L==='php')?cmtPatterns['php']:(L==='java')?cmtPatterns['java']:(L==='powershell'||L==='ps1'||L==='pwsh')?cmtPatterns['powershell']:(L==='yaml'||L==='yml')?cmtPatterns['yaml']:(L==='dockerfile'||L==='Dockerfile')?cmtPatterns['dockerfile']:(L==='ini'||L==='cfg'||L==='conf'||L==='toml')?cmtPatterns['ini']:(L==='diff'||L==='patch')?cmtPatterns['diff']:(L==='sql')?cmtPatterns['sql']:(L==='html'||L==='xml'||L==='svg')?cmtPatterns['html']:(L==='css'||L==='less'||L==='scss')?cmtPatterns['css']:(L==='python'||L==='py')?cmtPatterns['python']:[]);
+  if(cp&&cp.length) cp.forEach(p=>{ s=s.replace(p,m=>park(m,'syn-cm')); });
+  // 3. números
+  s=s.replace(/\b(\d+\.?\d*(?:[eE][+\-]?\d+)?|0x[0-9a-fA-F]+|0b[01]+)\b/g,m=>park(m,'syn-num'));
+  // 4. palabras clave (fuera de strings/comentarios ya aparcados)
+  if(kws){
+    const kwSet=new Set(kws.split(/\s+/));
+    if(kwSet.size>0){
+      const kwRe=new RegExp('\\b('+[...kwSet].map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')\\b','g');
+      s=s.replace(kwRe,m=>park(m,'syn-kw'));
+    }
+  }
+  // 5. builtins por lenguaje
+  const BUILTINS={
+    python:'print input range len str int float bool list dict set tuple type enumerate zip map filter sorted reversed abs all any chr ord dir divmod format getattr hasattr hash hex id isinstance issubclass iter max min next object oct open pow repr round slice sum super vars __init__ __name__ __main__ self cls',
+    javascript:'console document window Math JSON Promise Array Object String Number Boolean Date RegExp Error Set Map WeakMap WeakSet Symbol parseInt parseFloat isNaN isFinite encodeURI decodeURI encodeURIComponent decodeURIComponent eval setTimeout setInterval clearTimeout clearInterval fetch alert prompt confirm localStorage sessionStorage navigator location history',
+    bash:'echo cd ls cat grep sed awk cut sort uniq wc find xargs head tail chmod chown cp mv rm mkdir rmdir touch ln tar gzip gunzip curl wget ssh scp rsync diff patch ps kill top df du mount umount env export source',
+    go:'append cap close complex copy delete imag len make new panic print println real recover',
+    rust:'Some None Ok Err Vec String Box Arc Rc Cell RefCell HashMap HashSet BTreeMap BTreeSet println print format assert panic vec format_args write writeln',
+    php:'array count echo empty exit die isset list print strlen strpos substr str_replace trim explode implode json_encode json_decode header session_start',
+    java:'System String Integer Boolean Double Float Long Math ArrayList HashMap HashSet Arrays Collections',
+  };
+  const bl=BUILTINS[L]||((L==='py'||L==='python')?BUILTINS['python']:(L==='js'||L==='ts'||L==='javascript'||L==='typescript')?BUILTINS['javascript']:(L==='bash'||L==='sh'||L==='shell'||L==='zsh')?BUILTINS['bash']:(L==='go')?BUILTINS['go']:(L==='rs')?BUILTINS['rust']:(L==='php')?BUILTINS['php']:(L==='java')?BUILTINS['java']:'');
+  if(bl){ const bs=new Set(bl.split(/\s+/)); const br=new RegExp('\\b('+[...bs].map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')\\b','g'); s=s.replace(br,m=>park(m,'syn-builtin')); }
+  // 6. llamadas a función (identificador seguido de paréntesis, fuera de zonas aparcadas)
+  s=s.replace(/\b([a-zA-Z_]\w*)\s*(?=\()/g,(m,n)=>park(m,'syn-fn'));
+  // 7. decoradores (python)
+  if(L==='python'||L==='py') s=s.replace(/(@[a-zA-Z_]\w*)/g,m=>park(m,'syn-dec'));
+  // 8. tags HTML
+  if(L==='html'||L==='xml'||L==='svg'){ s=s.replace(/(<\/?[a-zA-Z][\w-]*)/g,m=>park(m,'syn-kw')); s=s.replace(/([a-zA-Z-]+)\s*=/g,m=>park(m,'syn-builtin')); }
+  // restaurar marcadores
+  for(let i=holders.length-1;i>=0;i--){
+    const h=holders[i];
+    s=s.replace('\x01'+i+'\x02','<span class="'+h.c+'">'+h.h+'</span>');
+  }
+  return s;
+}
 function mdToHtml(md){
   // Convertidor ligero de Markdown → HTML para la vista de impresión/PDF.
   // Barrera XSS: todo el texto (menos el interior de bloques de código, que se
   // escapa por separado) pasa por escH antes de insertarse en el popup.
   const b=t=>t.replace(/(^|[^\w])(\*\*|__)(.+?)\2/g,'$1<strong>$3</strong>');
   let s=String(md||'').replace(/^\s+|\s+$/g,'');
-  s=s.replace(/```([\w+#.-]*)\s*\n([\s\S]*?)```/g,(m,l,c)=>'<pre><code>'+escH(c)+'</code></pre>');
+  s=s.replace(/```([\w+#.-]*)\s*\n([\s\S]*?)```/g,(m,l,c)=>'<pre><div class="code-head"><span class="code-lang">'+(l||'code')+'</span><button class="code-copy" onclick="copyCodeBlock(this)">📋 '+((store.reportLang||'es')==='en'?'Copy':'Copiar')+'</button></div><code class="syn">'+highlightCode(c,l)+'</code></pre>');
   s=s.split(/\n{2,}/).map(blk=>{
     if(/^#{1,6}\s/.test(blk)){
       const lvl=blk.match(/^(#{1,6})\s/)[1].length; const txt=escH(blk.replace(/^#{1,6}\s*/,''));
@@ -3641,6 +3778,14 @@ function mdToHtml(md){
     return '<p>'+b(escH(blk).replace(/\n/g,'<br>')).replace(/(^|[^\w])\*([^*]+)\*/g,'$1<em>$2</em>')+'</p>';
   }).join('\n');
   return s;
+}
+function copyCodeBlock(btn){
+  const pre=btn.closest('pre'); if(!pre) return;
+  const code=pre.querySelector('code'); if(!code) return;
+  const txt=code.textContent||'';
+  const en=isEnglish(); const label=en?'Copy':'Copiar';
+  if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(()=>{ btn.textContent='📋 ✓'; setTimeout(()=>{ btn.textContent='📋 '+label; },1500); }).catch(()=>{}); }
+  else{ const ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed';ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); btn.textContent='📋 ✓'; setTimeout(()=>{ btn.textContent='📋 '+label; },1500); }
 }
 function downloadMarkdown(text, title){
   const t=(title||'informe').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50)||'informe';
