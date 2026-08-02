@@ -1143,6 +1143,14 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
       <div class="field">
         <button class="toggle" id="btnAutoLang" style="width:100%;justify-content:center"><span class="tk"></span> 🌐 Auto-idioma (EN→Voxtral · ES→voz offline)</button>
         <div class="hint">Aion detecta el idioma de lo que va a decir: si es <b>inglés</b> usa <b>Voxtral</b> (cuando hay clave Mistral) y si es <b>español</b> usa la <b>voz offline de Windows</b> — sin intervención tuya. Desactívalo para fijar siempre la voz elegida.</div>
+      <div class="field">
+        <button class="toggle" id="btnAutoStopMic" style="width:100%;justify-content:center"><span class="tk"></span> ⏹️ Auto-parar el micrófono al terminar de hablar</button>
+        <div class="hint">Cuando termines tu frase, Aion deja de escuchar sola y responde — no hace falta pulsar el micrófono para detenerla. Desactívalo si prefieres escucha continua.</div>
+      </div>
+      <div class="field">
+        <button class="toggle" id="btnBreve" style="width:100%;justify-content:center"><span class="tk"></span> ⚡ Respuestas breves (conversación fluida)</button>
+        <div class="hint">Aion responde más corta y directa en conversación normal (1-3 frases), para que el diálogo por voz sea fluido. Desarróllase con detalle solo cuando pidas informes o explicaciones completas.</div>
+      </div>
       </div>
       <div class="field" id="fieldVoxtralEmotion" hidden>
         <label>🎭 Emoción voxtral</label>
@@ -1606,7 +1614,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const store={
   provider:'demo', model:'hermes3', modelByProvider:{},
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
-  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion', autoStart:false, pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:'', reportLang:'es',
+  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, autoStopMic:true, breve:true, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion', autoStart:false, pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:'', reportLang:'es',
   pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, autoLockMin:0, rememberUnlock:false, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
 };
 
@@ -1719,6 +1727,7 @@ function systemPrompt(){
   else if(store.pentest) base=PENTEST_SYSTEM.replace('{scope}',store.pentestScope||'no especificado');
   else base=BASE_SYSTEM;
   if(store.search) base+=`\n\nAntes de la pregunta del usuario puedes recibir bloques de contexto: [RESULTADOS DE INTERNET] (búsqueda web) y [DATOS DE HERRAMIENTAS] (clima, CVEs, GitHub, países). Úsalos para responder con datos reales y actualizados, citando la fuente de forma breve.`;
+  if(store.breve&&!store.laboral&&!store.pentest) base+=`\n\n⚡ MODO BREVE: estamos en conversación fluida por voz. Responde CORTO y directo: normalmente 1-3 frases, sin párrafos largos ni relleno. Ve al grano y mantén el ritmo de un diálogo hablado. Solo desarrolla con detalle si el usuario te pide explícitamente un informe, código o una explicación completa.`;
   return base;
 }
 
@@ -4143,11 +4152,12 @@ function initRecog(){
     /* Wake word: «hola <word>» / «<word>» — dinámico según store.wakeWord.
        Si va seguido de una petición en la misma frase («Aion, abre el terminal»),
        la ejecuta directamente sin esperar a que termines. */
+    const ww=wakeWord().replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    // Normalizamos tildes para que «aíon»/«aíon» etc. casen igual (y cualquier variante acentuada del wake word).
+    const tN=texto.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const wakeRe=new RegExp('(^|\\s)(hola|oye|hey|ok)?\\s*'+ww+'(?:([\\s,.;:!¿?]+.*)|$)');
     if(wakeScan&&store.wake){
-      const ww=wakeWord().replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-      // Normalizamos tildes para que «aíon»/«aíon» etc. casen igual (y cualquier variante acentuada del wake word).
-      const tN=texto.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-      const m=new RegExp('(^|\\s)(hola|oye|hey|ok)?\\s*'+ww+'(?:([\\s,.;:!¿?]+.*)|$)').exec(tN);
+      const m=wakeRe.exec(tN);
       if(m){
         // Resultado provisional: seguimos escaneando hasta tener la frase final.
         if(!final) return;
@@ -4166,7 +4176,28 @@ function initRecog(){
       }
       return;
     }
-    if(final){ $('#textInput').value=final; handleUserText(final); }
+    /* Interrupción mutua: si el usuario está hablando (escucha activa) y Aion
+       oye el wake word con una petición, interrumpe y responde al momento. */
+    if(listening&&store.wake&&!wakeScan){
+      const m=wakeRe.exec(tN);
+      if(m&&final){
+        const resto=(m[3]||'').replace(/^[\s,.;:!¿?]+/,'').trim();
+        if(resto.length>=2){
+          setListening(false); // Aion corta la escucha y toma la palabra
+          chime(); toast('🔔 Aion interrumpe: '+resto);
+          $('#textInput').value=resto;
+          setTimeout(()=>{ if(!streaming&&!speaking) handleUserText(resto); },300);
+          return;
+        }
+      }
+    }
+    if(final){
+      $('#textInput').value=final;
+      /* Auto-parada: al terminar de hablar, el micrófono se detiene solo
+         (store.autoStopMic) — no hace falta pulsarlo para que pare. */
+      if(store.autoStopMic&&listening) setListening(false);
+      handleUserText(final);
+    }
   };
   recog.onerror=e=>{
     if(e.error==='not-allowed'){ toast('🚫 Acceso al micrófono denegado. Permítelo en el navegador (icono 🔒).'); wakeDenied=true; stopWakeScan(); }
@@ -4204,7 +4235,13 @@ function setListening(on){
     $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar'; }
 }
 function toggleMic(){
-  if(streaming||speaking){ stopAll(); return; }
+  /* Interrupción del usuario: si Aion está hablando o pensando, pulsar el
+     micrófono la corta al momento y deja el micrófono listo para responder. */
+  if(streaming||speaking){
+    stopAll();
+    setTimeout(()=>{ if(!streaming&&!speaking) setListening(true); },180); // margen tras recog.stop()
+    return;
+  }
   listening?setListening(false):setListening(true);
 }
 function stopAll(){ abortCtrl?.abort(); streaming=false; stopSpeak(); setListening(false); setState('idle'); }
@@ -4413,6 +4450,10 @@ async function* streamChat(provider,messages,signal){
     headers={'Content-Type':'application/json'};
     if(store.proxyToken) headers['X-Proxy-Token']=store.proxyToken;
     body={provider,messages,model:store.model,stream:true};
+  }
+  // Modo breve: cap de tokens para que la conversación por voz sea fluida y corta
+  if(store.breve&&!store.laboral&&!store.pentest&&provider!=='demo'&&provider!=='ollama'&&provider!=='huggingface'){
+    if(!body.max_tokens) body.max_tokens=220;
   }
   const resp=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal});
   if(!resp.ok){
@@ -5037,6 +5078,14 @@ function bind(){
     store.autoLang=!store.autoLang; syncAutoLangUI(); saveStore();
     toast(store.autoLang?(isEnglish()?'🌐 Auto-language ON: EN→Voxtral · ES→offline voice':'🌐 Auto-idioma ON: EN→Voxtral · ES→voz offline'):(isEnglish()?'🌐 Auto-language OFF':'🌐 Auto-idioma OFF'));
   };
+  $('#btnAutoStopMic').onclick=()=>{
+    store.autoStopMic=!store.autoStopMic; syncAutoStopMicUI(); saveStore();
+    toast(store.autoStopMic?'⏹️ Micrófono auto-stop activado: para solo al terminar de hablar':'⏹️ Micrófono en escucha continua (pulsa para detener)');
+  };
+  $('#btnBreve').onclick=()=>{
+    store.breve=!store.breve; syncBreveUI(); saveStore();
+    toast(store.breve?'⚡ Respuestas breves activadas: conversación más fluida':'⚡ Respuestas breves desactivadas');
+  };
   $('#btnPdfWatermark').onclick=()=>{ store.pdfWatermark=!store.pdfWatermark; syncPdfUI(); saveStore(); toast(store.pdfWatermark?'💧 Marca de agua de confidencialidad activada':'Marca de agua desactivada'); };
   $('#btnPdfCover').onclick=()=>{ store.pdfCover=!store.pdfCover; syncPdfUI(); saveStore(); toast(store.pdfCover?'🏢 Portada corporativa activada':'Portada desactivada'); };
   $('#btnAutoStart').onclick=()=>{
@@ -5219,6 +5268,8 @@ function collectSettings(noSave){
 function syncSearchUI(){ $('#btnSearch').classList.toggle('on',store.search); $('#btnSearchSet').classList.toggle('on',store.search); }
 function syncWakeUI(){ const b=$('#btnWakeSet'); if(b)b.classList.toggle('on',store.wake); syncWakeWordUI(); }
 function syncAutoLangUI(){ const b=$('#btnAutoLang'); if(b)b.classList.toggle('on',store.autoLang); }
+function syncAutoStopMicUI(){ const b=$('#btnAutoStopMic'); if(b)b.classList.toggle('on',store.autoStopMic); }
+function syncBreveUI(){ const b=$('#btnBreve'); if(b)b.classList.toggle('on',store.breve); }
 function syncPdfUI(){ const a=$('#btnPdfWatermark'); if(a)a.classList.toggle('on',store.pdfWatermark); const b=$('#btnPdfCover'); if(b)b.classList.toggle('on',store.pdfCover); }
 function syncAutoStartUI(){ const b=$('#btnAutoStart'); if(b)b.classList.toggle('on',store.autoStart); }
 function refreshModelsViaProxy(){
@@ -5446,7 +5497,7 @@ async function autoConfigure(){
   let w=0; const bar=$('#bootBar');
   const iv=setInterval(()=>{ w+=Math.random()*22; if(w>=100){w=100;clearInterval(iv);}
     bar.style.width=w+'%'; },120);
-  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncTtsUI(); syncProxyUI(); syncCryptoUI(); syncAutoStartUI();
+  clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncAutoStopMicUI(); syncBreveUI(); syncTtsUI(); syncProxyUI(); syncCryptoUI(); syncAutoStartUI();
   autoConfigure();
   captureWelcomeES();
   renderWelcomeLang();

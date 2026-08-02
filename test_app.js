@@ -298,6 +298,26 @@ check("frase completa: ejecuta handleUserText con la petición", script.includes
 check("frase completa: limpia separadores de la petición", script.includes("(m[3]||'').replace(/^[\\s,.;:!¿?]+/,'')"));
 check("frase completa: wake word solo sigue esperando petición", script.includes("Te escucho. ¿Qué necesitas?"));
 
+// --- Conversación fluida: auto-parada del micrófono + respuestas breves + interrupción mutua ---
+check("store default autoStopMic:true", script.includes("autoStopMic:true, breve:true,"));
+check("Ajustes: toggle de auto-parada del micrófono presente", html.includes('id="btnAutoStopMic"'));
+check("Ajustes: toggle de respuestas breves presente", html.includes('id="btnBreve"'));
+check("bind: btnAutoStopMic alterna store.autoStopMic", /\$\('#btnAutoStopMic'\)\.onclick=\(\)=>\{[\s\S]*?store\.autoStopMic=!store\.autoStopMic;/.test(script));
+check("bind: btnBreve alterna store.breve", /\$\('#btnBreve'\)\.onclick=\(\)=>\{[\s\S]*?store\.breve=!store\.breve;/.test(script));
+check("syncAutoStopMicUI definida y llamada en boot", /function\s+syncAutoStopMicUI/.test(script) && script.includes("syncAutoStopMicUI();"));
+check("syncBreveUI definida y llamada en boot", /function\s+syncBreveUI/.test(script) && script.includes("syncBreveUI();"));
+// Auto-parada: al terminar la frase, si autoStopMic está activo, setListening(false)
+check("auto-parada: final de frase detiene el micrófono solo", script.includes("if(store.autoStopMic&&listening) setListening(false);"));
+check("auto-parada: se aplica antes de procesar la frase", /if\(store\.autoStopMic&&listening\) setListening\(false\);\s*handleUserText\(final\);/.test(script));
+// Respuestas breves: instrucción en systemPrompt + cap de tokens en streamChat
+check("breve: systemPrompt añade MODO BREVE", script.includes("if(store.breve&&!store.laboral&&!store.pentest) base+="));
+check("breve: cap de max_tokens en streamChat", script.includes("if(store.breve&&!store.laboral&&!store.pentest&&provider!=='demo'&&provider!=='ollama'&&provider!=='huggingface')") && script.includes("if(!body.max_tokens) body.max_tokens=220;"));
+// Interrupción mutua: el usuario corta a Aion con el micrófono mientras habla/pensa
+check("interrupción: toggleMic corta streaming/speaking y deja el micrófono listo", /if\(streaming\|\|speaking\)\{[\s\S]*?stopAll\(\);\s*setTimeout\(\(\)=>\{[\s\S]*?setListening\(true\);\s*\},180\);/.test(script));
+// Interrupción mutua: Aion corta al usuario si oye el wake word con una petición durante la escucha
+check("interrupción: Aion corta al usuario con el wake word en escucha activa", script.includes("if(listening&&store.wake&&!wakeScan)") && script.includes("Aion interrumpe:"));
+check("interrupción: detiene la escucha antes de responder", /setListening\(false\);\s*\/\/ Aion corta la escucha y toma la palabra/.test(script));
+
 // --- Informes PDF: marca de agua y portada corporativa ---
 check("store default pdfWatermark/pdfCover/pdfCompany", script.includes("pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:''"));
 check("Ajustes: toggle de marca de agua presente", html.includes('id="btnPdfWatermark"'));
