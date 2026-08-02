@@ -24,6 +24,11 @@ Trabajo validado en local, aún sin commit en `main`: *(sección vacía — todo
 - `a7d890b` — **feat:** **test de mutación real** de `saveStore` (`test_mutacion.py`, copia temporal de `index.html` con la limpieza WebCrypto quitada para verificar que el check cae) + soporte `AION_HTML` en `test_app.js` + paso `[3/3]` en `test_all.cmd`/`test_all.sh`.
 - `9f983c2` — **docs:** perfil de LinkedIn de Arkaitz (`LINKEDIN.md`) para la primera oportunidad en ciberseguridad.
 - `9e159ea` — **docs:** `LINKEDIN.md` — eJPT *en preparación* + guía de 10 publicaciones semanales de pentesting.
+- `57baf6d` — **feat:** **wake word personalizado** (Aion, Aria, Nova…) persistido en `aion_cfg` + hotword de frase completa («Aion, abre el terminal» ejecuta la petición sin esperar).
+- `4600161` — **feat:** **informe de reconocimiento desde la salida real de nmap** (modo Laboral) con tabla de puertos, superficie de ataque y recomendaciones exportables.
+- `fe839a1` — **feat:** **re-scan de nmap desde la barra del informe** con nuevos flags (`-sV -sC -p-`) + parsers de **gobuster, Nessus y Burp Suite** con su generador de informe por herramienta.
+
+> ℹ️ Los commits `1199e9c`, `dd2eda3` y `7b144b1` (chores sobre este propio CHANGELOG y el `.gitignore`) no se listan individualmente por ser cambios de metadocumentación.
 
 ---
 
