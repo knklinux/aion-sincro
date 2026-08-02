@@ -15,30 +15,32 @@
 
 ### 📝 Post (listo para pegar)
 
-**Sin título universitario, pero con 482 tests de seguridad en mi proyecto open-source. 🛡️**
+**De instalar carpintería metálica a construir un asistente de IA para pentesting. Y con 518 tests de seguridad que lo demuestran. 🔧→🛡️**
 
-Hola, soy Arkaitz. Autodidacta. Sin carrera, sin bootcamp, sin contactos en el sector. Solo un teclado, Linux y mucha hambre de aprender.
+Hola, soy Arkaitz. Tengo 0 títulos universitarios. Estudios hasta secundaria. Y un trabajo a turno completo como autónomo instalador de carpintería metálica en Málaga.
 
-En vez de esperar a "saber suficiente" para empezar, decidí construir lo que necesitaba para aprender: **Aion Sincro**, un asistente de IA open-source para pentesting y red team.
+Pero cuando acaba el día y se apaga la radial, enciendo el portátil. Sin contactos en el sector y aprendiendo en solitario, decidí hacer lo único que tiene sentido cuando no tienes currículum: **construir lo que te gustaría que existiera**.
 
-¿Qué tiene? 5 motores de IA gratis (Ollama 100% local, Groq, OpenRouter y HuggingFace, más un modo demo sin conexión), voz con Piper 100% local y sin internet, informes de pentest exportables a Markdown/PDF/Word, auditoría ISO 27001, una ruta de red team con 18 checkpoints y examen, y una suite de seguridad con **482 tests** y pruebas de mutación.
+Así nació **Aion Sincro**, un asistente de IA open-source para pentesting y red team. Y más tarde **CyberGuard**, un toolkit CLI de seguridad en Python con cero dependencias.
 
-La parte que más me enorgullece no es el código: es que **cada afirmación se puede verificar**. Claves cifradas con WebCrypto, puente local endurecido, tests que protegen de verdad. Sin humo.
+¿Qué puede hacer Aion? 5 motores de IA gratuitos (Ollama 100% local, OpenRouter, Groq, HuggingFace y Mistral), voz neuronal local con Piper, informes de pentest profesionales exportables a Markdown, PDF y Word, auditoría ISO 27001:2022, una ruta guiada de red team con 18 checkpoints y examen, y una suite de seguridad con **518 tests** y pruebas de mutación reales (quito una línea de seguridad y verifico que el test cae — si no cae, no protege).
 
-Hoy me preparo para el eJPT y sigo construyendo en público, porque mi CV no son títulos: son repositorios.
+No soy un gurú. No vengo de FAANG. Soy un tipo que mide cerramientos por la mañana y escribe tests de cifrado WebCrypto por la noche. Y cada afirmación de este post se puede comprobar en el repo, sin humo.
+
+Hoy me preparo para el eJPT mientras sigo construyendo en público, porque mi CV no son títulos: son repositorios.
 
 📎 Repo: github.com/knklinux/aion-sincro
 
-**Pregunta para ti:** ¿qué es lo más difícil de aprender ciberseguridad en solitario? Llevo tiempo dándole vueltas y me encantaría leer tu experiencia. 👇
+**Pregunta para ti:** ¿cuál fue tu primer proyecto que demostró que sabías sin tener el papel que lo acreditara? Me encantaría leer tu historia. 👇
 
-`#Ciberseguridad #Pentesting #RedTeam #OpenSource #Linux #Autodidacta #eJPT #Infosec`
+`#Ciberseguridad #Pentesting #RedTeam #OpenSource #Linux #Autodidacta #eJPT #ReconversiónProfesional`
 
 ### 📸 Captura sugerida
 La portada del README (logo ⚡ + título "Compañera de Pentest · Coarquitecta del Plan de Rescate") o una captura del visor geométrico de Aion hablando.
 
 ### ✅ Verificable
-- 482 tests: `cd hermes-ai && node test_app.js` → `RESULTADO: 482 ok · 0 fallos`
-- 5 motores, Piper, informes MD/PDF/Word, ISO 27001, 18 checkpoints: todo en el README.
+- 518 tests app + 89 tests bridge = 607 en total: `cd hermes-ai && node test_app.js` → `RESULTADO: 518 ok · 0 fallos` | `python test_bridge.py` → `89 ok · 0 fallos`.
+- 5 motores, Piper, CyberGuard, informes MD/PDF/Word, ISO 27001, 18 checkpoints: todo en el README y `LINKEDIN.md`.
 
 ---
 
@@ -254,19 +256,19 @@ La semana pasada alguien me preguntó: *"¿cómo sabes que tus claves API están
 
 - **WebCrypto de verdad**: AES-GCM 256 con clave derivada por PBKDF2-SHA256 (120.000 iteraciones). La contraseña nunca se guarda: se pide cada sesión para desbloquear.
 - **El puente local endurecido**: solo escucha en `127.0.0.1`, valida `Host` y `Origin` contra falsificaciones, y exige token en cada petición.
-- **482 tests + pruebas de mutación**: no basta con tener tests; quito una línea de seguridad y **compruebo que el test falla**. Si el test no se entera, el test no protege.
+- **518 tests + pruebas de mutación**: no basta con tener tests; quito una línea de seguridad y **compruebo que el test falla**. Si el test no se entera, el test no protege.
 
 Eso es "seguridad por diseño": el control no es una feature que se añade al final, es la **prueba de que funciona**. Y cualquiera puede verificarlo: el repo es público.
 
 ¿Haces pruebas de mutación en tus proyectos? ¿O tus tests solo te dicen lo que quieres oír? 👇
 
-`#SeguridadPorDiseño #WebCrypto #DevSecOps #OpenSource #Pentesting #Testing`
+`#SeguridadPorDiseño #WebCrypto #DevSecOps #OpenSource #Pentesting #Testing #Ciberseguridad`
 
 ### 📸 Captura sugerida
-El resultado de la suite (`482 ok · 0 fallos`) o el informe de cobertura de mutación mostrando qué checks protegen de verdad.
+El resultado de la suite (`518 ok · 0 fallos`) o el informe de cobertura de mutación mostrando qué checks protegen de verdad.
 
 ### ✅ Verificable
-- Cifrado WebCrypto, endurecimiento del puente, 482 tests y `test_mutacion.py` con informe de cobertura: todo en el repo y documentado en `SECURITY.md`.
+- Cifrado WebCrypto, endurecimiento del puente, 518 tests y `test_mutacion.py` con informe de cobertura: todo en el repo y documentado en `SECURITY.md`.
 
 ---
 
@@ -278,7 +280,7 @@ El resultado de la suite (`482 ok · 0 fallos`) o el informe de cobertura de mut
 
 Esto es lo que he construido en público este trimestre:
 
-- 🛡️ **Aion Sincro**: asistente de IA open-source para pentest y red team — 5 motores gratis, voz local con Piper, informes MD/PDF/Word, auditoría ISO 27001 y una suite con **482 tests**.
+- 🛡️ **Aion Sincro**: asistente de IA open-source para pentest y red team — 5 motores gratis, voz local con Piper, informes MD/PDF/Word, auditoría ISO 27001 y una suite con **518 tests**.
 - 🗺️ **Ruta Red Team**: 18 checkpoints con examen y certificación de progreso exportable.
 - 🕵️ **OSINT local**: análisis de dominios, emails y contenido oculto sin subir nada a internet.
 - 🧾 **Informes profesionales**: plantillas de reconocimiento, pentest y ejecutivo; parsers de nmap, Burp, Nessus y gobuster.
@@ -291,7 +293,7 @@ Lo más valioso no es el código: es **haber aprendido en público**. Cada post 
 `#RedTeam #OpenSource #Pentesting #Aprendizaje #eJPT #InfoSec`
 
 ### 📸 Captura sugerida
-Un "mapa" visual de lo publicado (capturas de cada semana en una cuadrícula) + logros: 482 tests, 18 checkpoints, Bandit 27.
+Un "mapa" visual de lo publicado (capturas de cada semana en una cuadrícula) + logros: 518 tests, 18 checkpoints, Bandit 27.
 
 ### ✅ Verificable
 - Cada afirmación de este post aparece verificada en los posts 1-9 y en el repo.
@@ -300,7 +302,7 @@ Un "mapa" visual de lo publicado (capturas de cada semana en una cuadrícula) + 
 
 ## 📋 Checklist antes de publicar
 
-- [ ] Revisa que los datos sigan siendo ciertos (los tests pueden subir de 482, Bandit puede pasar del 27…).
+- [ ] Revisa que los datos sigan siendo ciertos (los tests pueden subir de 518, Bandit puede pasar del 27…).
 - [ ] Adjunta la captura real (nada de imágenes de stock ni de otro repo).
 - [ ] Publica el mismo día y hora de cada semana.
 - [ ] Responde todos los comentarios la primera hora.
@@ -309,4 +311,4 @@ Un "mapa" visual de lo publicado (capturas de cada semana en una cuadrícula) + 
 
 ---
 
-*Documento vivo: actualiza los números cuando cambien (ej. 482 → nueva cifra de la suite) y añade publicaciones nuevas cuando el calendario se amplíe.*
+*Documento vivo: actualiza los números cuando cambien (ej. 518 → nueva cifra de la suite) y añade publicaciones nuevas cuando el calendario se amplíe.*
