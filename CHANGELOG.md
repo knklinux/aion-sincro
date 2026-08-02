@@ -20,6 +20,29 @@ También hay **trabajo sin commitear en el árbol** que aún no forma parte de `
 
 ---
 
+## ✨ Lote 2026-08-02 — configuración, seguridad y perfil profesional
+
+### 🚀 Primera configuración y comodidad
+
+- `67c293c` — **feat:** **asistente de primera configuración** — wizard de 5 pasos (motor, Piper, terminal) en dorado de marca que se auto-abre cuando no hay motor configurado, con prueba real de conexión, persistencia inteligente (`aion_setup_done` solo con motor conectado) y comando "configúrame".
+- `67c293c` — **feat:** **recordar desbloqueo durante la sesión** — la clave derivada (nunca la contraseña) vive en `sessionStorage`, se re-importa como clave no extraíble al recargar y se olvida al bloquear/desactivar.
+
+### 🔐 Seguridad
+
+- `67c293c` — **fix(seguridad):** la prueba de conexión de **OpenRouter** daba **falso positivo** (usaba `GET /v1/models`, que es público). Ahora valida con `GET /v1/auth/key` (401 real con clave inválida) y muestra label + usos restantes. Hallado en prueba end-to-end real.
+
+### 👤 Perfil profesional y CV
+
+- `4d510fc` — **docs:** `LINKEDIN.md` con **datos reales confirmados** de Arkaitz (nombre completo, trabajo actual como autónomo instalador de carpintería metálica en Alupro Cerramientos, estudios hasta secundaria, inglés técnico, eJPT en preparación), verificado contra el perfil de GitHub sin afirmaciones inventadas.
+- `4d510fc` — **feat:** `generar_cv.py` — genera el CV en HTML/PDF desde `LINKEDIN.md` (fuente única de verdad) + `POSTS_LINKEDIN.md` con los 10 posts semanales + `CV_Arkaitz.html/pdf` (versionados por petición expresa) + capturas del visor.
+
+### 📱 Portabilidad e instalación
+
+- `20f474c` — **feat:** **PWA instalable** (`manifest.webmanifest` + `sw.js` con caché offline + iconos 192/512/maskable) y **esqueleto Android con Capacitor** (`mobile/`, permiso `RECORD_AUDIO` para la hotword, cleartext para el puente local).
+- `20f474c` — **feat:** `windows/serve.js` (servidor del lanzador) y actualización de `windows/aion-sincro.cmd` y `windows/install.cmd` (instalación a `%LOCALAPPDATA%\AionSincro`).
+
+---
+
 ## ✨ Lanzamiento inicial — 2026-08-01
 
 Primera versión estable de Aion Sincro. Los 15 commits publicados hasta la fecha, agrupados por funcionalidad. *(El proyecto aún no tiene tags de versión; la numeración formal se fijará al primer release etiquetado.)*

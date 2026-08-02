@@ -32,9 +32,9 @@ mobile/.gradle/
 # Informe generado por python test_mutacion.py --coverage (regenerable)
 MUTACION_COBERTURA.md
 
-# CV generado por generar_cv.py desde LINKEDIN.md (regenerable, no versionar)
-CV_Arkaitz.html
-CV_Arkaitz.pdf
+# CV generado por generar_cv.py desde LINKEDIN.md — versionado por petición
+# expresa (los reclutadores pueden verlo en el repo). Al regenerar con
+# `python generar_cv.py`, aparecerá como modificado: es correcto.
 
 # Sistema
 .DS_Store
