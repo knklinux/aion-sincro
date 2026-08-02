@@ -43,7 +43,10 @@ copy /y "%SRC%\SECURITY.md"       "%DEST%\" >nul
 copy /y "%SRC%\NUCLEO_MEMORIA.md" "%DEST%\" >nul
 copy /y "%SRC%\MANIFIESTO.md"     "%DEST%\" >nul
 copy /y "%SRC%\COMPARATIVA.md"    "%DEST%\" >nul
+copy /y "%SRC%\LINKEDIN.md"        "%DEST%\" >nul
+copy /y "%SRC%\POSTS_LINKEDIN.md"  "%DEST%\" >nul
 copy /y "%~dp0aion-sincro.cmd"          "%DEST%\" >nul
+copy /y "%~dp0serve.js"                "%DEST%\" >nul
 copy /y "%~dp0crear-acceso-directo.ps1" "%DEST%\" >nul
 
 rem --- Token del puente (solo la primera vez) ----------------------

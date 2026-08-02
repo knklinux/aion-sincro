@@ -7,8 +7,10 @@
 
 ## 🎯 Prioridad alta — practicidad diaria (laboral)
 
-1. **Plantillas de informe en Word (.docx)** — además de Markdown/PDF, exportar el informe de
-   pentest con la cabecera corporativa ya maquetada (python-docx o LibreOffice headless).
+1. **Plantillas de informe en Word (.docx)** — ✅ **HECHO (v1.0)**: exportación `.docx`
+   100 % en el navegador (ZIP + OOXML en JS puro, sin dependencias) con cabecera
+   corporativa en todas las páginas, portada opcional, tablas y marca de agua VML
+   nativa de Word. Respeta `reportLang` y el branding de Ajustes.
 2. **Exportación de la sesión completa** — JSON descargable del chat con marca de tiempo para
    reconstruir una auditoría (ya existe la persistencia local; falta el export limpio).
 3. **Cronómetro de sesión global** — tiempo total por sesión de trabajo y por modo
@@ -29,8 +31,10 @@
 
 ## 🤖 Aplicación Android
 
-9. **WebView de la PWA en Android** — la vía más rápida: Capacitor (Ionic) envuelve la app
-   web existente en un APK con permisos de micrófono para la hotword y la voz.
+9. **WebView de la PWA en Android** — ✅ **HECHO (esqueleto, v1.0)**: `mobile/` con
+   Capacitor listo para envolver la app en un APK (permiso `RECORD_AUDIO` para la
+   hotword, cleartext para el puente local, `npm run setup` + `npm run apk`).
+   Pendiente: firmar para Play Store y añadir `@capacitor-community/speech-recognition`.
 10. **TTS local en Android** — usar el motor TTS del sistema (`TextToSpeech`) para el español
     sin depender de Piper en el móvil (Piper Android existe pero requiere build nativo).
 11. **Termux en Android** — la app web ya funciona en cualquier navegador; documentar el

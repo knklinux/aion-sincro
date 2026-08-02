@@ -1,0 +1,13 @@
+{
+  "appId": "com.aionsincro.app",
+  "appName": "Aion Sincro",
+  "webDir": "www",
+  "backgroundColor": "#080604",
+  "android": {
+    "allowMixedContent": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

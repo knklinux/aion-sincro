@@ -1,0 +1,24 @@
+{
+  "name": "aion-sincro-android",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aion Sincro — envoltorio Android (Capacitor). Esqueleto mínimo para empaquetar la app web (index.html) en un APK con permiso de micrófono para la hotword.",
+  "author": "Ark & Jimmy",
+  "license": "MIT",
+  "scripts": {
+    "build:web": "node build-web.js",
+    "patch:manifest": "node patch-manifest.js",
+    "cap:add": "npx cap add android",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android",
+    "setup": "node setup.js",
+    "apk": "npm run build:web && npm run patch:manifest && npx cap build android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.0",
+    "@capacitor/core": "^6.1.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.0"
+  }
+}

@@ -20,12 +20,21 @@ salida-voces/
 # Node
 node_modules/
 
+# Android (Capacitor) — generado por `npx cap add android` / build-web
+mobile/www/
+mobile/android/
+mobile/.gradle/
+
 # Scripts temporales de validación/pruebas
 .tmp_*
 *.tmp_*
 
 # Informe generado por python test_mutacion.py --coverage (regenerable)
 MUTACION_COBERTURA.md
+
+# CV generado por generar_cv.py desde LINKEDIN.md (regenerable, no versionar)
+CV_Arkaitz.html
+CV_Arkaitz.pdf
 
 # Sistema
 .DS_Store
@@ -38,3 +47,6 @@ keys.json
 proxy_keys.json
 *.keys
 !keys.json.example
+
+# Token persistente del puente (lo genera windows/aion-sincro.cmd en modo repo)
+token
