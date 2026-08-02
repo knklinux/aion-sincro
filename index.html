@@ -953,7 +953,7 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
         </div>
       </div>
     </div>
-    <button class="head-btn" id="btnInstall" title="Instalar Aion Sincro como aplicación (PWA, funciona sin conexión)" style="display:none">⬇️ Instalar</button>
+    <button class="head-btn" id="btnInstall" title="Instalar Aion Sincro como aplicación nativa: icono dorado en el menú Inicio y acceso directo en la barra de tareas, funciona sin conexión" style="display:none">⬇️ Instalar como aplicación</button>
     <button class="head-btn" id="btnSetup" title="Asistente de primera configuración: conecta el motor, la voz y el terminal">🚀 Inicio</button>
     <button class="head-btn" id="btnSettings" title="Configuración">⚙️ Ajustes</button>
   </header>
@@ -5533,8 +5533,12 @@ async function autoConfigure(){
   captureWelcomeES();
   renderWelcomeLang();
   syncStoryBtnUI();
-  // PWA: registro del service worker (solo en http/https; file:// no aplica) + botón de instalación
+  // PWA: registro del service worker (solo en http/https; file:// no aplica) + botón de instalación nativa
+  // El botón solo aparece cuando el navegador lo permite (beforeinstallprompt) y se oculta
+  // si la app ya está instalada (standalone/appinstalled). Al aceptar, Aion queda instalada
+  // como PWA nativa: icono dorado en el menú Inicio + acceso en la barra de tareas.
   let deferredPrompt=null;
+  const hideInstallBtn=()=>{ const b=$('#btnInstall'); if(b) b.style.display='none'; };
   if('serviceWorker' in navigator && /^https?:/.test(location.protocol)){
     navigator.serviceWorker.register('sw.js').catch(err=>console.warn('SW:',err&&err.message));
     window.addEventListener('beforeinstallprompt',e=>{
@@ -5542,15 +5546,18 @@ async function autoConfigure(){
       const b=$('#btnInstall'); if(b) b.style.display='';
     });
     window.addEventListener('appinstalled',()=>{
-      const b=$('#btnInstall'); if(b) b.style.display='none';
+      deferredPrompt=null; hideInstallBtn();
+      toast('✅ Aion Sincro instalada como aplicación — búscala en el menú Inicio con el icono dorado',4500);
     });
     $('#btnInstall').onclick=async()=>{
       if(!deferredPrompt) return;
-      deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null;
-      const b=$('#btnInstall'); if(b) b.style.display='none';
+      deferredPrompt.prompt();
+      const choice=await deferredPrompt.userChoice;
+      if(choice&&choice.outcome==='accepted'){ deferredPrompt=null; hideInstallBtn(); }
+      // Si el usuario descarta el diálogo, mantenemos el botón disponible para reintentar.
     };
     if(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches){
-      const b=$('#btnInstall'); if(b) b.style.display='none';
+      hideInstallBtn();
     }
   }
   document.body.dataset.state='idle';

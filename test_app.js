@@ -890,7 +890,8 @@ await (async () => {
   check("sw.js: limpieza de cachés antiguas en activate", /caches\s*\.keys\(\)/.test(swSrc) && /caches\s*\.delete\(k\)/.test(swSrc) && swSrc.includes("clients.claim"));
   check("index.html enlaza el manifest", html.includes('rel="manifest" href="manifest.webmanifest"'));
   check("index.html: theme-color y apple-touch-icon", html.includes('name="theme-color"') && html.includes('rel="apple-touch-icon" href="icons/aion-192.png"'));
-  check("index.html: botón de instalación PWA en el header", html.includes('id="btnInstall"') && html.includes('⬇️ Instalar'));
+  check("index.html: botón de instalación PWA en el header (texto explícito)", html.includes('id="btnInstall"') && html.includes('⬇️ Instalar como aplicación'));
+  check("index.html: botón oculto por defecto hasta beforeinstallprompt", /id=\"btnInstall\"[^>]*style=\"display:none\"/.test(html));
   check("index.html: registra sw.js solo en http(s)", /navigator\.serviceWorker\.register\('sw\.js'\)/.test(script) && script.includes("location.protocol"));
   // Desinstalador de PWA
   check("desinstalar-pwa.ps1 existe", fs.existsSync("windows/desinstalar-pwa.ps1"));
@@ -905,6 +906,9 @@ await (async () => {
   check("repo: sin archivos temporales", !fs.existsSync(".tmp_launcher_real.log"));
   check("index.html: beforeinstallprompt muestra el botón", script.includes("beforeinstallprompt") && script.includes("deferredPrompt=e"));
   check("index.html: appinstalled oculta el botón", script.includes("appinstalled") && script.includes("(display-mode: standalone)"));
+  check("index.html: appinstalled muestra toast de éxito", script.includes("instalada como aplicación") && script.includes("toast("));
+  check("index.html: solo oculta el botón si el usuario acepta (userChoice)", script.includes("userChoice") && script.includes("outcome==='accepted'") && script.includes("deferredPrompt=null; hideInstallBtn();"));
+  check("index.html: no pierde el prompt si el usuario descarta", script.includes("Si el usuario descarta el diálogo"));
   check("iconos PWA existen en disco", ["icons/aion-192.png", "icons/aion-512.png", "icons/aion-maskable-512.png"].every(f => fs.existsSync(path.join(ROOT, f))));
   check("gen_pwa_icons.py presente (iconos reproducibles)", fs.existsSync(path.join(ROOT, "gen_pwa_icons.py")));
   check("README documenta la instalación PWA", /PWA/.test(fs.readFileSync(path.join(ROOT, "README.md"), "utf8")));
