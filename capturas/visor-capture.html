@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Visor Aion Sincro</title>
+<!-- Generador de capturas PNG del visor (Edge headless). No es la app: usa ?mode=normal|pentest -->
+<style>
+:root{
+  --bg0:#080604;
+  --bg1:#141008;
+  --panel:rgba(26,18,8,.74);
+  --panel-2:rgba(20,14,7,.88);
+  --line:rgba(214,164,70,.16);
+  --text:#f2e9d8;
+  --dim:#a08a68;
+  --cyan:#f5a524;
+  --cyan-soft:rgba(245,165,36,.14);
+  --violet:#10b981;
+  --gold:#fbbf24;
+  --green:#34d399;
+  --red:#fb7185;
+  --font:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',sans-serif;
+  --mono:'Cascadia Code','Consolas','SF Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:var(--font);
+  background:var(--bg0);
+  color:var(--text);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(245,165,36,.3)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;color:inherit}
+
+/* ---------- Fondo ---------- */
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+  background:
+    radial-gradient(1200px 700px at 50% 42%, #1c1308 0%, var(--bg0) 62%);
+}
+#bg::before{ /* rejilla */
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(245,165,36,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(245,165,36,.05) 1px,transparent 1px);
+  background-size:56px 56px;
+  -webkit-mask-image:radial-gradient(ellipse at 50% 40%,#000 20%,transparent 72%);
+          mask-image:radial-gradient(ellipse at 50% 40%,#000 20%,transparent 72%);
+}
+#bg::after{ /* vineta + aro cian tenue */
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 42%,rgba(245,165,36,.07),transparent 40%),
+             radial-gradient(circle at 50% 50%,transparent 55%,rgba(0,0,0,.55));
+}
+.star{position:absolute;width:2px;height:2px;border-radius:50%;background:#ffe3a3;
+  animation:twinkle var(--tw,5s) ease-in-out infinite;opacity:.5}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(.7)}50%{opacity:.9;transform:scale(1.2)}}
+
+/* ---------- Layout ---------- */
+.app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column}
+header.top{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 22px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(24,17,9,.9),rgba(24,17,9,.55));
+  backdrop-filter:blur(10px);
+}
+.logo{display:flex;align-items:center;gap:12px}
+.hex{position:relative;width:38px;height:38px;display:grid;place-items:center}
+.hex svg{width:100%;height:100%;filter:drop-shadow(0 0 8px rgba(245,165,36,.6))}
+.logo h1{font-size:20px;letter-spacing:.35em;font-weight:700;
+  background:linear-gradient(90deg,#ffd166,#f5a524 55%,#10b981);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.logo small{display:block;font-size:10px;letter-spacing:.3em;color:var(--dim);font-weight:400}
+.spacer{flex:1}
+.head-btn{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 14px;border-radius:10px;font-size:13px;color:var(--dim);
+  border:1px solid transparent;transition:.2s;
+}
+.head-btn:hover{color:var(--text);border-color:var(--line);background:rgba(245,165,36,.06)}
+.head-btn.on{color:var(--cyan);border-color:rgba(245,165,36,.4);background:var(--cyan-soft);
+  box-shadow:0 0 14px rgba(245,165,36,.15)}
+#btnPentest.on{color:#ffd6a5;border-color:rgba(245,185,66,.5);background:rgba(245,185,66,.1)}
+#btnLaboral.on{color:#a5d8ff;border-color:rgba(96,165,250,.5);background:rgba(59,130,246,.12)}
+/* Candado de cifrado en el header (bloqueado/desbloqueado) */
+#btnLock{display:none}
+#btnLock.visible{display:flex}
+#btnLock.locked{color:#fda4af;border-color:rgba(251,113,133,.4);background:rgba(251,113,133,.08)}
+#btnLock.unlocked{color:#9fe8c9;border-color:rgba(52,211,153,.45);background:rgba(16,185,129,.1)}
+#btnLock.locked:hover,#btnLock.unlocked:hover{border-color:var(--line);background:rgba(245,165,36,.06)}
+.lockWrap{position:relative;display:inline-flex}
+.lockPop{position:absolute;top:calc(100% + 10px);right:0;z-index:80;width:264px;padding:14px;border-radius:12px;
+  border:1px solid rgba(214,164,70,.25);background:linear-gradient(180deg,rgba(12,18,28,.99),rgba(6,10,18,.99));
+  box-shadow:0 18px 50px rgba(0,0,0,.7),0 0 24px rgba(245,165,36,.07);opacity:0;visibility:hidden;transform:translateY(-4px);
+  transition:.22s}
+.lockPop.show{opacity:1;visibility:visible;transform:none}
+.lockPop h5{margin:0 0 3px;font-size:12.5px;color:#ffe9c2;letter-spacing:.05em}
+.lockPop p{font-size:11px;color:var(--dim);line-height:1.55;margin:0 0 10px}
+.lockPop input{width:100%;padding:9px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);color:var(--text);font-size:12.5px;margin-bottom:9px;outline:none}
+.lockPop input:focus{border-color:rgba(245,165,36,.5)}
+.lockPop .lp-actions{display:flex;gap:7px}
+.lockPop button{flex:1;padding:8px 10px;border-radius:8px;font-size:11.5px;font-weight:600;letter-spacing:.04em;cursor:pointer;transition:.2s}
+#lockUnlockBtn{color:#9fe8c9;border:1px solid rgba(52,211,153,.4);background:rgba(16,185,129,.12)}
+#lockUnlockBtn:hover{background:rgba(16,185,129,.24)}
+#lockNowBtn{color:#fda4af;border:1px solid rgba(251,113,133,.35);background:rgba(251,113,133,.08)}
+#lockNowBtn:hover{background:rgba(251,113,133,.18)}
+#btnSincronia.on{color:#9fe8c9;border-color:rgba(52,211,153,.55);background:rgba(16,185,129,.12);
+  box-shadow:0 0 16px rgba(52,211,153,.25)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+
+main{flex:1;display:grid;grid-template-columns:1fr minmax(360px,430px);min-height:0;gap:0}
+@media (max-width:980px){ main{grid-template-columns:1fr} #rightCol{display:none} }
+/* ---------- Escenario / Avatar ---------- */
+#stage{display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:18px}
+#stage::before{ /* aurora sutil */
+  content:'';position:absolute;inset:12% 18%;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle, rgba(245,165,36,.05), transparent 65%);
+}
+.avatarWrap{position:relative;width:min(340px,66vw);height:min(340px,66vw);margin-top:2vh}
+
+.orbit{position:absolute;border-radius:50%;pointer-events:none}
+.orbit-1{inset:0;border:1px dashed rgba(245,165,36,.35);animation:spin 16s linear infinite}
+.orbit-2{inset:26px;border:1px dotted rgba(16,185,129,.45);animation:spin 24s linear infinite reverse}
+.orbit-3{inset:52px;border:1px solid rgba(245,165,36,.2);border-left-color:transparent;border-bottom-color:transparent;
+  animation:spin 10s linear infinite}
+.orbit-4{inset:78px;border:1px solid rgba(245,185,66,.25);border-top-color:transparent;
+  animation:spin 7s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.core{
+  position:absolute;inset:92px;border-radius:50%;
+  background:radial-gradient(circle at 36% 30%,#fff3d6,#f59e0b 42%,#b45309 76%,#451a03 100%);
+  box-shadow:0 0 55px rgba(251,191,36,.5),0 0 130px rgba(251,191,36,.22),inset 0 0 46px rgba(255,255,255,.3);
+  animation:corePulse 4.5s ease-in-out infinite;
+  display:grid;place-items:center;transition:box-shadow .5s,filter .5s;
+}
+.core::before{ /* brillo barrido */
+  content:'';position:absolute;inset:-12%;border-radius:50%;
+  background:conic-gradient(from 0deg,transparent 0 40%,rgba(255,255,255,.5) 50%,transparent 60% 100%);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));
+          mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));
+  animation:spin 6s linear infinite;opacity:.7;filter:blur(.5px);
+}
+/* Visor de interfaz — geometría profesional, sin rasgos humanos */
+.face{width:82%;height:82%;display:block;filter:drop-shadow(0 0 12px rgba(245,165,36,.45));transition:filter .4s}
+.v-eye{transform-box:fill-box;transform-origin:center;animation:blink 4.4s infinite}
+.v-mouth{transform-box:fill-box;transform-origin:center;transition:transform .2s}
+.v-delta{transform-box:fill-box;transform-origin:center;animation:deltaFloat 5s ease-in-out infinite}
+@keyframes blink{0%,90%,100%{transform:scaleY(1)}93%{transform:scaleY(.08)}96%{transform:scaleY(1)}}
+@keyframes talk{0%,100%{transform:scaleX(.5) scaleY(.8);opacity:.75}50%{transform:scaleX(1) scaleY(1.5);opacity:1}}
+@keyframes deltaFloat{0%,100%{transform:translateY(-.6px);opacity:.75}50%{transform:translateY(.6px);opacity:1}}
+@keyframes spinArc{to{transform:rotate(360deg)}}
+.v-arc{transform-box:fill-box;transform-origin:center;animation:spinArc 5s linear infinite}
+.v-arc.r{animation-duration:7.5s;animation-direction:reverse}
+body[data-state="listening"] .v-eye{animation:none;transform:translateX(4.5px)}
+body[data-state="thinking"] .v-eye{animation:none;transform:translateY(-4px)}
+body[data-state="thinking"] .v-mouth{transform:scaleX(.55)}
+body[data-state="speaking"] .v-mouth{animation:talk .3s ease-in-out infinite}
+body[data-state="speaking"] .v-eye{animation:blink 2.6s infinite}
+body[data-state="error"] .v-eye{animation:none;transform:scale(1.25)}
+body[data-state="error"] .face{filter:drop-shadow(0 0 18px rgba(251,113,133,.65))}
+@keyframes corePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+.core.beat{animation:coreBeat .22s ease}
+@keyframes coreBeat{0%{transform:scale(1.02)}100%{transform:scale(1)}}
+
+.particle{position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;pointer-events:none;
+  transform:rotate(var(--a)) translateX(var(--r));background:var(--c);
+  box-shadow:0 0 8px var(--c);animation:twinkle var(--tw,4s) ease-in-out infinite;opacity:.8}
+
+/* anillo de escaneo (escuchando) */
+.scan{position:absolute;inset:78px;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .3s}
+.scan::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:2px solid transparent;
+  border-top-color:var(--cyan);animation:spin 1.6s linear infinite;filter:drop-shadow(0 0 6px var(--cyan))}
+.scan::after{content:'';position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle,transparent 58%,rgba(245,165,36,.22) 62%,transparent 66%)}
+
+body[data-state="listening"] .scan{opacity:1}
+body[data-state="thinking"] .core{
+  filter:hue-rotate(100deg) saturate(1.2);
+  box-shadow:0 0 70px rgba(16,185,129,.65),0 0 150px rgba(16,185,129,.3),inset 0 0 46px rgba(255,255,255,.3);
+}
+body[data-state="thinking"] .orbit-3{animation-duration:2.4s}
+body[data-state="thinking"] .orbit-1{animation-duration:5s}
+body[data-state="thinking"] .orbit-2{animation-duration:4s}
+body[data-state="speaking"] .core{box-shadow:0 0 80px rgba(52,211,153,.6),0 0 170px rgba(52,211,153,.28),inset 0 0 46px rgba(255,255,255,.35)}
+body[data-state="speaking"] .orbit-1{border-color:rgba(52,211,153,.5)}
+body[data-state="error"] .core{filter:hue-rotate(340deg) saturate(1.3);box-shadow:0 0 60px rgba(251,113,133,.6)}
+/* Transición de seguridad del avatar: pulso rojo al bloquear, respiración verde al desbloquear */
+#core.sec-lock{animation:secLock 1.2s ease-in-out}
+#core.sec-lock .face{filter:drop-shadow(0 0 22px rgba(251,113,133,.9))}
+#core.sec-lock .v-delta{animation:secShake .5s ease-in-out}
+@keyframes secLock{
+  0%{transform:scale(1);box-shadow:0 0 55px rgba(251,191,36,.5),0 0 130px rgba(251,191,36,.22),inset 0 0 46px rgba(255,255,255,.3)}
+  28%{transform:scale(.86);box-shadow:0 0 90px rgba(251,113,133,.95),0 0 190px rgba(251,113,133,.45),inset 0 0 62px rgba(251,113,133,.55)}
+  46%{transform:scale(1.06);box-shadow:0 0 70px rgba(251,113,133,.8),0 0 150px rgba(251,113,133,.35)}
+  100%{transform:scale(1);box-shadow:0 0 60px rgba(251,113,133,.55),0 0 150px rgba(251,113,133,.25),inset 0 0 46px rgba(255,255,255,.3)}
+}
+@keyframes secShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-3px)}40%{transform:translateX(3px)}60%{transform:translateX(-2px)}80%{transform:translateX(2px)}}
+#core.sec-unlock{animation:secUnlock 1.6s ease-in-out}
+#core.sec-unlock .face{filter:drop-shadow(0 0 24px rgba(52,211,153,.95))}
+@keyframes secUnlock{
+  0%{transform:scale(1);box-shadow:0 0 55px rgba(251,191,36,.5),0 0 130px rgba(251,191,36,.22),inset 0 0 46px rgba(255,255,255,.3)}
+  22%{transform:scale(.92);box-shadow:0 0 44px rgba(52,211,153,.5)}
+  40%,62%{transform:scale(1.05);box-shadow:0 0 95px rgba(52,211,153,.95),0 0 200px rgba(52,211,153,.45),inset 0 0 60px rgba(52,211,153,.5)}
+  100%{transform:scale(1);box-shadow:0 0 70px rgba(52,211,153,.6),0 0 170px rgba(52,211,153,.3),inset 0 0 46px rgba(255,255,255,.35)}
+}
+#statusText{margin-top:26px;font-size:14px;letter-spacing:.5em;color:var(--cyan);font-weight:600;
+  text-shadow:0 0 16px rgba(245,165,36,.6);text-transform:uppercase}
+body[data-state="thinking"] #statusText{color:var(--violet);text-shadow:0 0 16px rgba(16,185,129,.6)}
+body[data-state="speaking"] #statusText{color:var(--green);text-shadow:0 0 16px rgba(52,211,153,.6)}
+
+#wave{display:flex;gap:4px;align-items:flex-end;height:34px;margin-top:22px}
+#wave .bar{width:4px;height:6px;border-radius:2px;background:rgba(245,165,36,.5);transition:.15s}
+body[data-state="listening"] #wave .bar{animation:eq 1s ease-in-out infinite}
+@keyframes eq{0%,100%{height:5px}50%{height:30px}}
+body[data-state="listening"] #wave .bar:nth-child(3n){animation-delay:.15s;background:rgba(16,185,129,.6)}
+body[data-state="listening"] #wave .bar:nth-child(3n+1){animation-delay:.3s}
+body[data-state="listening"] #wave .bar:nth-child(3n+2){animation-delay:.45s}
+
+/* ---------- Banner pentest ---------- */
+#pentestBanner{display:none;align-items:center;gap:10px;padding:9px 22px;font-size:12.5px;
+  background:linear-gradient(90deg,rgba(245,185,66,.16),rgba(245,185,66,.04));
+  border-bottom:1px solid rgba(245,185,66,.3);color:#ffd9a8;letter-spacing:.04em}
+#pentestBanner.show{display:flex;animation:msgIn .4s ease}
+
+/* ---------- Banner sincronía ---------- */
+#laboralBanner{display:none;align-items:center;gap:10px;padding:9px 22px;font-size:12.5px;
+  color:#a5d8ff;background:linear-gradient(90deg,rgba(59,130,246,.14),rgba(59,130,246,.03));border-bottom:1px solid rgba(96,165,250,.2)}
+#laboralBanner.show{display:flex;animation:msgIn .4s ease}
+#sincroniaBanner{display:none;align-items:center;gap:10px;padding:9px 22px;font-size:12.5px;
+  background:linear-gradient(90deg,rgba(52,211,153,.16),rgba(52,211,153,.04));
+  border-bottom:1px solid rgba(52,211,153,.32);color:#a7f3d0;letter-spacing:.04em}
+#sincroniaBanner.show{display:flex;animation:msgIn .4s ease}
+body[data-sincronia="1"] .core{
+  box-shadow:0 0 70px rgba(52,211,153,.5),0 0 150px rgba(52,211,153,.24),inset 0 0 46px rgba(255,255,255,.32);
+}
+body[data-sincronia="1"] .orbit-1{border-color:rgba(52,211,153,.45)}
+body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
+
+/* ---------- Panel de ajustes ---------- */
+#settings{position:fixed;top:0;right:-460px;width:min(440px,100vw);height:100%;z-index:50;
+  background:linear-gradient(200deg,#1a1206,#0c0803);border-left:1px solid var(--line);
+  box-shadow:-20px 0 60px rgba(0,0,0,.6);transition:right .35s cubic-bezier(.2,.8,.25,1);
+.capture *{animation:none!important;transition:none!important}
+.capture .orbit-1{transform:rotate(28deg)}
+.capture .orbit-2{transform:rotate(-38deg)}
+.capture .orbit-3{transform:rotate(95deg)}
+.capture .orbit-4{transform:rotate(200deg)}
+.capture .v-arc{transform:rotate(45deg)}
+.capture .v-arc.r{transform:rotate(160deg)}
+html,body{height:100%;overflow:hidden}
+body.capture{width:100vw;height:100vh}
+#stage{height:100%}
+
+</style>
+</head>
+<body class="capture">
+<div id="bg"></div><span class="star" style="left:0%;top:0%;--tw:3s"></span><span class="star" style="left:37%;top:53%;--tw:4s"></span><span class="star" style="left:74%;top:6%;--tw:5s"></span><span class="star" style="left:11%;top:59%;--tw:6s"></span><span class="star" style="left:48%;top:12%;--tw:7s"></span><span class="star" style="left:85%;top:65%;--tw:3s"></span><span class="star" style="left:22%;top:18%;--tw:4s"></span><span class="star" style="left:59%;top:71%;--tw:5s"></span><span class="star" style="left:96%;top:24%;--tw:6s"></span><span class="star" style="left:33%;top:77%;--tw:7s"></span><span class="star" style="left:70%;top:30%;--tw:3s"></span><span class="star" style="left:7%;top:83%;--tw:4s"></span><span class="star" style="left:44%;top:36%;--tw:5s"></span><span class="star" style="left:81%;top:89%;--tw:6s"></span><span class="star" style="left:18%;top:42%;--tw:7s"></span><span class="star" style="left:55%;top:95%;--tw:3s"></span><span class="star" style="left:92%;top:48%;--tw:4s"></span><span class="star" style="left:29%;top:1%;--tw:5s"></span><span class="star" style="left:66%;top:54%;--tw:6s"></span><span class="star" style="left:3%;top:7%;--tw:7s"></span><span class="star" style="left:40%;top:60%;--tw:3s"></span><span class="star" style="left:77%;top:13%;--tw:4s"></span>
+<div class="app">
+
+  <header class="top">
+    <div class="logo">
+      <div class="hex">
+        <svg viewBox="0 0 40 40">
+          <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#f5a524" stroke-width="2"/>
+          <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(245,165,36,.12)" stroke="#10b981" stroke-width="1"/>
+          <text x="20" y="23.5" text-anchor="middle" font-size="12" font-weight="800" fill="#fff7e0" font-family="monospace">Δ</text>
+        </svg>
+      </div>
+      <div><h1>AION</h1><small>PENTEST · RED TEAM</small></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="head-btn" id="btnSincronia">◈ Sincronía</button>
+    <button class="head-btn" id="btnPentest">🛡️ Pentest</button>
+    <button class="head-btn" id="btnLaboral">💼 Laboral</button>
+    <button class="head-btn" id="btnLearn">🧭 Ruta</button>
+    <button class="head-btn" id="btnLinkedin">📢 LinkedIn</button>
+    <button class="head-btn" id="btnSettings">⚙️ Ajustes</button>
+  </header>
+
+  <div id="pentestBanner">🛡️ <b>MODO PENTEST ACTIVADO</b> — Asistencia para pruebas de seguridad <b>únicamente autorizadas</b>. Aion Sincro exigirá verificación de permiso y rechazará peticiones ilegales.</div>
+  <main>
+
+    <section id="stage">
+      <div class="avatarWrap" id="avatarWrap">
+        <div class="orbit orbit-1"></div>
+        <div class="orbit orbit-2"></div>
+        <div class="orbit orbit-3"></div>
+        <div class="orbit orbit-4"></div>
+        <div class="scan"></div>
+        <div class="core" id="core"><svg class="face" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="vGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffd166"/><stop offset="55%" stop-color="#f5a524"/><stop offset="100%" stop-color="#b45309"/></linearGradient>
+            <radialGradient id="vCore" cx="50%" cy="38%"><stop offset="0%" stop-color="#2a1c05"/><stop offset="78%" stop-color="#120a02"/><stop offset="100%" stop-color="#000000"/></radialGradient>
+          </defs>
+          <circle cx="60" cy="60" r="55" fill="none" stroke="rgba(245,165,36,.22)" stroke-width="1" stroke-dasharray="2 6"/>
+          <path class="v-arc" d="M60 7 A53 53 0 0 1 95 25" fill="none" stroke="#f5a524" stroke-width="2" stroke-linecap="round"/>
+          <path class="v-arc r" d="M60 113 A53 53 0 0 1 25 95" fill="none" stroke="#10b981" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>
+          <polygon points="60,22 92,41 92,79 60,98 28,79 28,41" fill="url(#vCore)" stroke="url(#vGrad)" stroke-width="1.6"/>
+          <polygon points="60,30 84.5,44 84.5,76 60,90 35.5,76 35.5,44" fill="none" stroke="rgba(245,165,36,.3)" stroke-width=".7" stroke-dasharray="3 5"/>
+          <path d="M28 41 L22 36 M92 41 L98 36 M92 79 L98 84 M28 79 L22 84" stroke="rgba(245,165,36,.6)" stroke-width="1" stroke-linecap="round"/>
+          <path class="v-delta" d="M60 52 L73 70 L47 70 Z" fill="none" stroke="#f5a524" stroke-width="1.8" stroke-linejoin="round"/>
+          <circle cx="60" cy="70" r="2.2" fill="#f5a524"/>
+          <rect class="v-eye" x="42" y="74" width="36" height="3.4" rx="1.7" fill="#34d399"/>
+          <rect class="v-eye" x="42" y="80" width="36" height="2" rx="1" fill="rgba(52,211,153,.55)"/>
+          <rect class="v-eye" x="46" y="76.4" width="3.4" height="2.2" rx="1.1" fill="rgba(255,255,255,.85)"/>
+          <rect class="v-eye" x="70.6" y="76.4" width="3.4" height="2.2" rx="1.1" fill="rgba(255,255,255,.85)"/>
+          <path class="v-mouth" d="M49 86 Q54 88.2 60 86 Q66 88.2 71 86" fill="none" stroke="#f5a524" stroke-width="1.7" stroke-linecap="round"/>
+        </svg></div>
+      </div>
+      <div id="statusText">EN ESPERA</div>
+      <div id="wave"></div>
+    </section>
+
+  </main>
+</div>
+<script>
+  const m = new URLSearchParams(location.search).get('mode');
+  if (m === 'pentest') {
+    document.getElementById('btnPentest').classList.add('on');
+    document.getElementById('pentestBanner').classList.add('show');
+    document.body.dataset.state = 'thinking';
+    document.getElementById('statusText').textContent = 'ANALIZANDO';
+  } else {
+    document.body.dataset.state = 'idle';
+    document.getElementById('statusText').textContent = 'EN ESPERA';
+  }
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
-# Perfil de LinkedIn — Arkaitz
+# Perfil de LinkedIn — Arkaitz Cabezuelo Nuñez
 
 > **Objetivo**: primer empleo en ciberseguridad (junior pentester / security analyst / SOC / red team).
-> **Realidad**: autodidacta, sin título universitario, con **una herramienta open-source real y funcional** como prueba de capacidad. Eso vale más que un papel — pero un certificado abre la puerta que la experiencia no puede.
+> **Realidad**: autodidacta, sin título universitario, con **dos herramientas open-source reales y funcionales** (Aion Sincro + CyberGuard) como prueba de capacidad. Eso vale más que un papel — pero un certificado abre la puerta que la experiencia no puede.
 > Este documento está redactado para copiar y pegar directamente en LinkedIn.
 
 ---
@@ -9,7 +9,7 @@
 ## 1. Título (Headline) — elige una, o combina
 
 ```
-Cybersecurity Analyst aspirante | Autodidacta | Creador de Aion Sincro (IA open-source) | Linux · Redes · Red Team | Buscando mi primera oportunidad
+Cybersecurity Analyst & Junior Pentester en formación | Autodidacta | Creador de Aion Sincro y CyberGuard (open-source) | Linux · Red Team | Buscando mi primera oportunidad
 ```
 
 Alternativas:
@@ -22,18 +22,20 @@ Alternativas:
 
 ## 2. Acerca de (About)
 
-> Aprendo ciberseguridad por convicción, no por obligación. Sin formación académica estándar, he construido mi propio camino: en vez de limitarme a consumir cursos, **construyo las herramientas que necesito para aprender**.
->
-> El resultado más visible es **Aion Sincro**, un asistente de IA de código abierto (público en mi GitHub) diseñado como compañera de aprendizaje para pentesting y red team, con:
+> Aprendo ciberseguridad **construyendo mis propias herramientas** y documentando cada hallazgo. Sin título universitario, pero con un portfolio real de proyectos open-source que lo demuestran. El más visible es **Aion Sincro**, un asistente de IA de código abierto (público en mi GitHub) diseñado como compañera de aprendizaje para pentesting y red team, con:
 >
 > - 🧠 **5 motores de IA** (local, Ollama, Groq, OpenRouter, HuggingFace) — sin coste
 > - 🎙️ **Voz con 3 motores**: Piper neuronal 100% local, Mistral Voxtral y voces offline de Windows
-> - 🛡️ **Seguridad real**: claves cifradas con WebCrypto, puente local endurecido, suite de pruebas con ~450 checks y pruebas de mutación
+> - 🛡️ **Seguridad real**: claves cifradas con WebCrypto, puente local endurecido, suite de pruebas con ~475 tests y pruebas de mutación
 > - 📋 **Productividad profesional**: informes de pentest exportables a Markdown/PDF/Word, plantillas ISO 27001:2022, modo laboral
 > - 🎓 **Ruta de aprendizaje guiada** de red team con 18 checkpoints, examen práctico y certificación de progreso
 > - 📱 **Portable**: PWA instalable + esqueleto Android (Capacitor)
 >
-> Uso Linux como sistema diario, manejo la terminal con soltura y trabajo con nmap, gobuster, Burp Suite, OSINT y scripting en Python y JavaScript. Mi filosofía es la **simbiosis**: la IA no es una herramienta servil, sino una compañera de trabajo que me permite exprimir mi capacidad de razonamiento al máximo.
+> También he construido **CyberGuard**, un toolkit CLI modular de seguridad en Python con cero dependencias: módulo ofensivo (nmap + searchsploit) y auditor de **hardening** (sysctl + sshd_config) con salida CI/CD-friendly.
+>
+> Uso Linux como sistema diario (KDE Neon, Linux Mint, Kali), manejo la terminal con soltura (Bash, Python, find, grep, netcat, openssl, ssh) y trabajo con nmap, gobuster, Burp Suite, OSINT, OWASP Top 10 y análisis de tráfico TCP/IP. Laboratorios activos: OverTheWire (Bandit nivel 27), TryHackMe (rutas SOC Analyst Tier 1 y Pre-Security) y HackTheBox. Mi filosofía es la **simbiosis**: la IA no es una herramienta servil, sino una compañera de trabajo que me permite exprimir mi capacidad de razonamiento al máximo.
+>
+> Hoy trabajo como **autónomo instalador de carpintería metálica** (Alupro Cerramientos, Málaga) mientras construyo mi transición a la ciberseguridad. La precisión del trabajo manual, la constancia de un autónomo y la disciplina de estudio diario son el mismo músculo que necesito para el red team.
 >
 > Busco mi **primera oportunidad** en ciberseguridad: junior pentester, analista de seguridad o SOC. Tengo hambre de aprender, demuestro con código, y no tengo miedo de equivocarme delante de un log.
 >
@@ -47,10 +49,18 @@ Alternativas:
    - Texto del post: *"He construido un asistente de IA open-source para pentesting: voz, 5 motores de IA gratis, informes profesionales, ISO 27001, ruta de aprendizaje de red team con examen y certificación, y una suite de seguridad con ~450 checks. Sin título, pero con mucho código. Aion Sincro es mi prueba de que se puede."*
 2. **README del proyecto** (captura o enlace)
 3. **CHANGELOG.md / SECURITY.md** — muestra que también sabes documentar y pensar en seguridad (muy valorado en este sector)
+4. **CyberGuard** → https://github.com/knklinux/ciberguard
+   - Texto del post: *"Toolkit CLI modular de seguridad en Python, cero dependencias: módulo ofensivo (nmap + searchsploit) y auditor de hardening (sysctl + sshd_config) con salida CI/CD-friendly."*
 
 ---
 
 ## 4. Experiencia
+
+### Alupro Cerramientos (comunidad de bienes) — Instalador de carpintería metálica (autónomo)
+*Fecha: actualidad · Málaga*
+
+- Trabajo por cuenta propia (autónomo) como instalador de carpintería metálica en Málaga.
+- Instalación de cerramientos y carpintería metálica.
 
 ### Proyecto independiente — Creador de Aion Sincro (IA de ciberseguridad open-source)
 *Fecha: en curso*
@@ -62,16 +72,24 @@ Alternativas:
 - Añadí **portabilidad**: PWA instalable y esqueleto de app **Android** con Capacitor.
 - Público y versionado en **GitHub** con documentación, changelog y política de seguridad.
 
+### Proyecto independiente — Creador de CyberGuard (toolkit CLI de seguridad)
+*Fecha: en curso*
+
+- Desarrollé un **toolkit CLI modular de seguridad en Python, cero dependencias**: módulo ofensivo (nmap + searchsploit) y auditor de **hardening** (sysctl + sshd_config).
+- Salida **CI/CD-friendly**: pensado para integrarse en pipelines de auditoría automatizados.
+
 ### Proyectos personales previos
-- **ciberguard** y **Knk-linux-Ark-** en GitHub: experimentos y herramientas de ciberseguridad y Linux.
+- **Knk-linux-Ark-** en GitHub: experimentos y herramientas de ciberseguridad y Linux.
 
 ---
 
 ## 5. Educación y Certificaciones
 
 ### Educación
+- **Formación reglada**: estudios hasta secundaria.
 - **Autodidacta** — Ciberseguridad ofensiva, Linux, redes y programación (en curso, aprendizaje continuo).
 - Formación basada en práctica real: laboratorios propios, retos, lectura de logs, y construcción de herramientas (aprendizaje por construcción).
+- **Laboratorios activos**: OverTheWire Bandit (nivel 27 alcanzado), TryHackMe (rutas *SOC Analyst Tier 1* y *Pre-Security*) y HackTheBox (criptografía y máquinas Linux básicas).
 
 ### Certificaciones
 - **eJPT (eLearnSecurity Junior Penetration Tester)** — **en preparación** *(actualiza cuando la obtengas)*
@@ -85,7 +103,7 @@ Alternativas:
 ## 6. Habilidades (Skills)
 
 **Hard skills** (añade estas y confírmalas con la gente que te conozca):
-Linux, Redes (TCP/IP), Nmap, Gobuster, Burp Suite, OSINT, Bash, Python, JavaScript, Git/GitHub, Seguridad Web (OWASP Top 10), ISO 27001, Informes técnicos, Red Team (en formación), HTML/CSS/JS, Automatización con IA.
+Linux (KDE Neon, Mint, Kali), Redes (TCP/IP, análisis de tráfico), Nmap, Gobuster, Burp Suite, OSINT, Bash, Python, find/grep/netcat/openssl/ssh, JavaScript, Git/GitHub, Seguridad Web (OWASP Top 10), ISO 27001, Informes técnicos, Red Team (en formación), HTML/CSS/JS, Automatización con IA.
 
 **Soft skills** (valóralas y añade un "endoso"):
 Aprendizaje autodidacta, Resolución de problemas, Razonamiento lógico, Autonomía, Comunicación técnica, Curiosidad técnica, Constancia.
@@ -94,9 +112,10 @@ Aprendizaje autodidacta, Resolución de problemas, Razonamiento lógico, Autonom
 
 ## 7. Datos de perfil
 
+- **Nombre completo**: Arkaitz Cabezuelo Nuñez
 - **Ubicación**: Málaga, España (disponible para remoto)
-- **Idiomas**: Español (nativo), Inglés (técnico — suficiente para leer docs y escribir informes; indica tu nivel real)
-- **URL personalizada**: consigue `linkedin.com/in/arkaitz-...` (personaliza tu URL, es gratis y queda más profesional)
+- **Idiomas**: Español (nativo), Inglés (técnico — suficiente para leer documentación técnica y escribir informes; ajusta al nivel real)
+- **URL personalizada**: `linkedin.com/in/arkaitz-cabezuelo-nuñez-1012b5427` (ya está personalizada ✔)
 - **Github**: https://github.com/knklinux
 - **Foto**: no hace falta traje; una foto clara, natural, con buena luz.
 - **Banner**: usa la portada de Aion Sincro o un fondo oscuro con "Linux · Red Team · IA" — transmite el sector.
@@ -133,10 +152,15 @@ Esto no es marketing: es la idea que mueve el proyecto. **No construí Aion Sinc
 ## 10. Guía de contenido: 10 publicaciones semanales de pentesting
 
 > Publica **1 post por semana** durante 10 semanas (≈ 2,5 meses, el tiempo de tu preparación del eJPT). Cada post: 150-250 palabras, un **gancho** potente en la primera línea, **1 captura o fragmento de código** real, y una **pregunta final** para generar conversación. No hace falta ser experto — documentar tu proceso ya te diferencia del 95%.
+>
+> ✍️ **Los 10 posts ya están escritos y listos para pegar** en
+> **[`POSTS_LINKEDIN.md`](POSTS_LINKEDIN.md)** — junto a este archivo en el
+> repo. Cada semana tiene su publicación completa con captura sugerida y
+> verificación de los datos.
 
 | Semana | Tema | Gancho (primera línea) | Qué mostrar | CTA / pregunta final |
 |---|---|---|---|---|
-| 1 | Presentación: por qué construyo mis herramientas | "Sin título universitario, pero con ~450 tests de seguridad en mi proyecto open-source." | Captura del repo Aion Sincro | ¿Qué es lo más difícil de aprender ciberseguridad en solitario? |
+| 1 | Presentación: por qué construyo mis herramientas | "Sin título universitario, pero con 482 tests de seguridad en mi proyecto open-source." | Captura del repo Aion Sincro | ¿Qué es lo más difícil de aprender ciberseguridad en solitario? |
 | 2 | nmap más allá de `-sV -sC` | "Un escaneo no es un informe." | Flags que usas, salida real de tu laboratorio, XML | ¿Cuál es tu flag de nmap favorita? |
 | 3 | Parsear salidas de herramientas | "Cansado de copiar a mano la salida de Burp/Nessus/gobuster." | Fragmento del parser (CyberGuard / Aion Sincro) | ¿Automatizas tus informes o los haces a mano? |
 | 4 | OSINT con herramientas libres | "Empecé OSINT con holehe y wayback: esto encontré." | Captura de una salida real | ¿Qué herramienta OSINT te sorprendió más? |
