@@ -312,8 +312,7 @@ check("auto-parada: se aplica antes de procesar la frase", /if\(store\.autoStopM
 // Respuestas breves: instrucción en systemPrompt + cap de tokens en streamChat
 check("breve: systemPrompt añade MODO BREVE", script.includes("if(store.breve&&!store.laboral&&!store.pentest) base+="));
 check("breve: cap de max_tokens en streamChat", script.includes("if(store.breve&&!store.laboral&&!store.pentest&&provider!=='demo'&&provider!=='ollama'&&provider!=='huggingface')") && script.includes("if(!body.max_tokens) body.max_tokens=220;"));
-// Interrupción mutua: el usuario corta a Aion con el micrófono mientras habla/pensa
-check("interrupción: toggleMic corta streaming/speaking y deja el micrófono listo", /if\(streaming\|\|speaking\)\{[\s\S]*?stopAll\(\);\s*clearTimeout\(continuousTimer\);\s*\/\/ salir del ciclo[\s\S]*?setTimeout\(\(\)=>\{[\s\S]*?setListening\(true\);\s*\},180\);/.test(script));
+// Interrupción mutua: el usuario corta a Aion con el micrófono mientras habla/pensa  check("interrupción: toggleMic corta streaming/speaking y deja el micrófono listo", /if\(streaming\|\|speaking\)\{[\s\S]*?stopAll\(\);\s*clearTimeout\(continuousTimer\); clearTimeout\(silenceTimer\);\s*\/\/ salir del ciclo[\s\S]*?setTimeout\(\(\)=>\{[\s\S]*?setListening\(true\);\s*\},180\);/.test(script));
 // Interrupción mutua: Aion corta al usuario si oye el wake word con una petición durante la escucha
 check("interrupción: Aion corta al usuario con el wake word en escucha activa", script.includes("if(listening&&store.wake&&!wakeScan)") && script.includes("Aion interrumpe:"));
 check("interrupción: detiene la escucha antes de responder", /setListening\(false\);\s*\/\/ Aion corta la escucha y toma la palabra/.test(script));
@@ -323,10 +322,18 @@ check("store default continuous:false", script.includes("autoStopMic:true, breve
 check("Ajustes: toggle de conversación continua presente", html.includes('id="btnContinuous"'));
 check("bind: btnContinuous alterna store.continuous", /\$\('#btnContinuous'\)\.onclick=\(\)=>\{[\s\S]*?store\.continuous=!store\.continuous;/.test(script));
 check("syncContinuousUI definida y llamada en boot", /function\s+syncContinuousUI/.test(script) && script.includes("syncContinuousUI();"));
-check("continuousCycle() definida", /function\s+continuousCycle\s*\(/.test(script));
-check("continuousCycle reabre el micrófono sola (setListening(true))", /continuousTimer=setTimeout\(\(\)=>\{[\s\S]*?setListening\(true\);/.test(script));
-check("continuousCycle solo si está activo y sin trabajo en curso", script.includes("if(!store.continuous) return;") && script.includes("!streaming&&!speaking&&!listening&&recog"));
-check("toggleMic sale del ciclo continuo al interrumpir", script.includes("clearTimeout(continuousTimer)"));
+check("continuousCycle() definida", /function\s+continuousCycle\s*\(/.test(script));  check("continuousCycle reabre el micrófono sola (setListening(true))", /continuousTimer=setTimeout\(\(\)=>\{[\s\S]*?setListening\(true\);/.test(script));
+  check("continuousCycle solo si está activo y sin trabajo en curso", script.includes("if(!store.continuous) return;") && script.includes("!streaming&&!speaking&&!listening&&recog"));
+  check("toggleMic sale del ciclo continuo al interrumpir", script.includes("clearTimeout(continuousTimer)"));
+  // Límite de silencio configurable (turnTimeout) en conversación continua
+  check("store default turnTimeout:4", script.includes("continuous:false, turnTimeout:4,"));
+  check("Ajustes: slider de límite de silencio presente (2-5 s)", html.includes('id="turnTimeout"') && html.includes('min="2"') && html.includes('max="5"'));
+  check("bind: turnTimeout guarda el valor al mover el slider", /\$\('#turnTimeout'\)\.oninput=e=>\{[\s\S]*?store\.turnTimeout=\+e\.target\.value;/.test(script));
+  check("openSettings inicializa turnTimeout desde el store", /\$\('#turnTimeout'\)\.value=store\.turnTimeout\|\|4;/.test(script));
+  check("collectSettings persiste turnTimeout limitado a 2-5", /store\.turnTimeout=Math\.max\(2,Math\.min\(5,parseFloat\(\$\('#turnTimeout'\)\.value\)\|\|4\)\);/.test(script));
+  check("silenceTimer pausa el ciclo si no hablas (turnTimeout s)", /const tt=Math\.max\(2,Math\.min\(5,\+store\.turnTimeout\|\|4\)\);/.test(script) && /silenceTimer=setTimeout\(\(\)=>\{/.test(script) && script.includes("⏸️ Te espero en silencio"));
+  check("hablar cancela el límite de silencio (clearTimeout(silenceTimer) en onresult)", /clearTimeout\(silenceTimer\);\s*if\(final\)\{/.test(script));
+  check("stopAll limpia silenceTimer", script.includes("function stopAll(){ clearTimeout(silenceTimer);"));
 check("conversación continua enganchada al terminar de hablar (Windows)", /speaking=false; setState\(streaming\?'thinking':'idle'\); continuousCycle\(\); \}\ };/.test(script));
 check("conversación continua enganchada al terminar (Voxtral y Piper)", (script.match(/speaking=false; setState\(streaming\?'thinking':'idle'\); continuousCycle\(\);/g)||[]).length>=3);
 
