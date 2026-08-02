@@ -1054,6 +1054,26 @@ await (async () => {
   check("CMD en startup no abre navegador", cmd.includes('"%STARTUP_MODE%"=="0"') && cmd.includes("start \"\" \"http"));
   check("CMD en startup no muestra banner", cmd.includes('STARTUP_MODE%")=="0" (')||cmd.includes('STARTUP_MODE%"=="0" ('));
 
+  // ---------- Fase 2.4: endpoint /read (leer archivos del proyecto) ----------
+  check("bridgeRead definida", script.includes("async function bridgeRead"));
+  check("bridgeRead usa POST /read", /fetch\(BRIDGE\+'\/read'/.test(script) && script.includes("method:'POST'"));
+  check("bridgeRead envía path y token", /body:JSON\.stringify\(\{path:rpath,token:store\.bridgeToken\|\|''\}\)/.test(script));
+  check("botón termReadBtn en el HTML", script.includes("$('#termReadBtn')"));
+  check("handler termReadBtn con prompt", /\$\('#termReadBtn'\)\.onclick/.test(script) && script.includes("prompt('"));
+  check("chat: comando «lee X» maneja readMatch", script.includes("const readMatch=text.match"));
+  check("chat: lee/analiza/léeme/abre como verbos de lectura", /lee\|analiza\|l\[ée\]eme\|abre\|mu\[ée\]strame/.test(script));
+  check("chat: error controlado si no se puede leer", script.includes("No pude leer") && script.includes("streaming=false"));
+  check("bridge.py tiene endpoint /read", fs.readFileSync("bridge.py","utf8").includes('self.path == "/read"'));
+  check("bridge.mjs tiene endpoint /read", fs.readFileSync("bridge.mjs","utf8").includes('req.url === "/read"'));
+  // Seguridad del endpoint /read en el puente
+  const pyRead=fs.readFileSync("bridge.py","utf8");
+  const jsRead=fs.readFileSync("bridge.mjs","utf8");
+  check("/read: rechaza path traversal", pyRead.includes("path traversal no permitido") && jsRead.includes("path traversal no permitido"));
+  check("/read: rechaza rutas absolutas", pyRead.includes("ruta absoluta no permitida") && jsRead.includes("ruta absoluta no permitida"));
+  check("/read: limita a 1 MB", pyRead.includes("max 1 MB") && jsRead.includes("max 1 MB"));
+  check("/read: rechaza binarios", pyRead.includes("archivo binario no soportado") && jsRead.includes("archivo binario no soportado"));
+  check("/read: verifica que la ruta queda dentro del proyecto", pyRead.includes("fuera del proyecto") && jsRead.includes("fuera del proyecto"));
+
   // ---------- Resumen ----------
   console.log("\n" + "=".repeat(60));
   console.log(`RESULTADO: ${PASS} ok · ${FAIL} fallos`);

@@ -1074,6 +1074,7 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
           <button class="iconBtn" id="termKillBtn" aria-label="Detener comando">⏹ Detener</button>
           <button class="iconBtn" id="termReconnect" title="Reconectar puente" aria-label="Reconectar puente">⟳</button>
           <button class="iconBtn" id="termClear" title="Limpiar salida" aria-label="Limpiar salida del terminal">🗑️</button>
+          <button class="iconBtn" id="termReadBtn" title="Leer archivo del proyecto" aria-label="Leer archivo del proyecto">📂 Leer</button>
         </div>
         <div id="termOut"></div>
         <div class="termLine">
@@ -3253,6 +3254,17 @@ async function termKill(){
   try{ await fetch(BRIDGE+'/kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:store.bridgeToken||''})}); if(termBusy) termPrintText('⏹ Comando detenido','warn'); }
   catch(e){}
 }
+async function bridgeRead(rpath){
+  // Lee un archivo del proyecto via el puente (endpoint /read).
+  // Seguridad: el puente solo acepta rutas relativas dentro de BASE_DIR.
+  // Retorna {ok,content,size,path} o {ok:false,error}.
+  rpath=(rpath||'').trim(); if(!rpath) return {ok:false,error:'path vacío'};
+  try{
+    const resp=await fetch(BRIDGE+'/read',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({path:rpath,token:store.bridgeToken||''})});
+    return await resp.json();
+  }catch(e){ return {ok:false,error:e.message}; }
+}
 function termSubmit(){
   const input=$('#termInput');
   if(termBusy){ termKill(); return; }
@@ -4483,6 +4495,32 @@ async function handleUserText(text){
   addMsg('user',esc(text));
   const typing=addTyping();
   store.history.push({role:'user',content:text});
+  /* Comando /read: «lee X», «analiza X», «léeme X», «abre X».
+     Aion lee el archivo via el puente y lo incluye como contexto
+     en el chat para poder discutirlo contigo. */
+  const readMatch=text.match(/\b(?:lee|analiza|l[ée]eme|abre|mu[ée]strame|qu[ée] hay en|contenido de)\s+["']?([^"'\n]{1,200}?)["']?\s*$/i);
+  if(readMatch){
+    const rpath=readMatch[1].trim();
+    const r=await bridgeRead(rpath);
+    if(r.ok){
+      typing.closest('.msg').remove();
+      const body=addMsg('ai','');
+      const truncated=r.content.length>4000?r.content.slice(0,4000)+'\n\n── [archivo truncado: '+(r.content.length-4000)+' bytes más] ──':r.content;
+      body.textContent='📂 '+r.path+' ('+r.size+' bytes):\n\n'+truncated;
+      store.history.push({role:'assistant',content:body.textContent});
+      store.history.push({role:'user',content:'[ARCHIVO LEÍDO: '+rpath+'] Analiza el contenido de este archivo y dime qué ves.'});
+      speak('He leído '+rpath+'. Pregúntame lo que quieras sobre su contenido.');
+      streaming=false;
+      return;
+    }else{
+      typing.closest('.msg').remove();
+      const body=addMsg('ai','❌ No pude leer «'+esc(rpath)+'»: '+esc(r.error)+'.\n\n📂 Puedes leer archivos con el botón **📂 Leer** de la pestaña Terminal, o pedírmelo en el chat con «lee nombre-del-archivo».');
+      body.classList.add('err');
+      store.history.push({role:'assistant',content:body.textContent});
+      streaming=false;
+      return;
+    }
+  }
   /* Modo Laboral: si el usuario pega salida real de una herramienta (nmap,
      gobuster, curl, Nessus o Burp Suite), generamos el informe estructurado
      aquí mismo (funciona con cualquier motor, incluso Demo, porque es parsing
@@ -5175,6 +5213,22 @@ function bind(){
   $('#termReconnect').onclick=()=>{ termPing(); toast(termConnected?'Puente conectado ✔':'Puente no disponible — inicia bridge.py o bridge.mjs'); };
   $('#termClear').onclick=()=>{ $('#termOut').innerHTML=''; };
   $('#termKillBtn').onclick=termKill;
+  $('#termReadBtn').onclick=async()=>{
+    const path=prompt('📂 Ruta del archivo (relativa al proyecto):','');
+    if(!path||!path.trim()) return;
+    termPrintText('📂 Leyendo: '+path.trim(),'ai');
+    const r=await bridgeRead(path.trim());
+    if(r.ok){
+      termPrintText('── '+r.path+' ('+r.size+' bytes) ──','cmd');
+      // Mostrar primeras 60 líneas en el terminal
+      const lines=r.content.split('\n');
+      const preview=lines.slice(0,60).join('\n');
+      termPrintText(preview+(lines.length>60?'\n── … ('+(lines.length-60)+' líneas más) ──':''));
+      if(r.size>3000) termPrintText('💡 El archivo completo ('+r.size+' bytes) está disponible en el chat. Pregúntale a Aion «analiza '+path+'» y te lo desglosará.');
+    }else{
+      termPrintText('❌ '+r.error,'err');
+    }
+  };
   $('#btnTts').onclick=()=>{ store.tts=!store.tts; if(store.tts) ttsWarned=false; $('#btnTts').classList.toggle('on',store.tts); saveStore(); };
   $('#btnSearch').onclick=()=>{ store.search=!store.search; store.tools.internet=store.search; syncSearchUI(); saveStore(); renderTools(); toast(store.search?'Búsqueda web activada':'Búsqueda web desactivada'); };
   $('#toolsReset').onclick=()=>{ store.tools={internet:true,weather:true,cve:true,github:true,countries:true}; store.search=true; syncSearchUI(); saveStore(); renderTools(); toast('Herramientas restauradas'); };
