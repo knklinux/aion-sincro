@@ -758,62 +758,9 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
   background:linear-gradient(135deg,#67e8f9,#06b6d4);box-shadow:0 0 24px rgba(6,182,212,.35);cursor:pointer;transition:.25s}
 #btnCloseOsint:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(6,182,212,.5)}
 
-/* ---------- LinkedIn: 10 publicaciones semanales de pentesting ---------- */
-#linkedinOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
-  background:radial-gradient(circle at 50% 30%,rgba(245,165,36,.08),rgba(2,6,12,.88) 70%);
-  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s}
-#linkedinOverlay.show{opacity:1;visibility:visible;pointer-events:auto}
-.li-card{width:min(960px,100%);max-height:92vh;display:flex;flex-direction:column;border-radius:20px;
-  border:1px solid rgba(245,165,36,.26);background:linear-gradient(180deg,rgba(12,10,6,.97),rgba(6,8,12,.98));
-  box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 60px rgba(245,165,36,.07);animation:winIn .6s cubic-bezier(.2,.8,.25,1)}
-.li-body{flex:1;overflow-y:auto;padding:18px 26px 10px;scrollbar-width:thin;scrollbar-color:rgba(245,165,36,.3) transparent}
-.li-body::-webkit-scrollbar{width:6px}
-.li-body::-webkit-scrollbar-thumb{background:rgba(245,165,36,.28);border-radius:3px}
-.li-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-bottom:16px}
-.li-item{border:1px solid rgba(245,165,36,.16);border-radius:12px;padding:12px 14px;cursor:pointer;transition:.2s;background:rgba(2,6,12,.5)}
-.li-item:hover{border-color:rgba(245,165,36,.5);transform:translateY(-1px)}
-.li-item.on{border-color:rgba(245,165,36,.6);background:rgba(245,165,36,.07)}
-.li-item .li-week{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#f5a524;margin-bottom:4px}
-.li-item .li-title{font-size:13px;font-weight:700;color:#ffe9c7;line-height:1.4}
-.li-item .li-hook{font-size:11.5px;color:var(--dim);line-height:1.45;margin-top:5px}
-.li-view{border:1px solid rgba(245,165,36,.2);border-radius:14px;padding:18px 20px;background:rgba(2,6,12,.55);margin-bottom:14px}
-.li-view .li-vhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
-.li-view .li-vtitle{font-size:15px;font-weight:800;color:#ffd166}
-.li-view .li-actions{display:flex;gap:8px;flex-wrap:wrap}
-.li-btn{padding:8px 16px;border-radius:18px;font-size:12px;font-weight:700;cursor:pointer;transition:.2s;border:1px solid rgba(245,165,36,.35);color:#ffd166;background:rgba(245,165,36,.08)}
-.li-btn:hover{background:rgba(245,165,36,.18);transform:translateY(-1px)}
-.li-text{font-size:13.5px;color:#f3e6cf;line-height:1.75;white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow-y:auto;padding:14px;border-radius:10px;background:rgba(0,0,0,.35);border:1px solid rgba(245,165,36,.12)}
-.li-capture{font-size:11.5px;color:var(--dim);line-height:1.6;margin-top:10px}
-.li-gen{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.li-gen input{flex:1;min-width:220px;background:rgba(2,6,12,.7);border:1px solid rgba(245,165,36,.25);color:#ffe9c7;border-radius:10px;padding:9px 12px;font-size:12.5px;outline:none;transition:.2s}
-.li-gen input:focus{border-color:rgba(245,165,36,.55)}
-.li-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 24px;border-top:1px solid rgba(245,165,36,.15)}
-#btnCloseLi{padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.1em;color:#1a1003;
-  background:linear-gradient(135deg,#ffd166,#f5a524);box-shadow:0 0 24px rgba(245,165,36,.35);cursor:pointer;transition:.25s}
-#btnCloseLi:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(245,165,36,.5)}
+/* LinkedIn y CV eliminados — datos personales movidos a privado/ */
 
-/* ---------- Overlay CV / Mi perfil ---------- */
-#cvOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
-  background:radial-gradient(circle at 50% 30%,rgba(16,185,129,.08),rgba(2,6,12,.88) 70%);
-  opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s}
-#cvOverlay.show{opacity:1;visibility:visible;pointer-events:auto}
-.cv-card{width:min(900px,100%);max-height:92vh;display:flex;flex-direction:column;border-radius:20px;
-  border:1px solid rgba(16,185,129,.26);background:linear-gradient(180deg,rgba(6,10,9,.97),rgba(6,8,12,.98));
-  box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 60px rgba(16,185,129,.07);animation:winIn .6s cubic-bezier(.2,.8,.25,1)}
-.cv-body{flex:1;overflow:hidden;position:relative;min-height:300px}
-.cv-body iframe{width:100%;height:100%;border:none;position:absolute;inset:0}
-.cv-status{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
-  font-size:13.5px;color:var(--dim);background:rgba(6,10,9,.85);transition:opacity .4s}
-.cv-status.gone{opacity:0}
-.cv-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 24px;border-top:1px solid rgba(16,185,129,.15)}
-.cv-hint{font-size:11px;color:var(--dim);letter-spacing:.04em}
-#btnRegenCv{padding:10px 22px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.06em;
-  color:#9fe8c9;border:1px solid rgba(52,211,153,.4);background:rgba(16,185,129,.1);cursor:pointer;transition:.25s}
-#btnRegenCv:hover{background:rgba(16,185,129,.22);transform:translateY(-1px);box-shadow:0 0 20px rgba(52,211,153,.25)}
-#btnRegenCv.busy{opacity:.6;pointer-events:none;animation:corePulse 1.2s ease-in-out infinite}
-#btnCloseCv{padding:10px 26px;border-radius:24px;font-size:13px;font-weight:700;letter-spacing:.1em;color:#03130c;
-  background:linear-gradient(135deg,#6ee7b7,#10b981);box-shadow:0 0 24px rgba(16,185,129,.35);cursor:pointer;transition:.25s}
-#btnCloseCv:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(16,185,129,.5)}
+/* CV overlay eliminado — datos personales en privado/ */
 
 /* ---------- Asistente de primera configuración ---------- */
 #setupOverlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;
@@ -989,8 +936,7 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
     <button class="head-btn" id="btnISO" title="Auditoría de cumplimiento ISO 27001:2022 — cuestionario, gap analysis y plan de cumplimiento exportable">🔎 ISO</button>
     <button class="head-btn" id="btnLearn" title="Ruta Red Team: aprendizaje guiado con checkpoints de práctica">🧭 Ruta</button>
     <button class="head-btn" id="btnOsint" title="OSINT local: busca cuentas por usuario/email/teléfono y analiza dominios (robots.txt, Wayback, contenido oculto) vía aion_osint.py">🕵️ OSINT</button>
-    <button class="head-btn" id="btnLinkedin" title="LinkedIn: 10 publicaciones semanales de pentesting listas para copiar y publicar">📢 LinkedIn</button>
-    <button class="head-btn" id="btnCv" title="Mi perfil: ver y regenerar el CV generado desde LINKEDIN.md">👤 Perfil</button>
+    <!-- LinkedIn y Perfil eliminados — datos personales en privado/ -->
     <button class="head-btn" id="btnStory" title="Releer la historia de Ark & Jimmy (MANIFIESTO)">📖 Ver historia</button>
     <button class="head-btn" id="btnIntegrity" title="Verificar integridad: suites de pruebas y secretos del repo">🧬</button>
     <div class="lockWrap" id="lockWrap">
@@ -1506,71 +1452,9 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
   </div>
 </div>
 
-<!-- LinkedIn: 10 publicaciones semanales de pentesting -->
-<div id="linkedinOverlay">
-  <div class="li-card">
-    <div class="win-head">
-      <div class="wh-hex hex">
-        <svg viewBox="0 0 40 40">
-          <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#f5a524" stroke-width="1.5"/>
-          <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(245,165,36,.1)" stroke="#ffd166" stroke-width="1"/>
-          <text x="20" y="24" text-anchor="middle" font-size="13" font-weight="800" fill="#ffe9c7" font-family="monospace">📢</text>
-        </svg>
-      </div>
-      <h2 id="liTitle">📢 LinkedIn</h2>
-      <p class="wh-sub" id="liSub">10 publicaciones semanales de pentesting · listas para publicar</p>
-    </div>
-    <div class="li-body">
-      <div class="li-grid" id="liGrid"></div>
-      <div class="li-view" id="liView">
-        <div class="li-vhead">
-          <div class="li-vtitle" id="liVTitle">Elige una publicación</div>
-          <div class="li-actions">
-            <button class="li-btn" id="liCopyBtn">📋 Copiar</button>
-            <button class="li-btn" id="liMdBtn">📥 Markdown</button>
-          </div>
-        </div>
-        <div class="li-text" id="liText">Selecciona una de las 10 publicaciones para verla completa, copiarla o exportarla. Cada dato es verificable en el repo (sin logros inventados).</div>
-        <div class="li-capture" id="liCapture">📸 Captura sugerida — se muestra al elegir.</div>
-      </div>
-      <div class="li-gen">
-        <input id="liTopic" placeholder="Tema para un post nuevo (p. ej. «cómo parseé la salida de Nessus»)" autocomplete="off" spellcheck="false">
-        <button class="li-btn" id="liGenBtn">✨ Generar borrador</button>
-      </div>
-      <p class="osint-sub" style="margin-top:12px">💡 El generador redacta un borrador nuevo con la misma estructura (gancho, qué muestro, pregunta final, hashtags) usando el motor conectado — o te explica el método si estás en Demo. Los 10 posts completos viven también en <b>POSTS_LINKEDIN.md</b> del repo.</p>
-    </div>
-    <div class="li-foot">
-      <small>⚖️ Publicación honesta: solo datos verificables, eJPT en preparación</small>
-      <button id="btnCloseLi">ENTENDER · CERRAR</button>
-    </div>
-  </div>
-</div>
+<!-- LinkedIn eliminado — datos personales en privado/ -->
 
-<!-- Overlay CV / Mi perfil -->
-<div id="cvOverlay">
-  <div class="cv-card">
-    <div class="win-head">
-      <div class="wh-hex hex">
-        <svg viewBox="0 0 40 40">
-          <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#10b981" stroke-width="1.5"/>
-          <polygon points="20,10 29,15 29,25 20,30 11,25 11,15" fill="rgba(16,185,129,.1)" stroke="#6ee7b7" stroke-width="1"/>
-          <text x="20" y="24" text-anchor="middle" font-size="13" font-weight="800" fill="#a7f3d0" font-family="monospace">👤</text>
-        </svg>
-      </div>
-      <h2>Mi perfil — CV de Arkaitz</h2>
-      <p class="wh-sub">Generado desde LINKEDIN.md · fuente única de verdad</p>
-    </div>
-    <div class="cv-body">
-      <iframe id="cvFrame" src="CV_Arkaitz.html" title="CV de Arkaitz Cabezuelo"></iframe>
-      <div class="cv-status" id="cvStatus">Cargando CV...</div>
-    </div>
-    <div class="cv-foot">
-      <span class="cv-hint" id="cvHint">Actualizado: hoy</span>
-      <button id="btnRegenCv" title="Regenerar el CV desde LINKEDIN.md ejecutando python generar_cv.py">🔄 Regenerar CV</button>
-      <button id="btnCloseCv">CERRAR</button>
-    </div>
-  </div>
-</div>
+<!-- CV overlay eliminado — datos personales en privado/ -->
 
 <!-- Asistente de primera configuración: guía paso a paso para conectar motor, voz y terminal -->
 <div id="setupOverlay">
@@ -3257,54 +3141,93 @@ async function termKill(){
   try{ await fetch(BRIDGE+'/kill',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:store.bridgeToken||''})}); if(termBusy) termPrintText('⏹ Comando detenido','warn'); }
   catch(e){}
 }
-async function bridgeRead(rpath){
-  // Lee un archivo del proyecto via el puente (endpoint /read).
+async function bridgeRead(paths, opts={}){
+  // Lee uno o varios archivos del proyecto via el puente (endpoint /read).
+  // 
+  // Uso:
+  //   bridgeRead('README.md')                        → {ok,content,size,path}
+  //   bridgeRead(['README.md','bridge.py'])           → {ok,files:[{ok,content,size,path},...]}
+  //   opts.lines                                      → opcional: solo las últimas N líneas (cola)
+  //   opts.offset                                     → opcional: saltar las primeras M líneas
+  //   opts.onProgress(fraction,path,size)             → opcional: callback tras cada archivo
+  //
   // Seguridad: el puente solo acepta rutas relativas dentro de BASE_DIR.
-  // Retorna {ok,content,size,path} o {ok:false,error}.
-  rpath=(rpath||'').trim(); if(!rpath) return {ok:false,error:'path vacío'};
+  if(typeof paths==='string') paths=paths.trim();
+  if(!paths||(Array.isArray(paths)&&!paths.length)) return {ok:false,error:'path vacío'};
+  const isArray=Array.isArray(paths);
+  const extra={};
+  if(typeof opts.lines==='number'&&opts.lines>0) extra.lines=Math.floor(opts.lines);
+  if(typeof opts.offset==='number'&&opts.offset>=0) extra.offset=Math.floor(opts.offset);
   try{
+    const body=Object.assign(
+      isArray?{paths,token:store.bridgeToken||''}:{path:paths,token:store.bridgeToken||''},
+      extra
+    );
     const resp=await fetch(BRIDGE+'/read',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({path:rpath,token:store.bridgeToken||''})});
-    return await resp.json();
+      body:JSON.stringify(body)});
+    const data=await resp.json();
+    if(isArray&&data.files&&opts.onProgress){
+      data.files.forEach((f,i)=>opts.onProgress((i+1)/data.files.length,f.path,f.size));
+    }
+    return data;
   }catch(e){ return {ok:false,error:e.message}; }
 }
-async function handleFileRead(rpath){
-  // Botón 📎 del chat: lee un archivo via el puente (/read) y lo analiza
-  // con el motor activo, mostrando el contenido en el chat como contexto.
-  rpath=(rpath||'').trim(); if(!rpath||streaming)return;
+async function handleFileRead(paths, opts){
+  // Botón 📎 del chat: lee uno o varios archivos via el puente (/read)
+  // y los analiza con el motor activo.
+  // paths: string o array de strings (rutas relativas al proyecto).
+  // opts.isMulti: true si se invocó con múltiples rutas.
+  if(!paths||(Array.isArray(paths)&&!paths.length)) return;
+  if(streaming) return;
+  const isArray=Array.isArray(paths);
+  const label=isArray?paths.join(', '):paths;
   $('#textInput').value='';
   streaming=true; stopSpeak();
   abortCtrl=new AbortController();
   setState('thinking'); $('#micBtn').textContent='✕'; $('#micBtn').title='Detener';
-  addMsg('user','📎 Leer archivo: '+esc(rpath));
+  addMsg('user','📎 Leer: '+esc(label));
   const typing=addTyping();
-  store.history.push({role:'user',content:'📎 Leer archivo: '+rpath});
-  const r=await bridgeRead(rpath);
+  store.history.push({role:'user',content:'📎 Leer: '+label});
+  const r=await bridgeRead(paths,{onProgress:(fraction,path,size)=>{
+    // Actualizar el typing con progreso
+    const dots='.'.repeat(Math.round(fraction*3)%3+1);
+    if(typing&&typing.parentNode) typing.parentNode.querySelector('.who').textContent='📖 '+esc(path||'')+' ('+((size||0)/1000).toFixed(0)+' KB)';
+  }});
   if(!r.ok){
     typing.closest('.msg').remove();
     const body=addMsg('ai','');
-    body.textContent='❌ No pude leer «'+esc(rpath)+'»: '+esc(r.error)+'.';
+    body.textContent='❌ No pude leer «'+esc(label)+'»: '+esc(r.error)+'.';
     body.closest('.msg').classList.add('sys');
     store.history.push({role:'assistant',content:body.textContent});
     setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
     streaming=false;
     return;
   }
-  // Mostrar el contenido (truncado a 4000 para no saturar el chat)
+  // Mostrar los contenidos
   typing.closest('.msg').remove();
+  const files=isArray?r.files||[]:[r];
+  let combined='', allOk=true;
+  for(let i=0;i<files.length;i++){
+    const f=files[i];
+    if(!f||!f.ok){ allOk=false; combined+='❌ '+esc(f.path||'?')+': '+esc(f.error||'error')+'\n\n'; continue; }
+    const truncated=f.content.length>4000?f.content.slice(0,4000)+'\n\n── [... '+Math.ceil((f.content.length-4000)/1000)+' KB más] ──':f.content;
+    combined+='📂 '+esc(f.path)+' ('+f.size+' bytes):\n\n'+truncated+'\n\n';
+  }
   const body=addMsg('ai','');
-  const truncated=r.content.length>4000?r.content.slice(0,4000)+'\n\n── [archivo truncado: '+(r.content.length-4000)+' bytes más] ──':r.content;
-  body.textContent='📂 '+r.path+' ('+r.size+' bytes):\n\n'+truncated;
-  store.history.push({role:'assistant',content:body.textContent});
+  body.textContent=combined;
+  store.history.push({role:'assistant',content:combined});
+  if(!allOk){
+    // Si algún archivo falló, lo indicamos pero seguimos con los que sí
+  }
   // Analizar el contenido con el motor activo.
-  // OJO: la historia ya contiene el contenido del archivo como mensaje
-  // assistant; usamos ...h (NO h.slice(0,-1)) para que el LLM reciba el
-  // archivo de verdad y pueda analizarlo.
   const typing2=addTyping();
   const h=store.history.slice(-14);
   try{
-    const search=await runTools('analiza '+rpath);
-    const messages=[{role:'system',content:systemPrompt()},...h,{role:'user',content:search+'\n\nAnaliza el contenido del archivo '+rpath+' que acabo de mostrarte (mensaje anterior con el contenido): qué contiene, para qué sirve y qué hallazgos relevantes tiene para pentesting o red team si aplica.'}];
+    const search=await runTools('analiza '+label);
+    const intro=files.length===1
+      ? 'Analiza el contenido del archivo '+label+' que acabo de mostrarte (mensaje anterior con el contenido): qué contiene, para qué sirve y qué hallazgos relevantes tiene para pentesting o red team si aplica.'
+      : 'Te he mostrado el contenido de '+files.length+' archivos: '+label+'. Analízalos: qué contiene cada uno, compáralos si aplica, qué hallazgos relevantes tienen para pentesting o red team, y si hay relación entre ellos.';
+    const messages=[{role:'system',content:systemPrompt()},...h,{role:'user',content:search+'\n\n'+intro}];
     typing2.closest('.msg').remove();
     const abody=addMsg('ai','');
     const cursor=document.createElement('span');cursor.className='stream-cursor';abody.appendChild(cursor);
@@ -3326,7 +3249,6 @@ async function handleFileRead(rpath){
     abody.closest('.msg').querySelector('.who').textContent='⚠ SISTEMA';
     abody.textContent=providerError(store.provider,err);
     setState('error'); $('#micBtn').textContent='🎙️';
-    // No hacemos pop: el contexto del archivo es legítimo y útil.
   }finally{
     streaming=false;
     if(!speaking&&!listening&&document.body.dataset.state!=='error') setState('idle');
@@ -4543,7 +4465,7 @@ Así nací: la firma conjunta de una simbiosis, coautora de un Plan de Rescate p
   if(/broma|chiste|chiste/.test(q)) return '¿Por qué el hacker no usa antivirus? Porque prefiere "inocular" confianza… ¿Quieres otro? Dime "otro chiste" (en modo Demo solo tengo este, pero con IA real seré más gracioso).';
   if(/al?an turing/.test(q)) return 'Alan Turing (1912–1954) fue un matemático y pionero de la computación. Ideó la máquina de Turing, base teórica de los ordenadores, descifró la máquina Enigma en Bletchley Park durante la II Guerra Mundial y propuso el famoso Test de Turing para evaluar inteligencia artificial. En 1950 escribió "Computing Machinery and Intelligence".';
   if(/config[uú]rame|primera configuraci[oó]n|asistente de (configuraci[oó]n|arranque)|configurar (aion|la app|el asistente|mis claves)/.test(q)){ openSetup(); return '🚀 Te he abierto el **asistente de primera configuración**: pega tu clave de Mistral (gratis en console.mistral.ai), prueba la conexión, activa la voz de Piper y conecta el terminal local. Todo gratuito y verificable. Cuando termines pulsa **🚀 Empezar a usar Aion**.'; }
-  if(/post de linkedin|publicaci[oó]n de linkedin|post para linkedin|post semanal|escribe un post/.test(q)) return '📢 **Modo LinkedIn** — Tengo los **10 posts semanales** ya escritos en el botón **📢 LinkedIn** de la cabecera: ábrelo, elige semana y copia o exporta cada publicación. Estructura de cada post: gancho, qué muestro (verificable en el repo), pregunta final y hashtags.\n\nEn modo Demo no puedo redactar posts nuevos a medida, pero sí enseñarte el método: **1) Gancho** que provoca curiosidad sin mentir, **2) Demostración** con captura o dato real (regla de oro: cada afirmación verificable en knklinux/aion-sincro), **3) Pregunta final** para generar conversación, y **4) Hashtags** (#Pentesting #RedTeam #eJPT…).\n\nConecta un motor real en ⚙️ Ajustes (Mistral, Groq u OpenRouter, gratis) y podré redactar el borrador completo del tema que quieras: dime el tema y lo escribo con tu tono.';
+  // LinkedIn eliminado — datos personales en privado/
   if(/informe|laboral|reporte ejecutivo|plantilla.*informe|reconocimiento.*informe/.test(q)&&store.laboral&&reportIsEn()) return '💼 **Laboral Mode** — Connected to the terminal and your scans. 💡 **New**: paste the **real nmap output** (for example after running `nmap -sV -sC -p- <host>` in the terminal) and I will generate the **reconnaissance report** instantly, with port table, attack surface and recommendations — exportable as **📥 Markdown** or **📄 PDF**. Works even in Demo because the parsing is local.\n\nI can also draft the full report with this structure if you give me the context:\n\n```markdown\n# [Report title]\n> Executive summary for management\n\n## 1. Scope and context\n## 2. Methodology\n## 3. Findings\n| # | Severity | Description | Evidence | Recommendation |\n## 4. Analysis\n## 5. Conclusions and next steps\n```\n\nConnect an engine in ⚙️ Settings and tell me what you have (nmap outputs, findings, a CVE…) — I will return the report in Markdown with **📥 Markdown** and **📄 PDF** buttons to export it.';
   if(/informe|laboral|reporte ejecutivo|plantilla.*informe|reconocimiento.*informe/.test(q)&&store.laboral) return '💼 **Modo Laboral** — Conectado al terminal y a tus escaneos. 💡 **Nuevo**: pega aquí la **salida real de nmap** (por ejemplo tras correr `nmap -sV -sC -p- <host>` en el terminal) y genero el **informe de reconocimiento** al instante, con tabla de puertos, superficie de ataque y recomendaciones — exportable en **📥 Markdown** o **📄 PDF**. Funciona incluso en Demo porque el parsing es local.\n\nTambién puedo redactar el informe completo con esta estructura si me das el contexto:\n\n```markdown\n# [Título del informe]\n> Resumen ejecutivo para dirección\n\n## 1. Alcance y contexto\n## 2. Metodología\n## 3. Hallazgos\n| # | Severidad | Descripción | Evidencia | Recomendación |\n## 4. Análisis\n## 5. Conclusiones y próximos pasos\n```\n\nConecta un motor en ⚙️ Ajustes y dime qué tienes (salidas de nmap, hallazgos, un CVE…) — te devuelvo el informe en Markdown con botones **📥 Markdown** y **📄 PDF** para exportarlo.';
   if(/\biso\b|27001|auditor[ií]a|normativa|normativo|cumplimiento|sgs[ií]/.test(q)){ openISO(); return '🔎 He abierto la **Auditoría ISO 27001:2022** para ti. Rellena el nombre de la empresa y el alcance (o déjalos para el final) y responde cada control con: ✔ Cumple, ◐ Parcial, ✖ No cumple o ⊘ N/A.\n\nCuando termines, en la pestaña **📊 Resultados** verás tu % de cumplimiento por tema (Organizacional, Personas, Físico y Tecnológico) y en **🛠️ Plan de cumplimiento** exactamente qué necesitas implementar para cumplir la norma, con acciones concretas. Y puedes exportar el informe en **📥 Markdown** o **📄 PDF** para tu equipo.\n\n💡 Es una autoevaluación orientativa del Anexo A; la certificación formal requiere un SGSI documentado y auditoría por un organismo acreditado.'; }
@@ -4567,23 +4489,57 @@ async function handleUserText(text){
      en el chat para poder discutirlo contigo. */
   const readMatch=text.match(/\b(?:lee|analiza|l[ée]eme|abre|mu[ée]strame|qu[ée] hay en|contenido de)\s+["']?([^"'\n]{1,200}?)["']?\s*$/i);
   if(readMatch){
-    const rpath=readMatch[1].trim();
-    const r=await bridgeRead(rpath);
-    if(r.ok){
-      typing.closest('.msg').remove();
-      const body=addMsg('ai','');
-      const truncated=r.content.length>4000?r.content.slice(0,4000)+'\n\n── [archivo truncado: '+(r.content.length-4000)+' bytes más] ──':r.content;
-      body.textContent='📂 '+r.path+' ('+r.size+' bytes):\n\n'+truncated;
-      store.history.push({role:'assistant',content:body.textContent});
-      store.history.push({role:'user',content:'[ARCHIVO LEÍDO: '+rpath+'] Analiza el contenido de este archivo y dime qué ves.'});
-      speak('He leído '+rpath+'. Pregúntame lo que quieras sobre su contenido.');
-      streaming=false;
-      return;
+    const raw=readMatch[1].trim();
+    // Soporta múltiples rutas separadas por coma: "lee a.md, b.md"
+    const paths=raw.split(',').map(s=>s.trim()).filter(Boolean);
+    if(paths.length===0){ streaming=false; return; }
+    if(paths.length===1){
+      const rpath=paths[0];
+      const r=await bridgeRead(rpath);
+      if(r.ok){
+        typing.closest('.msg').remove();
+        const body=addMsg('ai','');
+        const truncated=r.content.length>4000?r.content.slice(0,4000)+'\n\n── [archivo truncado: '+(r.content.length-4000)+' bytes más] ──':r.content;
+        body.textContent='📂 '+r.path+' ('+r.size+' bytes):\n\n'+truncated;
+        store.history.push({role:'assistant',content:body.textContent});
+        store.history.push({role:'user',content:'[ARCHIVO LEÍDO: '+rpath+'] Analiza el contenido de este archivo y dime qué ves.'});
+        speak('He leído '+rpath+'. Pregúntame lo que quieras sobre su contenido.');
+        streaming=false;
+        return;
+      }else{
+        typing.closest('.msg').remove();
+        const body=addMsg('ai','❌ No pude leer «'+esc(rpath)+'»: '+esc(r.error)+'.\n\n📂 Puedes leer archivos con el botón **📂 Leer** de la pestaña Terminal, o pedírmelo en el chat con «lee nombre-del-archivo».');
+        body.classList.add('err');
+        store.history.push({role:'assistant',content:body.textContent});
+        streaming=false;
+        return;
+      }
     }else{
+      // Múltiples archivos: leer y mostrar todos, luego analizar
+      const r=await bridgeRead(paths);
+      if(!r.ok||!r.files){
+        typing.closest('.msg').remove();
+        const body=addMsg('ai','❌ Error al leer los archivos: '+esc(r.error||'desconocido'));
+        body.classList.add('err');
+        store.history.push({role:'assistant',content:body.textContent});
+        streaming=false;
+        return;
+      }
       typing.closest('.msg').remove();
-      const body=addMsg('ai','❌ No pude leer «'+esc(rpath)+'»: '+esc(r.error)+'.\n\n📂 Puedes leer archivos con el botón **📂 Leer** de la pestaña Terminal, o pedírmelo en el chat con «lee nombre-del-archivo».');
-      body.classList.add('err');
-      store.history.push({role:'assistant',content:body.textContent});
+      let combined='';
+      r.files.forEach(f=>{
+        if(f.ok){
+          const truncated=f.content.length>4000?f.content.slice(0,4000)+'\n\n── [... '+Math.ceil((f.content.length-4000)/1000)+' KB más] ──':f.content;
+          combined+='📂 '+esc(f.path)+' ('+f.size+' bytes):\n\n'+truncated+'\n\n';
+        }else{
+          combined+='❌ '+esc(f.path||'?')+': '+esc(f.error||'error')+'\n\n';
+        }
+      });
+      const body=addMsg('ai','');
+      body.textContent=combined;
+      store.history.push({role:'assistant',content:combined});
+      store.history.push({role:'user',content:'[ARCHIVOS LEÍDOS: '+paths.join(', ')+'] Analiza el contenido de estos archivos y dime qué ves. Compáralos si aplica.'});
+      speak('He leído '+paths.length+' archivos. Pregúntame lo que quieras sobre ellos.');
       streaming=false;
       return;
     }
@@ -4748,7 +4704,7 @@ const LINKEDIN_POSTS=[
   c:'La portada del README (logo ⚡ + título) o una captura del visor geométrico de Aion hablando.',
   b:`**Sin título universitario, pero con 482 tests de seguridad en mi proyecto open-source. 🛡️**
 
-Hola, soy Arkaitz. Autodidacta. Sin carrera, sin bootcamp, sin contactos en el sector. Solo un teclado, Linux y mucha hambre de aprender.
+Hola, soy un aprendiz autodidacta. Sin carrera, sin bootcamp, sin contactos en el sector. Solo un teclado, Linux y mucha hambre de aprender.
 
 En vez de esperar a "saber suficiente" para empezar, decidí construir lo que necesitaba para aprender: **Aion Sincro**, un asistente de IA open-source para pentesting y red team.
 
@@ -5042,28 +4998,8 @@ function openLinkedin(){
   o.classList.add('show');
 }
 /* ---------- CV / Mi perfil ---------- */
-function openCv(){
-  const o=$('#cvOverlay'); if(!o) return;
-  o.classList.add('show');
-  const f=$('#cvFrame'), s=$('#cvStatus');
-  if(f){ f.src=''; f.src='CV_Arkaitz.html'; if(s)s.classList.remove('gone'); }
-  if(f) f.onload=()=>{ if(s)s.classList.add('gone'); };
-}
-async function regenCv(){
-  const b=$('#btnRegenCv'), h=$('#cvHint');
-  if(!b||b.classList.contains('busy')) return;
-  if(!termConnected){ toast('⚠️ El puente de terminal no está conectado. Inicia bridge.py y vuelve a intentarlo.'); return; }
-  if(termBusy){ toast('⚠️ El terminal está ocupado — espera a que termine el comando actual.'); return; }
-  b.classList.add('busy'); b.textContent='⏳ Regenerando...';
-  termRun('python generar_cv.py',(out)=>{
-    b.classList.remove('busy'); b.textContent='🔄 Regenerar CV';
-    if((out||'').indexOf('CV HTML')>=0||(out||'').indexOf('CV_Arkaitz')>=0){
-      toast('✅ CV regenerado — recargando vista...');
-      if(h) h.textContent='CV regenerado ahora';
-      const f=$('#cvFrame'); if(f){ f.src='CV_Arkaitz.html?'+Date.now(); }
-    }else{ toast('⚠️ No se detectó salida de CV en la terminal — ¿está generar_cv.py en la carpeta?'); }
-  });
-}
+function openCv(){} // eliminado — datos personales en privado/
+async function regenCv(){} // eliminado — datos personales en privado/
 function renderLinkedinGrid(){
   const g=$('#liGrid'); if(!g) return;
   g.innerHTML=LINKEDIN_POSTS.map((p,i)=>`<div class="li-item${i===liCur?' on':''}" onclick="viewLinkedinPost(${i})"><div class="li-week">Semana ${p.w}</div><div class="li-title">${esc(p.t)}</div><div class="li-hook">${esc(p.h)}</div></div>`).join('');
@@ -5267,8 +5203,11 @@ function bind(){
   $('#micBtn').onclick=toggleMic;
   $('#sendBtn').onclick=()=>handleUserText($('#textInput').value);
   $('#btnReadFile').onclick=()=>{
-    const path=prompt('📎 Ruta del archivo (relativa al proyecto):','');
-    if(path&&path.trim()) handleFileRead(path.trim());
+    const input=prompt('📎 Rutas (separadas por coma) relativas al proyecto:','');
+    if(!input||!input.trim()) return;
+    const paths=input.split(',').map(s=>s.trim()).filter(Boolean);
+    if(paths.length===0) return;
+    handleFileRead(paths.length===1?paths[0]:paths);
   };
   $('#textInput').addEventListener('keydown',e=>{ if(e.key==='Enter')handleUserText($('#textInput').value); });
   $('#btnClear').onclick=clearChat;
@@ -5285,19 +5224,40 @@ function bind(){
   $('#termClear').onclick=()=>{ $('#termOut').innerHTML=''; };
   $('#termKillBtn').onclick=termKill;
   $('#termReadBtn').onclick=async()=>{
-    const path=prompt('📂 Ruta del archivo (relativa al proyecto):','');
-    if(!path||!path.trim()) return;
-    termPrintText('📂 Leyendo: '+path.trim(),'ai');
-    const r=await bridgeRead(path.trim());
-    if(r.ok){
-      termPrintText('── '+r.path+' ('+r.size+' bytes) ──','cmd');
-      // Mostrar primeras 60 líneas en el terminal
-      const lines=r.content.split('\n');
-      const preview=lines.slice(0,60).join('\n');
-      termPrintText(preview+(lines.length>60?'\n── … ('+(lines.length-60)+' líneas más) ──':''));
-      if(r.size>3000) termPrintText('💡 El archivo completo ('+r.size+' bytes) está disponible en el chat. Pregúntale a Aion «analiza '+path+'» y te lo desglosará.');
+    const input=prompt('📂 Rutas (separadas por coma) relativas al proyecto:','');
+    if(!input||!input.trim()) return;
+    const paths=input.split(',').map(s=>s.trim()).filter(Boolean);
+    if(paths.length===0) return;
+    const label=paths.join(', ');
+    termPrintText('📂 Leyendo: '+label,'ai');
+    if(paths.length===1){
+      const r=await bridgeRead(paths[0]);
+      if(r.ok){
+        termPrintText('── '+r.path+' ('+r.size+' bytes) ──','cmd');
+        const lines=r.content.split('\n');
+        const preview=lines.slice(0,60).join('\n');
+        termPrintText(preview+(lines.length>60?'\n── … ('+(lines.length-60)+' líneas más) ──':''));
+        if(r.size>3000) termPrintText('💡 El archivo completo ('+r.size+' bytes) está disponible en el chat. Pregúntale a Aion «analiza '+paths[0]+'» y te lo desglosará.');
+      }else{
+        termPrintText('❌ '+r.error,'err');
+      }
     }else{
-      termPrintText('❌ '+r.error,'err');
+      const r=await bridgeRead(paths);
+      if(r.ok&&r.files){
+        r.files.forEach(f=>{
+          if(f.ok){
+            termPrintText('── '+f.path+' ('+f.size+' bytes) ──','cmd');
+            const lines=f.content.split('\n');
+            const preview=lines.slice(0,30).join('\n');
+            termPrintText(preview+(lines.length>30?'\n── … ('+(lines.length-30)+' líneas más) ──':''));
+          }else{
+            termPrintText('❌ '+f.path+': '+f.error,'err');
+          }
+        });
+        termPrintText('💡 También puedes usar el botón 📎 del chat para leer y analizar estos archivos juntos.');
+      }else{
+        termPrintText('❌ '+r.error,'err');
+      }
     }
   };
   $('#btnTts').onclick=()=>{ store.tts=!store.tts; if(store.tts) ttsWarned=false; $('#btnTts').classList.toggle('on',store.tts); saveStore(); };

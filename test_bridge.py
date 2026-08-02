@@ -273,7 +273,35 @@ def test_bridge():
         st, _ = raw_http(port, "/read", method="POST",
                          body=json.dumps({"token": token, "path": ""}))
         check("/read path vacío → 400", st == 400, f"got {st}")
-        # 2.14 Ruta desconocida → 403
+        # 2.14 /read con lines=N → 200 + solo las últimas N líneas
+        st, body = raw_http(port, "/read", method="POST",
+                            body=json.dumps({"token": token, "path": "README.md", "lines": 5}))
+        check("/read lines=5 → 200", st == 200, f"got {st}")
+        txt = body.decode("utf-8", "replace")
+        check("/read lines=5 → tail:true", st == 200 and '"tail": true' in txt, txt[:120])
+        check("/read lines=5 → lines:5", st == 200 and '"lines": 5' in txt, txt[:120])
+        # 2.15 /read con lines=0 → 400 (debe ser > 0)
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "README.md", "lines": 0}))
+        check("/read lines=0 → 400", st == 400, f"got {st}")
+        # 2.16 /read con lines no numérico → 400
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "README.md", "lines": "abc"}))
+        check("/read lines=abc → 400", st == 400, f"got {st}")
+        # 2.17 /read con offset → 200 y excluye las primeras líneas
+        st, body = raw_http(port, "/read", method="POST",
+                            body=json.dumps({"token": token, "path": "README.md", "offset": 3, "lines": 3}))
+        check("/read offset+lines → 200", st == 200, f"got {st}")
+        txt = body.decode("utf-8", "replace")
+        check("/read offset+lines → lines:3", st == 200 and '"lines": 3' in txt, txt[:120])
+        check("/read offset+lines → total_lines presente", '"total_lines"' in txt, txt[:120])
+        # 2.18 /read multi con lines → 200 + cada archivo con tail
+        st, body = raw_http(port, "/read", method="POST",
+                            body=json.dumps({"token": token, "paths": ["README.md", "bridge.py"], "lines": 2}))
+        check("/read multi+lines → 200", st == 200, f"got {st}")
+        txt = body.decode("utf-8", "replace")
+        check("/read multi+lines → tail en cada archivo", txt.count('"tail": true') == 2, txt[:160])
+        # 2.19 Ruta desconocida → 403
         st, _ = raw_http(port, "/otra-cosa")
         check("ruta desconocida → 403", st == 403, f"got {st}")
     finally:
@@ -347,7 +375,27 @@ def test_bridge_node():
         st, _ = raw_http(port, "/read", method="POST",
                          body=json.dumps({"token": token, "path": ""}))
         check("node /read path vacío → 400", st == 400, f"got {st}")
-        # 3.15 Body > 1 MB → 413 (límite propio del puente Node)
+        # 3.15 /read con lines=N → 200 + tail (puente Node)
+        st, body = raw_http(port, "/read", method="POST",
+                            body=json.dumps({"token": token, "path": "README.md", "lines": 4}))
+        check("node /read lines=4 → 200", st == 200, f"got {st}")
+        txt = body.decode("utf-8", "replace")
+        check("node /read lines=4 → tail:true", st == 200 and '"tail":true' in txt, txt[:120])
+        check("node /read lines=4 → lines:4", st == 200 and '"lines":4' in txt, txt[:120])
+        # 3.16 /read con lines inválido → 400
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "README.md", "lines": 0}))
+        check("node /read lines=0 → 400", st == 400, f"got {st}")
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "README.md", "lines": "xyz"}))
+        check("node /read lines=xyz → 400", st == 400, f"got {st}")
+        # 3.17 /read multi con lines → 200 + tail en cada archivo
+        st, body = raw_http(port, "/read", method="POST",
+                            body=json.dumps({"token": token, "paths": ["README.md", "bridge.mjs"], "lines": 2}))
+        check("node /read multi+lines → 200", st == 200, f"got {st}")
+        txt = body.decode("utf-8", "replace")
+        check("node /read multi+lines → tail en cada archivo", txt.count('"tail":true') == 2, txt[:160])
+        # 3.18 Body > 1 MB → 413 (límite propio del puente Node)
         big = '{"token":"' + token + '","cmd":"' + "a" * 1_100_000 + '"}'
         st, _ = raw_http(port, "/run", method="POST", body=big, timeout=10)
         check("node body > 1 MB → 413", st == 413, f"got {st}")

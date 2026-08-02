@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Genera el CV de Arkaitz (HTML/PDF) a partir de LINKEDIN.md.
+"""Genera el CV de el autor (HTML/PDF) a partir de LINKEDIN.md.
 
 Fuente única de verdad: LINKEDIN.md → el CV y el perfil de LinkedIn SIEMPRE coinciden.
 Edita el .md y regenera con un solo comando; el CV nunca se desincroniza.
 
 Uso:
-  python generar_cv.py                # CV_Arkaitz.html (+ intenta CV_Arkaitz.pdf)
+  python generar_cv.py                # CV_el autor.html (+ intenta CV_el autor.pdf)
   python generar_cv.py --html-only    # solo HTML (sin PDF)
   python generar_cv.py --out DIR      # salida a otra carpeta
   python generar_cv.py --open         # abre el HTML en el navegador al terminar
@@ -32,7 +32,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "LINKEDIN.md")
-OUT_NAME = "CV_Arkaitz"
+OUT_NAME = "CV_el autor"
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ def extract(text):
     """Extrae la estructura del CV desde LINKEDIN.md."""
     d = {}
     m = re.search(r"^#\s*Perfil de LinkedIn\s*[—–-]\s*(.+?)\s*$", text, flags=re.M)
-    d["name"] = m.group(1) if m else "Arkaitz"
+    d["name"] = m.group(1) if m else "el autor"
     sec = split_sections(text)
 
     # 1. Headline: primer bloque de código de la sección 1

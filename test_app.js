@@ -493,17 +493,7 @@ check("Escape cierra el overlay OSINT", /e\.key==='Escape'\)\{\s*const o=\$\('#o
 check("aviso legal de uso en el overlay", html.includes("⚖️ Uso legal: solo datos propios o con autorización (Art. 197 C.P.)"));
 
 // ---------- LinkedIn: overlay de 10 publicaciones semanales ----------
-check("botón btnLinkedin en el header", html.includes('id="btnLinkedin"'));
-check("overlay #linkedinOverlay presente", html.includes('id="linkedinOverlay"'));
-check("10 posts embebidos en LINKEDIN_POSTS (semanas 1-10)", /const LINKEDIN_POSTS=\[[\s\S]*?w:10,/.test(script) && (script.match(/w:\d+/g)||[]).length>=10);
-check("openLinkedin() y renderLinkedinGrid() definidas", /function\s+openLinkedin\s*\(/.test(script) && /function\s+renderLinkedinGrid\s*\(/.test(script));
-check("viewLinkedinPost() muestra texto con textContent (sin innerHTML de posts)", /function\s+viewLinkedinPost\s*\([\s\S]*?t\.textContent=p\.b/.test(script));
-check("copyLinkedinPost() usa el portapapeles con fallback", /function\s+copyLinkedinPost\s*\([\s\S]*?navigator\.clipboard/.test(script) && /document\.execCommand\('copy'\)/.test(script));
-check("exportLinkedinPost() exporta a Markdown", /function\s+exportLinkedinPost\s*\([\s\S]*?downloadMarkdown/.test(script));
-check("generateLinkedinPost() envía el tema al chat", /function\s+generateLinkedinPost\s*\([\s\S]*?handleUserText/.test(script));
-check("Escape cierra el overlay LinkedIn", /e\.key==='Escape'\)\{\s*const o=\$\('#linkedinOverlay'\); if\(o&&o\.classList\.contains\('show'\)\) o\.classList\.remove\('show'\);/.test(script));
-check("demoBrain responde a 'post de linkedin'", /post de linkedin|publicaci[oó]n de linkedin/.test(script) && script.includes("Modo LinkedIn") && script.includes("📢"));
-check("sin XSS en el visor: el grid usa esc()", /renderLinkedinGrid\s*\([\s\S]*?\$\{esc\(p\.t\)\}/.test(script));
+// Eliminado — datos personales en privado/
 
 // ---------- Asistente de primera configuración ----------
 check("botón #btnSetup en el header", html.includes('id="btnSetup"'));
@@ -926,18 +916,8 @@ await (async () => {
   check("serve.js: decodeURIComponent con try/catch (sin crash por URL malformada)", serveJs.includes("decodeURIComponent") && serveJs.includes("catch"));
   check("install.cmd copia serve.js a la instalación", installCmd.includes("serve.js"));
 
-  // ---------- CV automático: generar_cv.py (fuente única de verdad: LINKEDIN.md) ----------
-  console.log("\n[CV] Generador de currículum desde LINKEDIN.md");
-  const cvPy = fs.existsSync(path.join(ROOT, "generar_cv.py")) ? fs.readFileSync(path.join(ROOT, "generar_cv.py"), "utf8") : "";
-  const linkedinMd = fs.existsSync(path.join(ROOT, "LINKEDIN.md")) ? fs.readFileSync(path.join(ROOT, "LINKEDIN.md"), "utf8") : "";
-  check("generar_cv.py existe", cvPy.length > 0);
-  check("LINKEDIN.md existe (fuente de verdad del CV)", linkedinMd.length > 0);
-  check("el generador lee LINKEDIN.md como fuente única", cvPy.includes("SRC = os.path.join(HERE, \"LINKEDIN.md\")"));
-  check("escapado HTML con esc() (sin XSS en el CV)", /def esc\(s\):[\s\S]*?html\.escape\(s, quote=True\)/.test(cvPy));
-  check("prints ASCII (sin UnicodeEncodeError en consola Windows)", cvPy.includes("CV HTML ->") && cvPy.includes("CV PDF  ->") && !cvPy.includes("CV HTML →"));
-  check("motores PDF: weasyprint o headless Edge/Chrome (todo local)", cvPy.includes("from weasyprint import HTML") && cvPy.includes("--print-to-pdf"));
-  check("parser de certificaciones tolera 'Certificaciones' sin tilde", /re\.search\(r"Certificaci\\w\+", head, flags=re\.I\)/.test(cvPy));
-  check("pie del CV cita la fuente y el script generador", cvPy.includes("Generado desde <b>LINKEDIN.md</b>") && cvPy.includes("generar_cv.py"));
+  
+  // CV automático eliminado — datos personales en privado/
 
   // ---------- Sintaxis coloreada en bloques de código (highlightCode) ----------
   console.log("\n[SYNTAX HIGHLIGHT] Bloques de código con coloreado de sintaxis");
@@ -1057,14 +1037,26 @@ await (async () => {
   // ---------- Fase 2.4: endpoint /read (leer archivos del proyecto) ----------
   check("bridgeRead definida", script.includes("async function bridgeRead"));
   check("bridgeRead usa POST /read", /fetch\(BRIDGE\+'\/read'/.test(script) && script.includes("method:'POST'"));
-  check("bridgeRead envía path y token", /body:JSON\.stringify\(\{path:rpath,token:store\.bridgeToken\|\|''\}\)/.test(script));
+  check("bridgeRead acepta string y array", script.includes("typeof paths==='string'") && script.includes("Array.isArray(paths)"));
+  check("bridgeRead con array envía {paths}", script.includes("{paths,token:store.bridgeToken"));
+  check("bridgeRead con string envía {path}", script.includes("{path:paths,token:store.bridgeToken"));
+  check("bridgeRead: opts.lines se envía como lines", /opts\.lines===.number.&&opts\.lines>0/.test(script) && script.includes("extra.lines=Math.floor(opts.lines)"));
+  check("bridgeRead: opts.offset se envía como offset", /opts\.offset===.number.&&opts\.offset>=0/.test(script) && script.includes("extra.offset=Math.floor(opts.offset)"));
+  check("bridgeRead: usa Object.assign para fusionar body+extra", script.includes("Object.assign("));
+  check("bridge.py: valida lines (entero 1..50000)", fs.readFileSync("bridge.py","utf8").includes("lines debe ser entero entre 1 y 50000"));
+  check("bridge.py: valida offset (entero >= 0)", fs.readFileSync("bridge.py","utf8").includes("offset debe ser entero >= 0"));
+  check("bridge.py: _read_single_file acepta lines y offset", /def _read_single_file\(rpath, lines=None, offset=None\)/.test(fs.readFileSync("bridge.py","utf8")));
+  check("bridge.py: aplica tail con [-lines:]", fs.readFileSync("bridge.py","utf8").includes("raw_lines[-lines:]"));
+  check("bridge.mjs: _readSingleFile acepta lines y offset", /function _readSingleFile\(rpath, lines, offset\)/.test(fs.readFileSync("bridge.mjs","utf8")));
+  check("bridge.mjs: valida lines y offset", fs.readFileSync("bridge.mjs","utf8").includes("lines debe ser entero entre 1 y 50000") && fs.readFileSync("bridge.mjs","utf8").includes("offset debe ser entero >= 0"));
   check("botón termReadBtn en el HTML", script.includes("$('#termReadBtn')"));
-  check("handler termReadBtn con prompt", /\$\('#termReadBtn'\)\.onclick/.test(script) && script.includes("prompt('"));
+  check("termReadBtn soporta múltiples rutas separadas por coma", script.includes(".split(',').map(s=>s.trim()).filter(Boolean)"));
   check("chat: comando «lee X» maneja readMatch", script.includes("const readMatch=text.match"));
   check("chat: lee/analiza/léeme/abre como verbos de lectura", /lee\|analiza\|l\[ée\]eme\|abre\|mu\[ée\]strame/.test(script));
+  check("chat: soporta múltiples rutas separadas por coma", script.includes("paths=raw.split(',').map(s=>s.trim()).filter(Boolean)"));
   check("chat: error controlado si no se puede leer", script.includes("No pude leer") && script.includes("streaming=false"));
-  check("bridge.py tiene endpoint /read", fs.readFileSync("bridge.py","utf8").includes('self.path == "/read"'));
-  check("bridge.mjs tiene endpoint /read", fs.readFileSync("bridge.mjs","utf8").includes('req.url === "/read"'));
+  check("bridge.py: acepta paths (array) y path (string)", fs.readFileSync("bridge.py","utf8").includes('data.get("paths")') && fs.readFileSync("bridge.py","utf8").includes('data.get("path")') && fs.readFileSync("bridge.py","utf8").includes("_read_single_file"));
+  check("bridge.mjs: acepta paths (array) y path (string)", fs.readFileSync("bridge.mjs","utf8").includes('data.paths') && fs.readFileSync("bridge.mjs","utf8").includes('_readSingleFile'));
   // Seguridad del endpoint /read en el puente
   const pyRead=fs.readFileSync("bridge.py","utf8");
   const jsRead=fs.readFileSync("bridge.mjs","utf8");
@@ -1073,6 +1065,7 @@ await (async () => {
   check("/read: limita a 1 MB", pyRead.includes("max 1 MB") && jsRead.includes("max 1 MB"));
   check("/read: rechaza binarios", pyRead.includes("archivo binario no soportado") && jsRead.includes("archivo binario no soportado"));
   check("/read: verifica que la ruta queda dentro del proyecto", pyRead.includes("fuera del proyecto") && jsRead.includes("fuera del proyecto"));
+  check("/read: array máximo 10 archivos", pyRead.includes("máximo 10 archivos") && jsRead.includes("maximo 10 archivos"));
 
   // ---------- Anclar a la barra de tareas (metodo menu Inicio) ----------
   check("anclar-barra-tareas.ps1 existe", fs.existsSync("windows/anclar-barra-tareas.ps1"));
@@ -1091,13 +1084,17 @@ await (async () => {
   check("boton btnReadFile en el HTML", html.includes('id="btnReadFile"'));
   check("CSS de btnReadFile", html.includes("#btnReadFile{width:46px"));
   check("function handleFileRead definida", script.includes("async function handleFileRead"));
-  check("handleFileRead usa bridgeRead", /const r=await bridgeRead\(rpath\)/.test(script));
-  check("handleFileRead muestra contenido truncado a 4000", script.includes("slice(0,4000)") && script.includes("archivo truncado"));
+  check("handleFileRead es async", script.includes("async function handleFileRead"));
+  check("handleFileRead acepta string y array", script.includes("const isArray=Array.isArray(paths)"));
+  check("handleFileRead usa bridgeRead", script.includes("const r=await bridgeRead(paths"));
+  check("handleFileRead muestra contenido truncado a 4000", script.includes("slice(0,4000)") && script.includes("KB más"));
   check("handleFileRead analiza con streamChat", script.includes("for await(const chunk of streamChat(store.provider") );
   check("handleFileRead controla error de lectura", script.includes("No pude leer") && script.includes("r.error"));
+  check("handleFileRead soporta múltiples archivos", script.includes("files.length") && script.includes("compáralos"));
   check("handler btnReadFile con prompt", /\$\('#btnReadFile'\)\.onclick/.test(script) && script.includes("prompt('"));
-  check("handler llama a handleFileRead", script.includes("handleFileRead(path.trim())"));
-  check("handler valida ruta vacia", script.includes("if(path&&path.trim())"));
+  check("btnReadFile acepta rutas separadas por coma", script.includes(".split(',').map(s=>s.trim()).filter(Boolean)"));
+  check("btnReadFile pasa array o string a handleFileRead", script.includes("handleFileRead(paths.length===1?paths[0]:paths)"));
+  check("handleFileRead: onProgress callback en bridgeRead", script.includes("onProgress:(fraction,path,size)"));
 
   // ---------- Resumen ----------
   console.log("\n" + "=".repeat(60));

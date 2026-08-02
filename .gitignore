@@ -1,52 +1,43 @@
+
+!keys.json.example
+# Android (Capacitor) — generado por `npx cap add android` / build-web
+# Archivos sensibles (no subir claves jamás)
+# Audio de prueba generado por piper_compare.py
+# CV generado por generar_cv.py desde LINKEDIN.md — versionado por petición
 # Entorno de desarrollo local (no subir)
+# Informe generado por python test_mutacion.py --coverage (regenerable)
+# Node
+# Piper TTS local (venv + modelos de voz, ~600 MB — no subir)
+# Python
+# Scripts temporales de validación/pruebas
+# Sistema
+# Token persistente del puente (lo genera windows/aion-sincro.cmd en modo repo)
+# Venv de herramientas OSINT (holehe para aion_osint.py)
+# `python generar_cv.py`, aparecerá como modificado: es correcto.
+# expresa (los reclutadores pueden verlo en el repo). Al regenerar con
+*.env
+*.keys
+*.pyc
+*.tmp_*
+.DS_Store
+.env.*
 .freebuff/
+.tmp_*
+.venv-osint/
+.venv-piper/
+MUTACION_COBERTURA.md
+Thumbs.db
+__pycache__/
 desktop-v2.db
 desktop-v2.db-shm
 desktop-v2.db-wal
-
-# Python
-__pycache__/
-*.pyc
-
-# Piper TTS local (venv + modelos de voz, ~600 MB — no subir)
-.venv-piper/
-piper-voices/
-
-# Venv de herramientas OSINT (holehe para aion_osint.py)
-.venv-osint/
-# Audio de prueba generado por piper_compare.py
-salida-voces/
-
-# Node
-node_modules/
-
-# Android (Capacitor) — generado por `npx cap add android` / build-web
-mobile/www/
-mobile/android/
-mobile/.gradle/
-
-# Scripts temporales de validación/pruebas
-.tmp_*
-*.tmp_*
-
-# Informe generado por python test_mutacion.py --coverage (regenerable)
-MUTACION_COBERTURA.md
-
-# CV generado por generar_cv.py desde LINKEDIN.md — versionado por petición
-# expresa (los reclutadores pueden verlo en el repo). Al regenerar con
-# `python generar_cv.py`, aparecerá como modificado: es correcto.
-
-# Sistema
-.DS_Store
-Thumbs.db
-
-# Archivos sensibles (no subir claves jamás)
-*.env
-.env.*
 keys.json
+mobile/.gradle/
+mobile/android/
+mobile/www/
+node_modules/
+piper-voices/
+privado/
 proxy_keys.json
-*.keys
-!keys.json.example
-
-# Token persistente del puente (lo genera windows/aion-sincro.cmd en modo repo)
+salida-voces/
 token

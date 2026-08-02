@@ -22,8 +22,8 @@ Trabajo validado en local, aún sin commit en `main`: *(sección vacía — todo
 
 - `40aac6f` — **feat:** **módulo OSINT** (`aion_osint.py` con suite `test_aion_osint.py` y lanzadores `linux/aion-osint` / `windows/aion-osint.cmd`) + plantillas Laboral ejecutivo/hallazgos/curl + fix de proxy y Piper.
 - `a7d890b` — **feat:** **test de mutación real** de `saveStore` (`test_mutacion.py`, copia temporal de `index.html` con la limpieza WebCrypto quitada para verificar que el check cae) + soporte `AION_HTML` en `test_app.js` + paso `[3/3]` en `test_all.cmd`/`test_all.sh`.
-- `9f983c2` — **docs:** perfil de LinkedIn de Arkaitz (`LINKEDIN.md`) para la primera oportunidad en ciberseguridad.
-- `9e159ea` — **docs:** `LINKEDIN.md` — eJPT *en preparación* + guía de 10 publicaciones semanales de pentesting.
+- `9f983c2` — **docs:** perfil de LinkedIn del autor (`LINKEDIN.md`, movido a `privado/`).
+- `9e159ea` — **docs:** `LINKEDIN.md` — eJPT *en preparación* + guía de 10 publicaciones semanales de pentesting (`privado/`).
 - `57baf6d` — **feat:** **wake word personalizado** (Aion, Aria, Nova…) persistido en `aion_cfg` + hotword de frase completa («Aion, abre el terminal» ejecuta la petición sin esperar).
 - `4600161` — **feat:** **informe de reconocimiento desde la salida real de nmap** (modo Laboral) con tabla de puertos, superficie de ataque y recomendaciones exportables.
 - `fe839a1` — **feat:** **re-scan de nmap desde la barra del informe** con nuevos flags (`-sV -sC -p-`) + parsers de **gobuster, Nessus y Burp Suite** con su generador de informe por herramienta.
@@ -45,8 +45,8 @@ Trabajo validado en local, aún sin commit en `main`: *(sección vacía — todo
 
 ### 👤 Perfil profesional y CV
 
-- `4d510fc` — **docs:** `LINKEDIN.md` con **datos reales confirmados** de Arkaitz (nombre completo, trabajo actual como autónomo instalador de carpintería metálica en Alupro Cerramientos, estudios hasta secundaria, inglés técnico, eJPT en preparación), verificado contra el perfil de GitHub sin afirmaciones inventadas.
-- `4d510fc` — **feat:** `generar_cv.py` — genera el CV en HTML/PDF desde `LINKEDIN.md` (fuente única de verdad) + `POSTS_LINKEDIN.md` con los 10 posts semanales + `CV_Arkaitz.html/pdf` (versionados por petición expresa) + capturas del visor.
+- `4d510fc` — **docs:** `LINKEDIN.md` con datos reales confirmados del autor (movido a `privado/`).
+- `4d510fc` — **feat:** `generar_cv.py` — genera CV en HTML/PDF desde `LINKEDIN.md` como fuente única (movido a `privado/`).
 
 ### 📱 Portabilidad e instalación
 

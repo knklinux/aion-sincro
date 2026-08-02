@@ -277,40 +277,64 @@ class Handler(BaseHTTPRequestHandler):
                 "duration_ms": int((time.time() - t0) * 1000),
             })
         if self.path == "/read":
-            # Leer un archivo del proyecto (relativo a BASE_DIR).
+            # Leer archivos del proyecto (relativos a BASE_DIR).
+            # Acepta:
+            #   { "path": "ruta" }              → un archivo (retrocompatible)
+            #   { "paths": ["ruta1", "ruta2"] } → varios archivos
+            #   { "lines": N }                  → opcional: solo las últimas N líneas (cola)
+            #   { "offset": M }                 → opcional: saltar las primeras M líneas (>=0)
             # Seguridad: solo rutas relativas, sin '..', dentro de BASE_DIR.
-            rpath = (data.get("path") or "").strip()
-            if not rpath:
-                return self._json({"ok": False, "error": "path vacío"}, 400)
-            # Rechazar rutas absolutas (Unix: /, Windows: C:\ o //)
-            if rpath.startswith("/") or rpath.startswith("\\\\") or (
-                len(rpath) >= 2 and rpath[1] == ":"
-            ):
-                return self._json({"ok": False, "error": "ruta absoluta no permitida"}, 400)
-            # Rechazar path traversal
-            if ".." in rpath.split(os.sep):
-                return self._json({"ok": False, "error": "path traversal no permitido"}, 400)
-            full = os.path.normpath(os.path.join(BASE_DIR, rpath))
-            # Verificar que la ruta resuelta está dentro de BASE_DIR
-            if not full.startswith(os.path.normpath(BASE_DIR) + os.sep):
-                return self._json({"ok": False, "error": "fuera del proyecto"}, 400)
-            if not os.path.isfile(full):
-                return self._json({"ok": False, "error": "archivo no encontrado"}, 404)
-            try:
-                sz = os.path.getsize(full)
-                if sz > 1_000_000:
-                    return self._json({"ok": False, "error": "archivo demasiado grande (max 1 MB)"}, 413)
-                with open(full, "r", encoding="utf-8", errors="replace") as fh:
-                    content = fh.read()
-                if "\x00" in content:
-                    return self._json({"ok": False, "error": "archivo binario no soportado"}, 415)
-                return self._json({
-                    "ok": True, "path": rpath, "content": content, "size": sz
-                })
-            except PermissionError:
-                return self._json({"ok": False, "error": "sin permiso para leer el archivo"}, 403)
-            except Exception as e:
-                return self._json({"ok": False, "error": str(e)[:200]}, 500)
+            paths = data.get("paths")
+            # Validar /lines/ (entero positivo, max 50000)
+            lines = data.get("lines")
+            if lines is not None:
+                if (isinstance(lines, bool)
+                        or not isinstance(lines, (int, float))
+                        or not float(lines).is_integer()):
+                    return self._json({"ok": False, "error": "lines debe ser entero entre 1 y 50000"}, 400)
+                lines = int(lines)
+                if lines <= 0 or lines > 50000:
+                    return self._json({"ok": False, "error": "lines debe ser entero entre 1 y 50000"}, 400)
+            # Validar /offset/ (entero >= 0, max 1e6)
+            offset = data.get("offset")
+            if offset is not None:
+                if (isinstance(offset, bool)
+                        or not isinstance(offset, (int, float))
+                        or not float(offset).is_integer()):
+                    return self._json({"ok": False, "error": "offset debe ser entero >= 0"}, 400)
+                offset = int(offset)
+                if offset < 0 or offset > 1_000_000:
+                    return self._json({"ok": False, "error": "offset debe ser entero >= 0"}, 400)
+            if isinstance(paths, list):
+                # Array de paths
+                if not paths:
+                    return self._json({"ok": False, "error": "paths vacío"}, 400)
+                if len(paths) > 10:
+                    return self._json({"ok": False, "error": "máximo 10 archivos"}, 400)
+                files = []
+                for rpath in paths:
+                    rpath = str(rpath).strip()
+                    if not rpath:
+                        continue
+                    result = _read_single_file(rpath, lines=lines, offset=offset)
+                    files.append(result)
+                ok = all(f.get("ok", False) for f in files)
+                return self._json({"ok": ok, "files": files})
+            else:
+                # String único (retrocompatible)
+                rpath = (data.get("path") or "").strip()
+                if not rpath:
+                    return self._json({"ok": False, "error": "path vacío"}, 400)
+                result = _read_single_file(rpath, lines=lines, offset=offset)
+                if not result.get("ok"):
+                    status = {
+                        "path vacío": 400, "ruta absoluta no permitida": 400,
+                        "path traversal no permitido": 400, "fuera del proyecto": 400,
+                        "archivo no encontrado": 404,
+                    }.get(result.get("error"), 500)
+                    return self._json(result, status)
+                return self._json(result)
+
         if self.path == "/run":
             cmd = data.get("cmd")
             if not isinstance(cmd, str) or not cmd.strip():
@@ -363,6 +387,60 @@ class Handler(BaseHTTPRequestHandler):
                 pass
             return
         self._deny()
+
+
+def _read_single_file(rpath, lines=None, offset=None):
+    """Lee un único archivo validando seguridad. Devuelve dict con ok/error.
+    Función independiente (no método) para que pueda ser llamada tanto desde
+    do_POST como desde el handler de array de paths.
+
+    lines:  si se pasa, devuelve solo las últimas N líneas (cola, útil para logs).
+    offset: si se pasa, salta las primeras M líneas (>=0). Compatible con lines
+            (se aplica offset primero y luego lines sobre el resto).
+    """
+    # Rechazar rutas absolutas (Unix: /, Windows: C:\ o //)
+    if rpath.startswith("/") or rpath.startswith("\\\\") or (
+        len(rpath) >= 2 and rpath[1] == ":"
+    ):
+        return {"ok": False, "error": "ruta absoluta no permitida"}
+    # Rechazar path traversal
+    if ".." in rpath.split(os.sep):
+        return {"ok": False, "error": "path traversal no permitido"}
+    full = os.path.normpath(os.path.join(BASE_DIR, rpath))
+    # Verificar que la ruta resuelta está dentro de BASE_DIR
+    if not full.startswith(os.path.normpath(BASE_DIR) + os.sep):
+        return {"ok": False, "error": "fuera del proyecto"}
+    if not os.path.isfile(full):
+        return {"ok": False, "error": "archivo no encontrado", "path": rpath}
+    try:
+        sz = os.path.getsize(full)
+        if sz > 1_000_000:
+            return {"ok": False, "error": "archivo demasiado grande (max 1 MB)", "path": rpath}
+        with open(full, "r", encoding="utf-8", errors="replace") as fh:
+            content = fh.read()
+        if "\x00" in content:
+            return {"ok": False, "error": "archivo binario no soportado", "path": rpath}
+        # Recortar a las últimas N líneas y/o saltar las primeras M
+        if lines is not None or offset is not None:
+            raw_lines = content.split("\n")
+            # Descartar el elemento vacío final si el archivo termina en salto
+            # de línea (típico en logs): así "lines" cuenta líneas reales.
+            if raw_lines and raw_lines[-1] == "":
+                raw_lines = raw_lines[:-1]
+            total = len(raw_lines)  # total REAL del archivo (antes de offset)
+            if offset is not None:
+                raw_lines = raw_lines[offset:]
+            if lines is not None:
+                raw_lines = raw_lines[-lines:]
+            content = "\n".join(raw_lines)
+            return {"ok": True, "path": rpath, "content": content,
+                    "size": sz, "lines": len(raw_lines), "total_lines": total,
+                    "tail": lines is not None}
+        return {"ok": True, "path": rpath, "content": content, "size": sz}
+    except PermissionError:
+        return {"ok": False, "error": "sin permiso para leer el archivo", "path": rpath}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:200], "path": rpath}
 
 
 def main():

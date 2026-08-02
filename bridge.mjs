@@ -214,64 +214,115 @@ http
       }
 
       if (req.url === "/read" && req.method === "POST") {
-        // Leer un archivo del proyecto (relativo a __dirname).
+        // Leer archivos del proyecto (relativo a __dirname).
+        // Acepta:
+        //   { "path": "ruta" }             → un archivo (retrocompatible)
+        //   { "paths": ["ruta1", "ruta2"] }  → varios archivos
+        //   { "lines": N }                  → opcional: solo las últimas N líneas (cola)
+        //   { "offset": M }                 → opcional: saltar las primeras M líneas (>=0)
         // Seguridad: solo rutas relativas, sin '..', dentro de __dirname.
-        const rpath = String(data.path || "").trim();
-        if (!rpath) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: false, error: "path vacio" }));
-          return;
-        }
-        // Rechazar rutas absolutas (Unix: /, Windows: C:\ o //)
-        if (rpath.startsWith("/") || rpath.startsWith("\\\\") ||
-            (rpath.length >= 2 && rpath[1] === ":")) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: false, error: "ruta absoluta no permitida" }));
-          return;
-        }
-        // Rechazar path traversal
-        if (rpath.split(path.sep).includes("..")) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: false, error: "path traversal no permitido" }));
-          return;
-        }
-        const full = path.resolve(__dirname, rpath);
-        // Verificar que la ruta resuelta esta dentro de __dirname
-        if (!full.startsWith(path.resolve(__dirname) + path.sep)) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: false, error: "fuera del proyecto" }));
-          return;
-        }
-        try {
-          const stat = fs.statSync(full);
-          if (!stat.isFile()) {
-            res.writeHead(404, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ ok: false, error: "no es un archivo" }));
+        // Validar /lines/ (entero positivo, max 50000)
+        let lines = data.lines;
+        if (lines != null) {
+          if (typeof lines === "boolean" || typeof lines !== "number" || !Number.isInteger(lines) || lines <= 0 || lines > 50000) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "lines debe ser entero entre 1 y 50000" }));
             return;
           }
-          if (stat.size > 1_000_000) {
-            res.writeHead(413, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ ok: false, error: "archivo demasiado grande (max 1 MB)" }));
+        } else {
+          lines = null;
+        }
+        // Validar /offset/ (entero >= 0, max 1e6)
+        let offset = data.offset;
+        if (offset != null) {
+          if (typeof offset === "boolean" || typeof offset !== "number" || !Number.isInteger(offset) || offset < 0 || offset > 1000000) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "offset debe ser entero >= 0" }));
             return;
           }
-          const content = fs.readFileSync(full, "utf8");
-          if (content.includes("\x00")) {
-            res.writeHead(415, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ ok: false, error: "archivo binario no soportado" }));
+        } else {
+          offset = null;
+        }
+        if (Array.isArray(data.paths)) {
+          // Array de paths
+          if (data.paths.length === 0) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "paths vacio" }));
+            return;
+          }
+          if (data.paths.length > 10) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "maximo 10 archivos" }));
+            return;
+          }
+          const files = data.paths.map(rpath => _readSingleFile(String(rpath).trim(), lines, offset));
+          const ok = files.every(f => f.ok);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok, files }));
+          return;
+        } else {
+          // String único (retrocompatible)
+          const rpath = String(data.path || "").trim();
+          if (!rpath) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "path vacio" }));
+            return;
+          }
+          const result = _readSingleFile(rpath, lines, offset);
+          if (!result.ok) {
+            const status = { "path vacio": 400, "ruta absoluta no permitida": 400, "path traversal no permitido": 400, "fuera del proyecto": 400, "archivo no encontrado": 404 }[result.error] || 500;
+            res.writeHead(status, { "Content-Type": "application/json" });
+            res.end(JSON.stringify(result));
             return;
           }
           res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: true, path: rpath, content, size: stat.size }));
-        } catch (e) {
-          if (e.code === "ENOENT") {
-            res.writeHead(404, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ ok: false, error: "archivo no encontrado" }));
-          } else if (e.code === "EACCES" || e.code === "EPERM") {
-            res.writeHead(403, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ ok: false, error: "sin permiso para leer el archivo" }));
-          } else {
-            res.writeHead(500, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ ok: false, error: String(e.message || e).slice(0, 200) }));
+          res.end(JSON.stringify(result));
+          return;
+        }
+
+        function _readSingleFile(rpath, lines, offset) {
+          if (!rpath) return { ok: false, error: "path vacio" };
+          if (rpath.startsWith("/") || rpath.startsWith("\\\\") ||
+              (rpath.length >= 2 && rpath[1] === ":")) {
+            return { ok: false, error: "ruta absoluta no permitida" };
+          }
+          if (rpath.split(path.sep).includes("..")) {
+            return { ok: false, error: "path traversal no permitido" };
+          }
+          const full = path.resolve(__dirname, rpath);
+          if (!full.startsWith(path.resolve(__dirname) + path.sep)) {
+            return { ok: false, error: "fuera del proyecto" };
+          }
+          try {
+            const stat = fs.statSync(full);
+            if (!stat.isFile()) {
+              return { ok: false, error: "no es un archivo", path: rpath };
+            }
+            if (stat.size > 1_000_000) {
+              return { ok: false, error: "archivo demasiado grande (max 1 MB)", path: rpath };
+            }
+            let content = fs.readFileSync(full, "utf8");
+            if (content.includes("\x00")) {
+              return { ok: false, error: "archivo binario no soportado", path: rpath };
+            }
+            // Recortar a las últimas N líneas y/o saltar las primeras M
+            if (lines != null || offset != null) {
+              let rawLines = content.split("\n");
+              // Descartar el elemento vacío final si el archivo termina en salto
+              // de línea (típico en logs): así "lines" cuenta líneas reales.
+              if (rawLines.length && rawLines[rawLines.length - 1] === "") rawLines = rawLines.slice(0, -1);
+              const total = rawLines.length; // total REAL del archivo (antes de offset)
+              if (offset != null) rawLines = rawLines.slice(offset);
+              if (lines != null) rawLines = rawLines.slice(-lines);
+              content = rawLines.join("\n");
+              return { ok: true, path: rpath, content, size: stat.size,
+                       lines: rawLines.length, total_lines: total, tail: lines != null };
+            }
+            return { ok: true, path: rpath, content, size: stat.size };
+          } catch (e) {
+            if (e.code === "ENOENT") return { ok: false, error: "archivo no encontrado", path: rpath };
+            if (e.code === "EACCES" || e.code === "EPERM") return { ok: false, error: "sin permiso para leer el archivo", path: rpath };
+            return { ok: false, error: String(e.message || e).slice(0, 200), path: rpath };
           }
         }
         return;
