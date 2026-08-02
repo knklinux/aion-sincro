@@ -993,6 +993,31 @@ await (async () => {
     }catch(e){ console.warn('  ! highlightCode round-trip error:',e.message); }
   }
 
+  // ---------- OSINT Geolocalizacion ----------
+  console.log("\n[OSINT GEOLOC] Herramienta de geolocalizacion en el panel de herramientas");
+  check("TOOLS incluye geoloc", /key:\s*'geoloc'/.test(html));
+  check("geoLocate() existe", html.includes("async function geoLocate()"));
+  check("renderGeolocPanel() existe", html.includes("function renderGeolocPanel()"));
+  check("CSS: #geolocPanel presente", html.includes("#geolocPanel{padding:"));
+  check("CSS: .geoloc-card con estilo azul", html.includes('.geoloc-card{border:1px solid rgba(59,130,246'));
+  check("CSS: .geoloc-coords con monoespaciado", html.includes('.geoloc-coords{display:flex;gap:14px;font-family:var(--mono)'));
+  check("HTML: #geolocPanel en toolsPanel", html.includes('id="geolocPanel"'));
+  check("geoLocate usa navigator.geolocation", html.includes("'geolocation' in navigator"));
+  check("geoLocate: fallback IP con ip-api.com", html.includes('ip-api.com'));
+  check("geoLocate: reverse geocoding con Nominatim", html.includes('nominatim.openstreetmap.org'));
+  check("renderGeolocPanel: boton copiar coordenadas", html.includes('navigator.clipboard.writeText'));
+  check("renderGeolocPanel: enlace OpenStreetMap", html.includes('openstreetmap.org'));
+  check("renderGeolocPanel: enlace Google Maps", html.includes('google.com/maps'));
+  check("renderGeolocPanel: nota WiFi no disponible", /escaneo.*redes.*WiFi|WiFi.*scanning.*browser/i.test(html));
+  check("renderTools: toggle geoloc activa geoLocate", /geoloc.*geoLocate/.test(html));
+  check("renderTools: panel se muestra/oculta con toggle", html.includes("classList.toggle('show',!!store.tools.geoloc)"));
+  check("runTools: responde a consultas de ubicacion", /donde estoy|ubicacion|geolocal[ií]zame|mis coordenadas/.test(html));
+  check("runTools: devuelve coordenadas en el chat", html.includes('UBICACION:'));
+  check("runTools: nota WiFi no disponible en respuesta", /airodump|escaneo WiFi|WiFi scanning/i.test(html));
+  check("TOOLS: descripcion aclara limitacion WiFi", /redes WiFi no son accesibles|WiFi.*no.*accesibles|no.*API.*web/i.test(html));
+  check("_geoCache: cache de coordenadas", html.includes('_geoCache'));
+  check("geoloc-btn: botones con estilo de enlace", html.includes('.geoloc-btn{display:inline-flex'));
+
   // ---------- Resumen ----------
   console.log("\n" + "=".repeat(60));
   console.log(`RESULTADO: ${PASS} ok · ${FAIL} fallos`);

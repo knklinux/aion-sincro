@@ -564,6 +564,23 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
 .toolSwitch.on{background:rgba(16,185,129,.55)}
 .toolSwitch.on::after{left:17px;background:#fff}
 .toolsNote{padding:12px 16px;font-size:11px;color:var(--dim);line-height:1.5;border-top:1px solid var(--line)}
+/* Panel de Geolocalizacion OSINT */
+#geolocPanel{padding:0 14px 10px;display:none}
+#geolocPanel.show{display:block}
+.geoloc-card{border:1px solid rgba(59,130,246,.3);border-radius:12px;background:linear-gradient(160deg,rgba(59,130,246,.08),rgba(59,130,246,.02));padding:14px;animation:msgIn .3s ease}
+.geoloc-head{display:flex;align-items:center;gap:8px;font-size:12px;color:#a5d8ff;font-weight:700;letter-spacing:.06em;margin-bottom:8px}
+.geoloc-icon{font-size:16px}
+.geoloc-refresh{margin-left:auto;padding:3px 8px;border-radius:12px;font-size:12px;color:var(--dim);border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);cursor:pointer;transition:.2s}
+.geoloc-refresh:hover{color:#a5d8ff;border-color:rgba(59,130,246,.4)}
+.geoloc-coords{display:flex;gap:14px;font-family:var(--mono);font-size:17px;font-weight:700;color:#ffd166;letter-spacing:.02em;margin:4px 0 2px}
+.geoloc-src{font-size:10.5px;color:var(--dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em}
+.geoloc-addr{font-size:11.5px;color:#d8c9a8;line-height:1.5;margin-bottom:10px;word-break:break-word}
+.geoloc-links{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.geoloc-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:16px;font-size:10.5px;font-weight:600;letter-spacing:.04em;cursor:pointer;transition:.2s;text-decoration:none;color:#a5d8ff;border:1px solid rgba(59,130,246,.35);background:rgba(59,130,246,.08)}
+.geoloc-btn:hover{background:rgba(59,130,246,.2);border-color:rgba(59,130,246,.6);transform:translateY(-1px)}
+.geoloc-note{margin-top:10px;padding:7px 10px;border-radius:8px;font-size:10px;color:var(--dim);line-height:1.5;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15)}
+.geoloc-busy{font-size:12px;color:#67e8f9;padding:8px 0;animation:msgIn .3s ease}
+.geoloc-err{font-size:12px;color:#fca5a5;padding:8px 0;animation:msgIn .3s ease}
 
 @media (max-width:640px){
   .avatarWrap{width:min(300px,74vw);height:min(300px,74vw)}
@@ -1071,6 +1088,7 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
           <button class="iconBtn" id="toolsReset">↺ Restaurar</button>
         </div>
         <div id="toolsList"></div>
+        <div id="geolocPanel"></div>
         <p class="toolsNote">Aion Sincro consulta estas fuentes desde tu navegador, sin claves, cuando tu pregunta lo requiere. Actívalas o desactívalas a tu gusto. Para todo lo demás, usa la pestaña Terminal.</p>
       </div>
     </aside>
@@ -4189,7 +4207,8 @@ const TOOLS=[
   {key:'weather',icon:'🌦️',name:'Clima (Open-Meteo)',desc:'Tiempo y temperatura por ciudad, sin clave'},
   {key:'cve',icon:'🛡️',name:'Base de CVEs (NVD)',desc:'Detalle y CVSS de cualquier CVE-XXXX-XXXX'},
   {key:'github',icon:'🐙',name:'GitHub',desc:'Búsqueda de repositorios por estrellas'},
-  {key:'countries',icon:'🗺️',name:'Datos de países',desc:'Capital, población, idiomas y región'}
+  {key:'countries',icon:'🗺️',name:'Datos de países',desc:'Capital, población, idiomas y región'},
+  {key:'geoloc',icon:'📍',name:'OSINT Geolocalización',desc:'Coordenadas GPS + geocoding inverso + IP fallback (las redes WiFi no son accesibles desde el navegador)'}
 ];
 function renderTools(){
   const list=$('#toolsList'); if(!list)return; list.innerHTML='';
@@ -4197,9 +4216,66 @@ function renderTools(){
     const on=!!(store.tools||{})[t.key];
     const card=document.createElement('div'); card.className='toolCard'+(on?'':' off');
     card.innerHTML='<span class="ti">'+t.icon+'</span><span class="tt"><b>'+t.name+'</b><small>'+t.desc+'</small></span><button class="toolSwitch'+(on?' on':'')+'" aria-label="Activar o desactivar '+t.name+'"></button>';
-    card.querySelector('.toolSwitch').onclick=()=>{ store.tools[t.key]=!store.tools[t.key]; if(t.key==='internet') store.search=store.tools.internet; syncSearchUI(); saveStore(); renderTools(); };
+    card.querySelector('.toolSwitch').onclick=()=>{ store.tools[t.key]=!store.tools[t.key]; if(t.key==='internet') store.search=store.tools.internet; syncSearchUI(); saveStore(); renderTools(); if(t.key==='geoloc'){ const gp=$('#geolocPanel'); if(gp) gp.classList.toggle('show',!!store.tools.geoloc); if(store.tools.geoloc) geoLocate(); } };
     list.appendChild(card);
   });
+  // Si geoloc esta activo al renderizar, mostrar panel
+  const gp=$('#geolocPanel'); if(gp){ gp.classList.toggle('show',!!(store.tools&&store.tools.geoloc)); if(store.tools&&store.tools.geoloc) renderGeolocPanel(); }
+}
+// ---- Geolocalizacion OSINT ----
+let _geoCache=null;
+async function geoLocate(){
+  const panel=$('#geolocPanel'); if(!panel) return;
+  panel.innerHTML='<div class="geoloc-busy">📍 Obteniendo ubicacion...</div>';
+  let lat=null, lon=null, src='';
+  // 1) Intentar GPS del navegador
+  if('geolocation' in navigator){
+    try{
+      const pos=await new Promise((resolve,reject)=>{
+        navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:8000,maximumAge:60000});
+      });
+      lat=pos.coords.latitude; lon=pos.coords.longitude;
+      src='GPS ('+Math.round(pos.coords.accuracy)+'m precision)';
+    }catch(e){ /* GPS denegado o no disponible */ }
+  }
+  // 2) Fallback: IP geolocation (gratis, sin clave)
+  if(lat===null){
+    try{
+      const r=await tFetch('http://ip-api.com/json/?fields=lat,lon,city,country,countryCode,query');
+      const j=await r.json();
+      if(j.lat&&j.lon){ lat=j.lat; lon=j.lon; src='IP ('+j.city+', '+j.country+')'; }
+    }catch(e){}
+  }
+  if(lat===null){ panel.innerHTML='<div class="geoloc-err">❌ No se pudo obtener la ubicacion. El navegador denego el GPS y la geolocalizacion por IP fallo.</div>'; return; }
+  // 3) Reverse geocoding (lat/lon -> direccion)
+  let addr='';
+  try{
+    const r=await tFetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lon+'&format=json&accept-language=es');
+    const j=await r.json();
+    if(j&&j.display_name) addr=j.display_name;
+  }catch(e){}
+  _geoCache={lat,lon,src,addr,ts:Date.now()};
+  renderGeolocPanel();
+}
+function renderGeolocPanel(){
+  const panel=$('#geolocPanel'); if(!panel) return;
+  const d=_geoCache;
+  if(!d){ panel.innerHTML='<div class="geoloc-busy">📍 Activa la herramienta para obtener tu ubicacion.</div>'; return; }
+  const en=isEnglish();
+  const mapsUrl='https://www.openstreetmap.org/?mlat='+d.lat+'&mlon='+d.lon+'#map=15/'+d.lat+'/'+d.lon;
+  panel.innerHTML=
+    '<div class="geoloc-card">'+
+      '<div class="geoloc-head"><span class="geoloc-icon">📍</span><span>'+(en?'OSINT Geolocation':'OSINT Geolocalizacion')+'</span><button class="geoloc-refresh" onclick="geoLocate()" title="'+(en?'Refresh':'Actualizar')+'">🔄</button></div>'+
+      '<div class="geoloc-coords"><span>'+d.lat.toFixed(6)+'</span><span>'+d.lon.toFixed(6)+'</span></div>'+
+      '<div class="geoloc-src">'+esc(d.src)+'</div>'+
+      (d.addr?'<div class="geoloc-addr">📍 '+esc(d.addr)+'</div>':'')+
+      '<div class="geoloc-links">'+
+        '<a class="geoloc-btn" href="'+mapsUrl+'" target="_blank" rel="noopener">🗺️ OpenStreetMap</a>'+
+        '<a class="geoloc-btn" href="https://www.google.com/maps?q='+d.lat+','+d.lon+'" target="_blank" rel="noopener">📍 Google Maps</a>'+
+        '<button class="geoloc-btn" onclick="navigator.clipboard.writeText(\''+d.lat+', '+d.lon+'\');toast(\''+(en?'Coordinates copied':'Coordenadas copiadas')+'\')">📋 '+(en?'Copy coords':'Copiar coord.')+'</button>'+
+      '</div>'+
+      '<div class="geoloc-note">'+(en?'WiFi network scanning is not possible from a browser (no Web API available). Use native tools like airodump-ng or the bridge terminal for wireless recon.':'El escaneo de redes WiFi no es posible desde el navegador (no existe API web para ello). Usa herramientas nativas como airodump-ng o el puente de terminal para reconocimiento inalambrico.')+'</div>'+
+    '</div>';
 }
 function tFetch(url,opts={}){
   const ctrl=new AbortController();
@@ -4249,6 +4325,10 @@ async function runTools(q){
         if(j.items) out.push('🐙 GITHUB (mejores por estrellas para "'+qq+'"):\n'+j.items.slice(0,3).map(r=>'• '+r.full_name+' ⭐'+r.stargazers_count+' — '+((r.description||'').slice(0,110)||'sin descripción')).join('\n'));
       }
     }catch(e){}
+  }
+  if(t.geoloc&&/\b(d[oó]nde estoy|ubicaci[oó]n|geolocal[ií]zame|mis coordenadas|what'?s my location|where am i|my gps|my location)\b/i.test(q)){
+    if(!_geoCache) await geoLocate();
+    if(_geoCache) out.push('📍 UBICACION: '+_geoCache.lat.toFixed(6)+', '+_geoCache.lon.toFixed(6)+' ('+_geoCache.src+')'+(store.tools.geoloc?' — El panel de Geolocalizacion muestra el mapa y la direccion.':'')+'\n'+(isEnglish()?'WiFi scanning is not possible from a browser — use airodump-ng or similar via the terminal bridge.':'El escaneo WiFi no es posible desde el navegador — usa airodump-ng o similar via el puente de terminal.'));
   }
   if(t.countries&&/\b(capital de|poblaci[oó]n de|idioma de|bandera de|pa[ií]s de|d[ií]as de)\b/i.test(q)){
     try{
