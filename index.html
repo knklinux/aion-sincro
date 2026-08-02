@@ -4311,6 +4311,24 @@ function toggleMic(){
 }
 let continuousTimer=null;
 let silenceTimer=null;
+function turnTimeoutAdaptado(){
+  /* Límite de silencio adaptativo según el contexto:
+     - Si Aion acaba de pedirte algo que requiere preparación (pegar una
+       salida de nmap, responder los controles ISO, subir un archivo), el
+       turno dura más (8-10 s) para que no se pause mientras tecleas o
+       buscas la salida del terminal.
+     - En conversación normal usa el valor configurado (2-5 s).
+     Base: el último mensaje del asistente + modos activos (Laboral/ISO). */
+  const base=Math.max(2,Math.min(5,+store.turnTimeout||4));
+  if(base>=8) return base; // si el usuario ya subió el límite, no lo bajamos
+  const h=store.history||[];
+  let last='';
+  for(let i=h.length-1;i>=0;i--){ if(h[i]&&h[i].role==='assistant'&&h[i].content){ last=String(h[i].content); break; } }
+  const isoOpen=!!($('#isoOverlay')&&$('#isoOverlay').classList.contains('show'));
+  const waitingInput=/(pega|p[ée]gamel[oa]|salida (real )?de nmap|salida de (nmap|gobuster|burp|nessus)|responde (a )?(los |estos )?controles|contesta (los |estos )?controles|adjunta|sube (el|la|los)|mandame|p[áa]same|escribe (el|la|tu) (informe|reporte)|dame.*(nmap|informe)|enviarme)/i.test(last);
+  if(isoOpen||store.laboral||waitingInput) return 10; // contexto largo: 10 s
+  return base;
+}
 function continuousCycle(){
   /* Modo conversación continua: cuando Aion termina de responder, reabre el
      micrófono sola para el siguiente turno del usuario — sin pulsar nada.
@@ -4323,11 +4341,12 @@ function continuousCycle(){
       setListening(true);
       chimeResume(); // tono ascendente: se reabre el micrófono para tu turno
       if(!toastShownContinuous){ toastShownContinuous=true; toast('🔄 Tu turno — habla cuando quieras','1800'); setTimeout(()=>{toastShownContinuous=false;},6000); }
-      /* Límite de silencio configurable (turnTimeout, 2-5 s): si el usuario no
-         dice nada en ese tiempo, Aion pausa el ciclo sola y espera en silencio
-         en vez de quedarse escuchando eternamente. Se reanuda con el micrófono
-         o el wake word. */
-      const tt=Math.max(2,Math.min(5,+store.turnTimeout||4));
+      /* Límite de silencio adaptativo: en contexto de trabajo (nmap, ISO,
+         informes) el turno dura 10 s; en conversación normal usa el valor
+         configurado (turnTimeout, 2-5 s). Si el usuario no dice nada, Aion
+         pausa el ciclo sola y espera en silencio — se reanuda con el
+         micrófono o el wake word. */
+      const tt=turnTimeoutAdaptado();
       clearTimeout(silenceTimer);
       silenceTimer=setTimeout(()=>{
         if(store.continuous&&listening&&!streaming&&!speaking&&!wakeScan){

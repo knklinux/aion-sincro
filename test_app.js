@@ -338,7 +338,7 @@ check("continuousCycle() definida", /function\s+continuousCycle\s*\(/.test(scrip
   check("bind: turnTimeout guarda el valor al mover el slider", /\$\('#turnTimeout'\)\.oninput=e=>\{[\s\S]*?store\.turnTimeout=\+e\.target\.value;/.test(script));
   check("openSettings inicializa turnTimeout desde el store", /\$\('#turnTimeout'\)\.value=store\.turnTimeout\|\|4;/.test(script));
   check("collectSettings persiste turnTimeout limitado a 2-5", /store\.turnTimeout=Math\.max\(2,Math\.min\(5,parseFloat\(\$\('#turnTimeout'\)\.value\)\|\|4\)\);/.test(script));
-  check("silenceTimer pausa el ciclo si no hablas (turnTimeout s)", /const tt=Math\.max\(2,Math\.min\(5,\+store\.turnTimeout\|\|4\)\);/.test(script) && /silenceTimer=setTimeout\(\(\)=>\{/.test(script) && script.includes("⏸️ Te espero en silencio"));
+  check("silenceTimer pausa el ciclo si no hablas (turnTimeout s)", script.includes("const tt=turnTimeoutAdaptado();") && script.includes("silenceTimer=setTimeout(()=>{") && script.includes("⏸️ Te espero en silencio"));
   check("hablar cancela el límite de silencio (clearTimeout(silenceTimer) en onresult)", /clearTimeout\(silenceTimer\);\s*if\(final\)\{/.test(script));
   check("stopAll limpia silenceTimer", script.includes("function stopAll(){ clearTimeout(silenceTimer);"));
   // Sonidos de transición del ciclo (WebAudio puro): pausa y reanudación por audio
@@ -349,6 +349,14 @@ check("continuousCycle() definida", /function\s+continuousCycle\s*\(/.test(scrip
   check("chimePause() suena al pausar por silencio", /setListening\(false\);\s*chimePause\(\);\s*\/\/ doble pit corto/.test(script));
   check("chimeResume() suena al reabrir el micrófono", /setListening\(true\);\s*chimeResume\(\);\s*\/\/ tono ascendente/.test(script));
   check("sonidos usan WebAudio sin archivos externos (catch silencioso)", script.includes("window.AudioContext||window.webkitAudioContext") && /function\s+chimePause[\s\S]*?\}catch\(_\)\{\}/.test(script) && /function\s+chimeResume[\s\S]*?\}catch\(_\)\{\}/.test(script));
+  // Límite de silencio adaptativo según contexto (nmap/ISO/laboral → más largo)
+  check("turnTimeoutAdaptado() definida", /function\s+turnTimeoutAdaptado\s*\(/.test(script));
+  check("adaptativo: base es el turnTimeout configurado (2-5 s)", /const base=Math\.max\(2,Math\.min\(5,\+store\.turnTimeout\|\|4\)\);/.test(script));
+  check("adaptativo: detecta petición de pegar salida nmap/gobuster/burp", script.includes("(pega|p[ée]gamel[oa]|salida (real )?de nmap|salida de (nmap|gobuster|burp|nessus)"));
+  check("adaptativo: detecta pedir respuesta de controles ISO", script.includes("responde (a )?(los |estos )?controles") && script.includes("contesta (los |estos )?controles"));
+  check("adaptativo: contexto largo devuelve 10 s", /if\(isoOpen\|\|store\.laboral\|\|waitingInput\) return 10;/.test(script));
+  check("adaptativo: no baja el límite si el usuario lo subió (>=8)", /if\(base>=8\) return base;/.test(script));
+  check("silenceTimer usa turnTimeoutAdaptado()", /const tt=turnTimeoutAdaptado\(\);/.test(script));
 check("conversación continua enganchada al terminar de hablar (Windows)", /speaking=false; setState\(streaming\?'thinking':'idle'\); continuousCycle\(\); \}\ };/.test(script));
 check("conversación continua enganchada al terminar (Voxtral y Piper)", (script.match(/speaking=false; setState\(streaming\?'thinking':'idle'\); continuousCycle\(\);/g)||[]).length>=3);
 
