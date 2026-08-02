@@ -861,6 +861,17 @@ await (async () => {
   check("index.html: theme-color y apple-touch-icon", html.includes('name="theme-color"') && html.includes('rel="apple-touch-icon" href="icons/aion-192.png"'));
   check("index.html: botón de instalación PWA en el header", html.includes('id="btnInstall"') && html.includes('⬇️ Instalar'));
   check("index.html: registra sw.js solo en http(s)", /navigator\.serviceWorker\.register\('sw\.js'\)/.test(script) && script.includes("location.protocol"));
+  // Desinstalador de PWA
+  check("desinstalar-pwa.ps1 existe", fs.existsSync("windows/desinstalar-pwa.ps1"));
+  const pwaUninstall=fs.readFileSync("windows/desinstalar-pwa.ps1","utf8");
+  check("desinstalar-pwa.ps1: flag -Browser", pwaUninstall.includes("-Browser"));
+  check("desinstalar-pwa.ps1: soporta Edge y Chrome", pwaUninstall.includes("Edge") && pwaUninstall.includes("Chrome") && pwaUninstall.includes("Ambos"));
+  check("desinstalar-pwa.ps1: flag -Port", pwaUninstall.includes("-Port"));
+  check("desinstalar-pwa.ps1: abre serviceworker-internals", pwaUninstall.includes("serviceworker-internals"));
+  check("desinstalar-pwa.ps1: incluye snippet JS de verificacion", pwaUninstall.includes("navigator.serviceWorker.getRegistrations()"));
+  check("desinstalar-pwa.ps1: limpia cache con caches.delete", pwaUninstall.includes("caches.delete"));
+  check("desinstalar-pwa.ps1: instrucciones post-limpieza", pwaUninstall.includes("reinstalar"));
+  check("repo: sin archivos temporales", !fs.existsSync(".tmp_launcher_real.log"));
   check("index.html: beforeinstallprompt muestra el botón", script.includes("beforeinstallprompt") && script.includes("deferredPrompt=e"));
   check("index.html: appinstalled oculta el botón", script.includes("appinstalled") && script.includes("(display-mode: standalone)"));
   check("iconos PWA existen en disco", ["icons/aion-192.png", "icons/aion-512.png", "icons/aion-maskable-512.png"].every(f => fs.existsSync(path.join(ROOT, f))));
