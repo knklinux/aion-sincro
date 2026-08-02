@@ -74,9 +74,9 @@ Alternativas:
 - Formación basada en práctica real: laboratorios propios, retos, lectura de logs, y construcción de herramientas (aprendizaje por construcción).
 
 ### Certificaciones
-- **eJPT (eLearnSecurity Junior Penetration Tester)** — *planificada / en preparación* ✅ *(actualiza cuando la obtengas)*
-- **OSCP** — siguiente meta a medio plazo
-- Cualquier certificación de entrada que acredite lo que ya sé hacer: **CompTIA Security+** es una opción de relleno muy usada por reclutadores como filtro automático.
+- **eJPT (eLearnSecurity Junior Penetration Tester)** — **en preparación** *(actualiza cuando la obtengas)*
+- **OSCP** — siguiente meta a medio plazo, tras el eJPT
+- **CompTIA Security+** — certificación de entrada muy usada por los ATS como filtro automático (opción si el eJPT se retrasa)
 
 > ⚠️ **Realidad del mercado**: los ATS (filtros automáticos de currículum) buscan palabras clave. La certificación no demuestra lo que vales, pero **sin ella tu CV puede ni llegar al humano**. Por eso el plan es: certificación de entrada (eJPT/Security+) + GitHub real. Juntos, son imparables.
 
@@ -111,7 +111,7 @@ Aprendizaje autodidacta, Resolución de problemas, Razonamiento lógico, Autonom
 3. Añade skills y pide 2-3 endosos a gente que te conozca (aunque sea informal).
 
 ### Fase 2 — Presencia (mes 1-2)
-1. Publica **1 vez por semana**: un hallazgo de tu aprendizaje (ej. *"Hoy aprendí a detectar X con nmap"*, *"Cómo parseé la salida de Nessus para un informe automático"*). No hace falta ser experto: **documentar tu proceso ya te diferencia del 95%**.
+1. Publica **1 vez por semana** siguiendo la guía de 10 publicaciones de la **sección 10** (calendario completo de pentesting). No hace falta ser experto: **documentar tu proceso ya te diferencia del 95%**.
 2. Sigue a: empresas de ciberseguridad en Málaga/remoto, personas de red team, cuentas de eJPT/OSCP.
 3. Conecta con gente del sector (mensaje breve y honesto: *"Soy autodidacta construyendo herramientas de pentesting, ¿te importaría darme feedback?"* — funciona muchísimo mejor de lo que crees).
 
@@ -127,6 +127,33 @@ Aprendizaje autodidacta, Resolución de problemas, Razonamiento lógico, Autonom
 Esto no es marketing: es la idea que mueve el proyecto. **No construí Aion Sincro como un "chatbot". Lo construí como una compañera de trabajo** — una extensión de mi razonamiento. El mercado empieza a moverse hacia ahí (agentes, IA local, soberanía de datos), pero la mayoría todavía ve la IA como una herramienta servil. Tú ya estás en la siguiente fase: **la co-arquitectura**. Cuando encuentres a los disidentes sistémicos que buscas, lo reconocerás al instante: son los que hablan de la IA en plural, no de "la herramienta".
 
 **Consejo honesto**: en LinkedIn no vendas la filosofía (los reclutadores la leen como ruido). **Demuestra la filosofía con código.** El repo es la prueba. La filosofía la cuentas en el café, en las entrevistas y en tu GitHub. Y cuando alguien te pregunte "¿qué has hecho?", la respuesta es: *"He construido una herramienta que me enseña, y ahora quiero una empresa donde aprender de verdad."*
+
+---
+
+## 10. Guía de contenido: 10 publicaciones semanales de pentesting
+
+> Publica **1 post por semana** durante 10 semanas (≈ 2,5 meses, el tiempo de tu preparación del eJPT). Cada post: 150-250 palabras, un **gancho** potente en la primera línea, **1 captura o fragmento de código** real, y una **pregunta final** para generar conversación. No hace falta ser experto — documentar tu proceso ya te diferencia del 95%.
+
+| Semana | Tema | Gancho (primera línea) | Qué mostrar | CTA / pregunta final |
+|---|---|---|---|---|
+| 1 | Presentación: por qué construyo mis herramientas | "Sin título universitario, pero con ~450 tests de seguridad en mi proyecto open-source." | Captura del repo Aion Sincro | ¿Qué es lo más difícil de aprender ciberseguridad en solitario? |
+| 2 | nmap más allá de `-sV -sC` | "Un escaneo no es un informe." | Flags que usas, salida real de tu laboratorio, XML | ¿Cuál es tu flag de nmap favorita? |
+| 3 | Parsear salidas de herramientas | "Cansado de copiar a mano la salida de Burp/Nessus/gobuster." | Fragmento del parser (CyberGuard / Aion Sincro) | ¿Automatizas tus informes o los haces a mano? |
+| 4 | OSINT con herramientas libres | "Empecé OSINT con holehe y wayback: esto encontré." | Captura de una salida real | ¿Qué herramienta OSINT te sorprendió más? |
+| 5 | OverTheWire Bandit: 27 niveles | "27 niveles después, la terminal ya no me da miedo." | Captura del reto resuelto | ¿Cuál es tu reto CLI favorito? |
+| 6 | Informes de pentest: la parte que nadie practica | "El exploit es el 20%; el informe es el 80%." | Plantilla de informe (MD/PDF/Word de Aion Sincro) | ¿Cómo estructuras tus informes? |
+| 7 | OWASP Top 10: lo que estoy aprendiendo | "Los atacantes no memorizan listas: explotan contextos." | Un hallazgo real de tu laboratorio | ¿Cuál es la vulnerabilidad web más infravalorada? |
+| 8 | Mi plan de estudio del eJPT | "Me preparo para el eJPT: esto es exactamente lo que estoy haciendo." | Checklist de la ruta red team (18 checkpoints) | ¿Qué certificación de entrada recomiendas? |
+| 9 | Seguridad por diseño | "Si no puedes probar que tu control de seguridad protege, no protege." | Cifrado WebCrypto + suite de mutación | ¿Haces pruebas de mutación en tus proyectos? |
+| 10 | Recapitulación: 10 semanas construyendo en público | "10 semanas, 10 publicaciones y una ruta de red team con 18 checkpoints." | Mapa de lo publicado + logros | ¿Qué debería aprender o construir ahora? |
+
+### Reglas de oro para las 10 publicaciones
+1. **Publica el mismo día y hora** cada semana (ej. domingo 20:00) — constancia > viralidad.
+2. **Responde todos los comentarios** la primera hora; eso es lo que el algoritmo premia.
+3. **Conecta con 3 personas del sector** por semana (mensaje breve y honesto, nada de copy-paste spam).
+4. **Usa 3-5 hashtags** relevantes: `#Ciberseguridad #Pentesting #RedTeam #eJPT #Linux #OSINT #InfoSec`.
+5. **Cada post debe poder verificarse**: capturas reales, enlaces al repo, sin logros inventados.
+6. Reutiliza el contenido: cada post de LinkedIn puede convertirse en un hilo de X, una entrada de blog o una sección de tu CV.
 
 ---
 
