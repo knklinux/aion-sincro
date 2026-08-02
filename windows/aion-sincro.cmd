@@ -56,6 +56,14 @@ echo   ============================================
 echo     AION SINCRÓ - Compañera de Pentest y Red Team
 echo   ============================================
 echo.
+
+rem --- 0) Limpiar servicios de sesiones anteriores (evita conflictos de puerto) ---
+echo   Cerrando servicios de sesiones anteriores...
+for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr /c:"127.0.0.1:%PORT_APP% "') do taskkill /pid %%a /f 2>nul
+for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr /c:"127.0.0.1:%PORT_BRIDGE% "') do taskkill /pid %%a /f 2>nul
+for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr /c:"127.0.0.1:8766 "') do taskkill /pid %%a /f 2>nul
+%SystemRoot%\System32\timeout.exe /t 1 /nobreak >nul
+
 echo   Sirviendo la app en  http://127.0.0.1:%PORT_APP%/
 echo.
 
@@ -111,7 +119,7 @@ if %errorlevel%==0 (
 )
 
 rem --- 5) Abre el navegador -----------------------------------------
-start "" "http://127.0.0.1:%PORT_APP%/"
+start "" "http://127.0.0.1:%PORT_APP%/index.html"
 
 echo   Listo. Resumen de la sesión:
 echo     · App web      http://127.0.0.1:%PORT_APP%/

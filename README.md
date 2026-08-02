@@ -139,8 +139,23 @@ El repo incluye el **esqueleto Android** en [`mobile/`](mobile/): la configuraci
 mínima de [Capacitor](https://capacitorjs.com/) para envolver `index.html` en un
 **APK** instalable, con **permiso de micrófono para la hotword** ya preparado.
 
-**Requisitos:** Node 18+, Java 17 (JDK) y Android Studio con el SDK
-(platform + build-tools).
+**Requisitos:** Node 18+, Java 17 (JDK) y Android SDK (platform + build-tools).
+
+**Instalación automatizada del SDK (recomendado):**
+
+```powershell
+cd mobile
+powershell -ExecutionPolicy Bypass -File install-android-sdk.ps1
+```
+
+El script descarga e instala **sin intervención manual**:
+1. **Eclipse Temurin JDK 17** (MSI silencioso, nivel usuario)
+2. **Android SDK command-line tools** (última versión)
+3. **Paquetes SDK**: platform-tools, build-tools 34, platforms;android-34
+4. **Variables de entorno**: `JAVA_HOME`, `ANDROID_HOME` y PATH (usuario, sin admin)
+
+> 💡 Es **idempotente**: si JDK/SDK ya están instalados, los detecta y salta el paso.
+> Tras ejecutarlo, **cierra y reabre PowerShell** para que los cambios en PATH surtan efecto.
 
 **Flujo completo (una sola vez):**
 

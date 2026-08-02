@@ -2211,7 +2211,7 @@ function speakWindows(text,lang){
       else{ speaking=false; setState(streaming?'thinking':'idle'); } };
     u.onboundary=()=>{ if(document.body.dataset.state==='speaking') beatCore(); };
     u.onstart=()=>{ speaking=true; };
-    u.onerror=(e)=>{ console.warn('Aion voice error:',e?.error||e?.message||'unknown', 'lang:',lang,'voices:',voices.length); advance(); };
+    u.onerror=(e)=>{ console.warn('Aion voice error:',e?.error||e?.message||'unknown', 'lang:',lang,'voices:',voices.length); if(speakQueue.length<=1) toast(isEnglish()?'🔇 Voice could not play. Check that your browser supports speech synthesis.':'🔇 La voz no pudo reproducirse. Comprueba que tu navegador soporta síntesis de voz.'); advance(); };
     u.onend=advance;
     speakQueue.push(u);
   });
@@ -5308,8 +5308,11 @@ async function autoConfigure(){
     await tryRememberedUnlock();
   }
   // 1) Token del puente servido por el lanzador (mismo origen)
+  //    El token del puente NO es un secreto — es una llave de sesion local.
+  //    Se fetchea siempre (incluso con crypto activo) porque sin el el puente
+  //    no conecta y es necesario para /run.
   try{
-    if(!store.bridgeToken && !store.crypto){
+    if(!store.bridgeToken){
       const r=await fetch('token',{cache:'no-store'});
       if(r.ok){ const t=(await r.text()).trim(); if(t){ store.bridgeToken=t; saveStore(); } }
     }
