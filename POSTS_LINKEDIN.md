@@ -79,38 +79,37 @@ Salida real de un escaneo con `-sV -sC -p-` y el informe generado automáticamen
 
 ---
 
-## Semana 3 · Parsear salidas de herramientas
+## Semana 3 · Lo que nmap no te cuenta
 
-### 📝 Post
+### 📝 Post (listo para pegar)
 
-**Cansado de copiar a mano la salida de Burp, Nessus o gobuster. 🖥️**
+**Lo que nmap no te cuenta: los falsos negativos que casi me cuestan un hallazgo. 🔍**
 
-El 90% de mi tiempo de "informe" era copiar y pegar. Así que lo automatizé: enseñé a mi asistente a **leer la salida cruda** de 4 herramientas y generar el informe por mí.
+La semana pasada hablé de flags avanzados. Esta semana toca lo incómodo: lo que nmap **no ve**, aunque le pases `-p-`.
 
-Lo que aprendí parseando:
+Escaneé mi propio laboratorio y nmap me dijo que el puerto 8080 estaba cerrado. El servicio respondía. El navegador lo cargaba. Pero nmap, silencio.
 
-- **nmap**: puertos, servicios y versiones → tabla de superficie de ataque.
-- **gobuster**: directorios y códigos de estado → árbol de rutas interesantes.
-- **Burp Suite**: hallazgos y tráfico → sección de evidencia del informe.
-- **Nessus**: plugins y severidades → prioridad de remediación.
+Tres razones por las que nmap miente:
 
-No es magia: es regex, buenas estructuras de datos y **mucho testing**. Cada parser tiene sus casos de borde (una salida truncada, un puerto filtrado, un dominio sin respuesta).
+1. **Firewall con rate-limiting**: si el objetivo descarta paquetes tras N conexiones, nmap marca "filtered" o no ve nada. Solución: `--max-retries 3` y `--scan-delay 1s`.
+2. **Protocolos que nmap no entiende**: servicios custom, HTTP en puertos raros, o un netcat escuchando. Solución: `nc -zv` como segunda opinión.
+3. **El triple handshake engaña**: un puerto completa SYN/ACK y luego larga un RST antes de que nmap termine de sondear. Solución: combinar `-sT` (TCP connect) con `-sS`.
 
-Lo mejor: funciona en local, sin subir los datos del cliente a ningún sitio. Pega la salida, genera el informe, exporta a Word/PDF. Mi CV no son títulos, son repositorios.
+Lo metí en Aion Sincro: ahora la app me avisa si hay rangos sin escanear y sugiere flags de verificación. Porque un escaneo incompleto es un informe incompleto.
 
-¿Automatizas tus informes o los haces a mano? Me interesa saber cómo lo hace cada uno. 👇
+No soy analista de redes. Soy un instalador de carpintería metálica que aprendió a pillar a nmap en un renuncio. Cada afirmación, comprobable en el repo.
 
-`#Automatización #Pentesting #BurpSuite #Nessus #Gobuster #Informes #InfoSec`
+📎 Repo: github.com/knklinux/aion-sincro
+
+**Pregunta para ti:** ¿alguna vez te ha pasado que una herramienta te diga "no hay nada" y tú sepas que sí lo hay? Cuéntame la anécdota. 👇
+
+`#Nmap #Pentesting #FalsosNegativos #InfoSec #RedTeam #Reconocimiento #Autodidacta`
 
 ### 📸 Captura sugerida
-Fragmento del código del parser (detecta el tipo de herramienta) + un informe generado desde una salida real.
+Un escaneo donde nmap muestra "closed/filtered" y la evidencia de que el puerto realmente responde (navegador, netcat o Wireshark).
 
 ### ✅ Verificable
-- `detectToolOutput()` y los generadores por herramienta están en `hermes-ai/index.html`, con tests de regresión en la suite.
-
----
-
-## Semana 4 · OSINT con herramientas libres
+- El parser de nmap en `hermes-ai/index.html` genera recomendaciones de verificación adicional cuando detecta rangos sin escanear o resultados inconsistentes. Cubierto por la suite de tests.## Semana 4 · OSINT con herramientas libres
 
 ### 📝 Post
 
