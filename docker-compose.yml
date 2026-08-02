@@ -1,0 +1,99 @@
+# ============================================================
+# Aion Sincro · Docker Compose
+# ============================================================
+# Levanta la app completa con un solo comando:
+#
+#   cp docker/.env.example .env
+#   docker compose up -d
+#
+# La app queda en http://127.0.0.1:8080/index.html
+# ============================================================
+# NOTA: el puente (bridge) usa network_mode: host porque
+# necesita ejecutar comandos en la máquina HOST.  Esto solo
+# funciona en Linux.  En Windows/macOS, comenta el servicio
+# bridge y ejecútalo de forma nativa:
+#   python bridge.py --port 8765
+# ============================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # 1. App web — sirve index.html y los archivos estáticos
+  # ----------------------------------------------------------
+  app:
+    image: python:3.12-alpine
+    working_dir: /app
+    volumes:
+      - .:/app:ro
+    command: python -m http.server ${APP_PORT:-8080} --bind 0.0.0.0
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:${APP_PORT:-8080}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${APP_PORT:-8080}/index.html')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ----------------------------------------------------------
+  # 2. Proxy de claves — mantiene las API keys FUERA del navegador
+  #    (opcional: Aion funciona sin él, pero las claves viajarían
+  #     al navegador.  Si no lo usas, deja este servicio comentado.)
+  # ----------------------------------------------------------
+  proxy:
+    image: python:3.12-alpine
+    working_dir: /app
+    volumes:
+      - .:/app:ro
+      - ./docker/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/entrypoint.sh", "proxy.py"]
+    command: sh -c 'python proxy.py --port ${PROXY_PORT:-8797} ${PROXY_TOKEN:+--token $PROXY_TOKEN}'
+    ports:
+      - "127.0.0.1:${PROXY_PORT:-8797}:${PROXY_PORT:-8797}"
+    environment:
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # 3. Puente de terminal — ejecuta comandos en el HOST
+  #    ⚠ SOLO LINUX. En Windows/macOS, comenta este servicio
+  #      y ejecuta el puente de forma nativa:
+  #        python bridge.py --port 8765
+  # ----------------------------------------------------------
+  bridge:
+    image: python:3.12-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /:/host:ro
+    network_mode: host
+    pid: host
+    privileged: true
+    command: sh -c 'python bridge.py --port ${BRIDGE_PORT:-8765} ${BRIDGE_TOKEN:+--token $BRIDGE_TOKEN}'
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # 4. Piper TTS — voz neuronal 100% local (español)
+  #    Primera construcción tarda ~5 min (descarga modelos ONNX).
+  # ----------------------------------------------------------
+  piper:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.piper
+    working_dir: /app
+    volumes:
+      - .:/app:ro
+      - piper-voices:/voices
+      - ./docker/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/entrypoint.sh", "piper_server.py"]
+    command: sh -c 'python piper_server.py --port ${PIPER_PORT:-8766} --voices-dir /voices ${PIPER_TOKEN:+--token $PIPER_TOKEN}'
+    ports:
+      - "127.0.0.1:${PIPER_PORT:-8766}:${PIPER_PORT:-8766}"
+    restart: unless-stopped
+
+volumes:
+  piper-voices:
+    driver: local

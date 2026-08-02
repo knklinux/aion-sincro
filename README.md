@@ -133,6 +133,51 @@ botón **⬇️ Instalar** en la barra superior y la app se instala como aplicac
 - **Nota:** el registro del service worker solo se activa sobre `http(s)`
   (`file://` no aplica, igual que el micrófono).
 
+### 🐳 Docker Compose — app + puente + proxy + Piper en un comando
+
+Levanta toda la infraestructura de Aion Sincro con **un solo comando**:
+
+```bash
+cp docker/.env.example .env
+docker compose up -d
+```
+
+La app queda disponible en **http://127.0.0.1:8080/index.html**.
+
+**Servicios incluidos** (4 contenedores):
+
+| Servicio | Puerto | Descripción |
+|---|---|---|
+| **app** | `8080` | Servidor HTTP que sirve la interfaz web |
+| **bridge** | `8765` | Puente de terminal (ejecuta comandos en el host) |
+| **proxy** | `8797` | Proxy de claves (mantiene las API keys fuera del navegador) |
+| **piper** | `8766` | Voz neuronal Piper TTS (español, 100% local) |
+
+**Requisitos previos:**
+- [Docker](https://docs.docker.com/get-docker/) y Docker Compose v2+
+- **Bridge (ejecución de comandos):** solo funciona en **Linux** (usa `network_mode: host`).
+  En Windows/macOS, comenta el servicio `bridge` en `docker-compose.yml` y ejecútalo de forma nativa:
+  ```bash
+  python bridge.py --port 8765
+  ```
+
+**Configuración de API keys (opcional):**
+
+Edita el archivo `.env` creado en el primer paso con tus claves gratuitas:
+
+```bash
+MISTRAL_API_KEY=tu-clave-de-mistral    # https://console.mistral.ai/api-keys
+GROQ_API_KEY=tu-clave-de-groq          # https://console.groq.com/keys
+```
+
+Sin claves, Aion funciona en **modo demo local** (respuestas predefinidas,
+herramientas web CVE/clima/GitHub, Ruta Red Team, informes).
+
+**Primera construcción de Piper (solo una vez):**
+
+La imagen de Piper descarga los modelos de voz neuronal durante la construcción
+(~900 MB). Si quieres omitir Piper, comenta su servicio en `docker-compose.yml`.
+
 ### 🤖 Aplicación Android (APK con Capacitor)
 
 El repo incluye el **esqueleto Android** en [`mobile/`](mobile/): la configuración

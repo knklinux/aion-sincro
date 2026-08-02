@@ -1,0 +1,43 @@
+# ============================================================
+# Aion Sincro · Piper TTS — Imagen Docker
+# ============================================================
+# Construye una imagen con Python 3.12 + piper-tts +
+# onnxruntime para síntesis de voz neuronal LOCAL.
+#
+# Tamaño estimado: ~900 MB (modelos onnx + runtime)
+# ============================================================
+
+FROM python:3.12-slim
+
+# Instalar dependencias del sistema necesarias para onnxruntime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instalar piper-tts (motor de síntesis neuronal)
+RUN pip install --no-cache-dir piper-tts
+
+# Descargar voces en español (sharvard-medium + dos alternativas)
+# Se descargan en /voices durante la construcción para que la
+# imagen ya venga lista; si no existen en runtime, piper_server.py
+# las descargará bajo demanda con /download.
+RUN mkdir -p /voices && \
+    python -c "
+from piper.download_voices import download_voice
+from pathlib import Path
+d = Path('/voices')
+for v in ['es_ES-sharvard-medium', 'es_MX-claude-high']:
+    try:
+        download_voice(v, d)
+        print(f'  OK: {v}')
+    except Exception as e:
+        print(f'  WARN: {v} — {e}')
+" || echo "Algunas voces no se pudieron pre-descargar; se descargarán bajo demanda en runtime."
+
+# Copiar entrypoint
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+WORKDIR /app
+ENTRYPOINT ["/entrypoint.sh"]
