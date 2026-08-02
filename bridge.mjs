@@ -213,6 +213,70 @@ http
         return;
       }
 
+      if (req.url === "/read" && req.method === "POST") {
+        // Leer un archivo del proyecto (relativo a __dirname).
+        // Seguridad: solo rutas relativas, sin '..', dentro de __dirname.
+        const rpath = String(data.path || "").trim();
+        if (!rpath) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "path vacio" }));
+          return;
+        }
+        // Rechazar rutas absolutas (Unix: /, Windows: C:\ o //)
+        if (rpath.startsWith("/") || rpath.startsWith("\\\\") ||
+            (rpath.length >= 2 && rpath[1] === ":")) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "ruta absoluta no permitida" }));
+          return;
+        }
+        // Rechazar path traversal
+        if (rpath.split(path.sep).includes("..")) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "path traversal no permitido" }));
+          return;
+        }
+        const full = path.resolve(__dirname, rpath);
+        // Verificar que la ruta resuelta esta dentro de __dirname
+        if (!full.startsWith(path.resolve(__dirname) + path.sep)) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "fuera del proyecto" }));
+          return;
+        }
+        try {
+          const stat = fs.statSync(full);
+          if (!stat.isFile()) {
+            res.writeHead(404, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "no es un archivo" }));
+            return;
+          }
+          if (stat.size > 1_000_000) {
+            res.writeHead(413, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "archivo demasiado grande (max 1 MB)" }));
+            return;
+          }
+          const content = fs.readFileSync(full, "utf8");
+          if (content.includes("\x00")) {
+            res.writeHead(415, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "archivo binario no soportado" }));
+            return;
+          }
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true, path: rpath, content, size: stat.size }));
+        } catch (e) {
+          if (e.code === "ENOENT") {
+            res.writeHead(404, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "archivo no encontrado" }));
+          } else if (e.code === "EACCES" || e.code === "EPERM") {
+            res.writeHead(403, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: "sin permiso para leer el archivo" }));
+          } else {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: String(e.message || e).slice(0, 200) }));
+          }
+        }
+        return;
+      }
+
       if (req.url === "/run" && req.method === "POST") {
         const cmd = typeof data.cmd === "string" ? data.cmd.trim() : "";
         if (!cmd) {

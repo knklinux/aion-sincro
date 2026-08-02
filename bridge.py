@@ -276,6 +276,41 @@ class Handler(BaseHTTPRequestHandler):
                 "checks": checks,
                 "duration_ms": int((time.time() - t0) * 1000),
             })
+        if self.path == "/read":
+            # Leer un archivo del proyecto (relativo a BASE_DIR).
+            # Seguridad: solo rutas relativas, sin '..', dentro de BASE_DIR.
+            rpath = (data.get("path") or "").strip()
+            if not rpath:
+                return self._json({"ok": False, "error": "path vacío"}, 400)
+            # Rechazar rutas absolutas (Unix: /, Windows: C:\ o //)
+            if rpath.startswith("/") or rpath.startswith("\\\\") or (
+                len(rpath) >= 2 and rpath[1] == ":"
+            ):
+                return self._json({"ok": False, "error": "ruta absoluta no permitida"}, 400)
+            # Rechazar path traversal
+            if ".." in rpath.split(os.sep):
+                return self._json({"ok": False, "error": "path traversal no permitido"}, 400)
+            full = os.path.normpath(os.path.join(BASE_DIR, rpath))
+            # Verificar que la ruta resuelta está dentro de BASE_DIR
+            if not full.startswith(os.path.normpath(BASE_DIR) + os.sep):
+                return self._json({"ok": False, "error": "fuera del proyecto"}, 400)
+            if not os.path.isfile(full):
+                return self._json({"ok": False, "error": "archivo no encontrado"}, 404)
+            try:
+                sz = os.path.getsize(full)
+                if sz > 1_000_000:
+                    return self._json({"ok": False, "error": "archivo demasiado grande (max 1 MB)"}, 413)
+                with open(full, "r", encoding="utf-8", errors="replace") as fh:
+                    content = fh.read()
+                if "\x00" in content:
+                    return self._json({"ok": False, "error": "archivo binario no soportado"}, 415)
+                return self._json({
+                    "ok": True, "path": rpath, "content": content, "size": sz
+                })
+            except PermissionError:
+                return self._json({"ok": False, "error": "sin permiso para leer el archivo"}, 403)
+            except Exception as e:
+                return self._json({"ok": False, "error": str(e)[:200]}, 500)
         if self.path == "/run":
             cmd = data.get("cmd")
             if not isinstance(cmd, str) or not cmd.strip():

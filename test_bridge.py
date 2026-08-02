@@ -19,6 +19,7 @@ La misma matriz de seguridad se aplica a AMBOS puentes:
   8) piper_server.py: /ping con token, Host/Origin forjados, slug malicioso
   9) proxy.py: endpoints de claves, token, límites y sin fugas
   10) /integrity: verificación de integridad del repo (exige token)
+  11) /read: lectura de archivos del proyecto con validación de path traversal
 
 Uso:
     python test_bridge.py
@@ -245,7 +246,34 @@ def test_bridge():
         st, body = raw_http(port, "/kill", method="POST", body=json.dumps({"token": token}))
         check("/kill → 200", st == 200, f"got {st}")
         check("/kill → ok:true", st == 200 and b'"ok": true' in body)
-        # 2.8 Ruta desconocida → 403
+        # 2.8 /read archivo válido → 200 + content
+        st, body = raw_http(port, "/read", method="POST",
+                            body=json.dumps({"token": token, "path": "README.md"}))
+        check("/read README.md → 200", st == 200, f"got {st}")
+        txt = body.decode("utf-8", "replace")
+        check("/read devuelve contenido", "Aion Sincro" in txt, txt[:120])
+        check("/read → ok:true", st == 200 and '"ok": true' in txt)
+        # 2.9 /read path traversal → 400
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "../etc/passwd"}))
+        check("/read path traversal → 400", st == 400, f"got {st}")
+        # 2.10 /read ruta absoluta → 400
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "/etc/passwd"}))
+        check("/read ruta absoluta → 400", st == 400, f"got {st}")
+        # 2.11 /read archivo inexistente → 404
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "no-existe.txt"}))
+        check("/read inexistente → 404", st == 404, f"got {st}")
+        # 2.12 /read sin token → 403
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"path": "README.md"}))
+        check("/read sin token → 403", st == 403, f"got {st}")
+        # 2.13 /read path vacío → 400
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": ""}))
+        check("/read path vacío → 400", st == 400, f"got {st}")
+        # 2.14 Ruta desconocida → 403
         st, _ = raw_http(port, "/otra-cosa")
         check("ruta desconocida → 403", st == 403, f"got {st}")
     finally:
@@ -292,7 +320,34 @@ def test_bridge_node():
         # 3.8 Ruta desconocida → 404 (bridge.mjs usa 404, a diferencia del 403 de bridge.py)
         st, _ = raw_http(port, "/otra-cosa", body=json.dumps({"token": token}), method="POST")
         check("node ruta desconocida → 404", st == 404, f"got {st}")
-        # 3.9 Body > 1 MB → 413 (límite propio del puente Node)
+        # 3.9 /read archivo válido → 200 + content
+        st, body = raw_http(port, "/read", method="POST",
+                            body=json.dumps({"token": token, "path": "README.md"}))
+        check("node /read README.md → 200", st == 200, f"got {st}")
+        txt = body.decode("utf-8", "replace")
+        check("node /read devuelve contenido", "Aion Sincro" in txt, txt[:120])
+        check("node /read → ok:true", st == 200 and '"ok":true' in txt)
+        # 3.10 /read path traversal → 400
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "../etc/passwd"}))
+        check("node /read path traversal → 400", st == 400, f"got {st}")
+        # 3.11 /read ruta absoluta → 400
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "/etc/passwd"}))
+        check("node /read ruta absoluta → 400", st == 400, f"got {st}")
+        # 3.12 /read archivo inexistente → 404
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "no-existe.txt"}))
+        check("node /read inexistente → 404", st == 404, f"got {st}")
+        # 3.13 /read sin token → 403
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"path": "README.md"}))
+        check("node /read sin token → 403", st == 403, f"got {st}")
+        # 3.14 /read path vacío → 400
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": ""}))
+        check("node /read path vacío → 400", st == 400, f"got {st}")
+        # 3.15 Body > 1 MB → 413 (límite propio del puente Node)
         big = '{"token":"' + token + '","cmd":"' + "a" * 1_100_000 + '"}'
         st, _ = raw_http(port, "/run", method="POST", body=big, timeout=10)
         check("node body > 1 MB → 413", st == 413, f"got {st}")
