@@ -171,9 +171,28 @@ if "!BRIDGE_OK!"=="1" (
 )
 call :log "Fin de arranque  %time%"
 
-rem --- 5) Abre el navegador (solo en modo normal) --------------------
+rem --- 4c) Detectar Edge (apertura preferida de la app) --------------
+rem (se hace FUERA del bloque con () porque %ProgramFiles(x86)% contiene
+rem  parentesis que romperian el parser de cmd dentro de un bloque)
+set "EDGE_BIN="
+if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" set "EDGE_BIN=%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"
+if not defined EDGE_BIN if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" set "EDGE_BIN=%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"
+
+rem --- 5) Abre la app en Edge (o el navegador por defecto) ------------
+rem (dos detalles de cmd.exe:
+rem  - !EDGE_BIN! con delayed expansion DENTRO del bloque: el valor contiene
+rem    "(x86)" y %EDGE_BIN% se expande al parsear el bloque, rompiendo el
+rem    conteo de parentesis y dejando sin ejecutar lineas siguientes
+rem  - los mensajes de :log NO pueden llevar el caracter ">" (ni flechas
+rem    "->"): call :log interpreta ">" como redireccion y rompe el parseo)
 if "%STARTUP_MODE%"=="0" (
-  start "" "http://127.0.0.1:%PORT_APP%/index.html"
+  if defined EDGE_BIN (
+    start "" "!EDGE_BIN!" --app=http://127.0.0.1:%PORT_APP%/index.html
+    call :log "Navegador: Edge (modo app) en http://127.0.0.1:%PORT_APP%/index.html"
+  ) else (
+    start "" "http://127.0.0.1:%PORT_APP%/index.html"
+    call :log "Navegador: por defecto (Edge no detectado)"
+  )
 
   echo   Listo. Resumen de la sesión:
   echo     · App web      http://127.0.0.1:%PORT_APP%/

@@ -109,7 +109,8 @@ Write-Host "  [OK] Acceso creado en el menu Inicio:"
 Write-Host "       $startMenuLnk"
 Write-Host "       Lanzador: $launcher"
 
-# ------- 2) Anclar a la barra de tareas (verbo taskbarpin sobre el acceso de Inicio) -------
+# ------- 2) Anclar a la barra de tareas -------
+# 2a) Primero el verbo nativo taskbarpin sobre el acceso de Inicio.
 try {
     $shellApp = New-Object -ComObject Shell.Application
     $item = $shellApp.Namespace($startMenuDir).ParseName("Aion Sincro.lnk")
@@ -117,16 +118,43 @@ try {
         # Esperar un instante a que Explorer indexe el acceso nuevo
         Start-Sleep -Milliseconds 400
         $item.InvokeVerb("taskbarpin") | Out-Null
-        Start-Sleep -Milliseconds 600
+        Start-Sleep -Milliseconds 800
     }
 } catch {
-    # Si falla el verbo, no pasa nada: el acceso ya esta en Inicio para anclarlo a mano
+    # Se ignora: probaremos el pin directo abajo
 }
 
-# ------- 3) Limpiar el acceso viejo de User Pinned\TaskBar (evita duplicados) -------
-if (Test-Path $oldTaskbarLnk) {
-    try { Remove-Item $oldTaskbarLnk -Force; Write-Host "  [OK] Limpiado acceso antiguo de User Pinned\TaskBar" }
-    catch { Write-Host "  [i] No se pudo limpiar el acceso antiguo (se ignora)" }
+# 2b) Si el verbo no surtio efecto, PIN DIRECTO en User Pinned\TaskBar.
+# Microsoft restringe el verbo en algunas builds; escribir el .lnk a mano
+# es el metodo que usan muchas apps y suele pintar el icono en Win10/11.
+if (-not (Test-Path $oldTaskbarLnk)) {
+    Write-Host "  [i] El verbo taskbarpin no surtio efecto; creando pin directo..."
+    try {
+        $pin = $ws.CreateShortcut($oldTaskbarLnk)
+        $pin.TargetPath = $launcher
+        $pin.Arguments = ""
+        $pin.WorkingDirectory = $appDir
+        $pin.IconLocation = $icon
+        $pin.Description = "Aion Sincro - Companion de Pentest y Red Team (arranca servicios + app)"
+        $pin.Save()
+        Write-Host "  [OK] Pin directo creado en User Pinned\TaskBar"
+        # Forzar que Explorer refresque la barra de tareas
+        try { $shellApp = New-Object -ComObject Shell.Application } catch {}
+    } catch {
+        Write-Host "  [i] No se pudo anclar programaticamente; anclalo a mano desde Inicio"
+    }
+} else {
+    Write-Host "  [OK] Anclado verificado en User Pinned\TaskBar"
+}
+
+# ------- 3) Limpiar accesos VIEJOS de User Pinned\TaskBar (evita duplicados) -------
+# Solo borra otras versiones/nombres antiguos, NUNCA nuestro Aion Sincro.lnk.
+foreach ($old in @("Hermes AI.lnk", "Hermes.lnk", "Aion.lnk")) {
+    $oldPath = Join-Path $taskbarDir $old
+    if (Test-Path $oldPath) {
+        try { Remove-Item $oldPath -Force; Write-Host "  [OK] Limpiado acceso antiguo de la barra: $old" }
+        catch { Write-Host "  [i] No se pudo limpiar $old (se ignora)" }
+    }
 }
 
 Write-Host ""

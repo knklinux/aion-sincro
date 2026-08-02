@@ -1047,6 +1047,15 @@ await (async () => {
   check("CMD loguea en modo normal y startup", cmd.includes('arranque silencioso') && cmd.includes('call :log "Modo: %STARTUP_MODE%'));
   check("startup.log en .gitignore", (fs.existsSync(".gitignore")?fs.readFileSync(".gitignore","utf8"):"").includes("startup.log"));
 
+  // ---------- Apertura en Edge (launcher) ----------
+  check("CMD detecta Edge en ProgramFiles(x86) y ProgramFiles", cmd.includes("%ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe") && cmd.includes("%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe"));
+  check("CMD abre la app con Edge en modo app (--app=)", cmd.includes('start "" "!EDGE_BIN!" --app=http://127.0.0.1:%PORT_APP%/index.html'));
+  check("CMD usa delayed expansion !EDGE_BIN! dentro del bloque", cmd.includes("!EDGE_BIN!"));
+  check("CMD loguea Navegador: Edge sin flecha -> (el > rompe cmd)", cmd.includes('call :log "Navegador: Edge (modo app) en http://127.0.0.1:%PORT_APP%/index.html"') && !/Navegador: Edge[^"]*-\>/.test(cmd));
+  check("CMD fallback al navegador por defecto si Edge no existe", cmd.includes('call :log "Navegador: por defecto (Edge no detectado)"'));
+  check("anclar-barra-tareas.ps1 limpia Arguments al guardar el lnk", fs.existsSync("windows/anclar-barra-tareas.ps1") && fs.readFileSync("windows/anclar-barra-tareas.ps1","utf8").includes("$lnk.Arguments = \"\""));
+  check("crear-acceso-directo.ps1 limpia Arguments al guardar el lnk", fs.existsSync("windows/crear-acceso-directo.ps1") && /\$lnk\.Arguments\s*=\s*""/.test(fs.readFileSync("windows/crear-acceso-directo.ps1","utf8")));
+
   // ---------- Fase 2.4: endpoint /read (leer archivos del proyecto) ----------
   check("bridgeRead definida", script.includes("async function bridgeRead"));
   check("bridgeRead usa POST /read", /fetch\(BRIDGE\+'\/read'/.test(script) && script.includes("method:'POST'"));
