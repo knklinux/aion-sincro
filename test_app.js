@@ -314,8 +314,7 @@ check("bind: btnAutoStopMic alterna store.autoStopMic", /\$\('#btnAutoStopMic'\)
 check("bind: btnBreve alterna store.breve", /\$\('#btnBreve'\)\.onclick=\(\)=>\{[\s\S]*?store\.breve=!store\.breve;/.test(script));
 check("syncAutoStopMicUI definida y llamada en boot", /function\s+syncAutoStopMicUI/.test(script) && script.includes("syncAutoStopMicUI();"));
 check("syncBreveUI definida y llamada en boot", /function\s+syncBreveUI/.test(script) && script.includes("syncBreveUI();"));
-// Auto-parada: al terminar la frase, si autoStopMic está activo, setListening(false)
-check("auto-parada: final de frase detiene el micrófono solo", script.includes("if(store.autoStopMic&&listening) setListening(false);"));  check("auto-parada: se aplica antes de procesar la frase", /if\(store\.autoStopMic&&listening\) setListening\(false\);\s*voiceInputFlag=true;\s*handleUserText\(final\);/.test(script));
+// Auto-parada: al terminar la frase, si autoStopMic está activo, setListening(false)  check("auto-parada: final de frase detiene el micrófono solo", script.includes("if(store.autoStopMic&&listening){ setListening(false); chimeDone(); }"));  check("auto-parada: se aplica antes de procesar la frase", /if\(store\.autoStopMic&&listening\)\{ setListening\(false\); chimeDone\(\); \}\s*voiceInputFlag=true;\s*handleUserText\(final\);/.test(script));
 // Respuestas breves: instrucción en systemPrompt + cap de tokens en streamChat
 check("breve: systemPrompt añade MODO BREVE", script.includes("if(store.breve&&!store.laboral&&!store.pentest) base+="));
 check("breve: cap de max_tokens en streamChat", script.includes("if(store.breve&&!store.laboral&&!store.pentest&&provider!=='demo'&&provider!=='ollama'&&provider!=='huggingface')") && script.includes("if(!body.max_tokens) body.max_tokens=220;"));
@@ -361,6 +360,12 @@ check("continuousCycle() definida", /function\s+continuousCycle\s*\(/.test(scrip
   check("turnRing: se oculta al interrumpir (toggleMic)", /clearTimeout\(continuousTimer\); clearTimeout\(silenceTimer\); turnRingHide\(\);/.test(script));
   check("turnRing: se oculta en stopAll", /function stopAll\(\)\{ clearTimeout\(silenceTimer\); turnRingHide\(\);/.test(script));
   check("sonidos usan WebAudio sin archivos externos (catch silencioso)", script.includes("window.AudioContext||window.webkitAudioContext") && /function\s+chimePause[\s\S]*?\}catch\(_\)\{\}/.test(script) && /function\s+chimeResume[\s\S]*?\}catch\(_\)\{\}/.test(script));
+  // Sonido de 'turno completado': tono neutro al captar la frase con auto-parada
+  check("chimeDone() definido (tono breve y neutro)", script.includes("function chimeDone(){") && script.includes("window.AudioContext||window.webkitAudioContext"));
+  check("chimeDone() usa una sola nota corta neutra (440 Hz)", script.includes("o.frequency.value=440") && script.includes("o.stop(t+.28)"));
+  check("chimeDone() suena en la auto-parada del turno (sin romper setListening)", /if\(store\.autoStopMic&&listening\)\{ setListening\(false\); chimeDone\(\); \}/.test(script));
+  check("chimeDone() solo con auto-parada de voz (antes de handleUserText)", /if\(store\.autoStopMic&&listening\)\{ setListening\(false\); chimeDone\(\); \}\s*voiceInputFlag=true;\s*handleUserText\(final\);/.test(script));
+  check("chimeDone() no se engancha en los caminos de wake word (única llamada en la auto-parada)", (script.match(/chimeDone\(\);\s*\}/g)||[]).length===1 && script.includes("if(store.autoStopMic&&listening){ setListening(false); chimeDone(); }"));
   // Límite de silencio adaptativo según contexto (nmap/ISO/laboral → más largo)
   check("turnTimeoutAdaptado() definida", /function\s+turnTimeoutAdaptado\s*\(/.test(script));
   check("adaptativo: base es el turnTimeout configurado (2-5 s)", /const base=Math\.max\(2,Math\.min\(5,\+store\.turnTimeout\|\|4\)\);/.test(script));
