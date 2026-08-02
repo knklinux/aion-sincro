@@ -308,6 +308,7 @@ body[data-state="listening"] #wave .bar:nth-child(3n+2){animation-delay:.45s}
 .msg.ai.sys{background:rgba(245,185,66,.08);border-color:rgba(245,185,66,.35)}
 .msg.ai.sys .who{color:var(--gold)}
 .msg .stream-cursor{display:inline-block;width:7px;height:14px;background:var(--cyan);margin-left:2px;
+.failover-note{margin-top:8px;font-size:.78em;color:var(--gold);opacity:.9;font-style:italic;}
   animation:blink 1s step-start infinite;vertical-align:-2px}
 @keyframes blink{50%{opacity:0}}
 .typing{display:inline-flex;gap:5px;align-items:center}
@@ -1099,6 +1100,18 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
         </select>
         <div class="hint" id="providerHint"></div>
       </div>
+      <div class="field">
+        <label>🔄 Motor de respaldo (fallback automático)</label>
+        <select id="backupProvider">
+          <option value="">Sin respaldo</option>
+          <option value="groq">Groq — gratis con API key</option>
+          <option value="openrouter">OpenRouter — modelos gratis</option>
+          <option value="ollama">Ollama — 100% local</option>
+          <option value="huggingface">HuggingFace — gratis con token</option>
+        </select>
+        <button class="toggle" id="btnAutoFailover" style="width:100%;justify-content:center"><span class="tk"></span> 🔄 Cambiar automáticamente si falla el motor principal</button>
+        <div class="hint">Si el motor principal falla (cuota agotada, 401/429, caída de red), Aion conmuta sola al respaldo y te lo avisa en el chat. El respaldo necesita su API key en los campos de abajo.</div>
+      </div>
       <div class="field" id="fieldOllamaUrl" hidden>
         <label>URL de Ollama</label>
         <input type="text" id="ollamaUrl" value="http://localhost:11434">
@@ -1648,7 +1661,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 
 /* ---------- Estado ---------- */
 const store={
-  provider:'demo', model:'hermes3', modelByProvider:{},
+  provider:'demo', model:'hermes3', modelByProvider:{}, backupProvider:'', autoFailover:true,
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
   lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, autoStopMic:true, breve:true, continuous:false, turnTimeout:4, chimeVol:70, chimeMute:false, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion', autoStart:false, pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:'', reportLang:'es',
   pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, autoLockMin:0, rememberUnlock:false, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
@@ -3326,7 +3339,7 @@ async function handleFileRead(paths, opts){
     const abody=addMsg('ai','');
     const cursor=document.createElement('span');cursor.className='stream-cursor';abody.appendChild(cursor);
     let acc='';
-    for await(const chunk of streamChat(store.provider,messages,abortCtrl.signal)){
+    for await(const chunk of streamChatWithFailover(messages,abortCtrl.signal)){
       acc+=chunk; cursor.before(document.createTextNode(chunk)); cursor.remove(); abody.appendChild(cursor);
       $('#chatLog').scrollTop=$('#chatLog').scrollHeight;
     }
@@ -3334,7 +3347,7 @@ async function handleFileRead(paths, opts){
     if(!acc) abody.textContent='(Sin respuesta)';
     else store.history.push({role:'assistant',content:acc,ts:Date.now()});
     setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
-    if(acc){ renderTermChips(abody, acc); speak(acc); }
+    if(acc){ renderTermChips(abody, acc); speak(acc); if(lastFailoverNote){ const fn=document.createElement('div'); fn.className='failover-note'; fn.textContent='⚡ Respondido con el motor de respaldo: '+lastFailoverNote; abody.appendChild(fn); lastFailoverNote=''; } }
   }catch(err){
     typing2.closest('.msg').remove();
     if(err.name==='AbortError'){ $('#micBtn').textContent='🎙️'; return; }
@@ -4655,6 +4668,42 @@ async function* streamChat(provider,messages,signal){
   }
 }
 
+/* ---------- Conmutación automática de motor (failover) ----------
+   Si el motor principal falla con un error de proveedor (HTTP 401/403/429/5xx,
+   cuota agotada, rate-limit o caída de red), Aion reintenta la misma petición
+   con el motor de respaldo configurado (Ajustes → Motor de respaldo). */
+let lastFailoverNote='';
+async function* streamChatWithFailover(messages,signal){
+  const primary=store.provider;
+  const backup=store.backupProvider;
+  const doFailover=store.autoFailover && !!backup && backup!=='demo' && backup!==primary;
+  try{
+    for await(const c of streamChat(primary,messages,signal)) yield c;
+    return;
+  }catch(err){
+    if(err&&err.name==='AbortError') throw err;
+    if(!doFailover || !isFailoverError(err)) throw err;
+    const savedModel=store.model;
+    store.model=store.modelByProvider[backup]||PROVIDERS[backup].models[0];
+    try{
+      lastFailoverNote=PROVIDERS[backup].label;
+      toast('⚠️ '+PROVIDERS[primary].label+' falló ('+String(err.message||err).slice(0,50)+') → conmutando a '+PROVIDERS[backup].label+'…',3800);
+      for await(const c of streamChat(backup,messages,signal)) yield c;
+    }catch(err2){
+      if(err2&&err2.name==='AbortError') throw err2;
+      lastFailoverNote='';
+      const e=new Error('El motor de respaldo '+PROVIDERS[backup].label+' también falló: '+(err2.message||err2));
+      e.backupFailed=true; throw e;
+    }finally{
+      store.model=savedModel;
+    }
+  }
+}
+function isFailoverError(err){
+  const m=String(err&&err.message||err||'');
+  return /HTTP (401|403|429|5\d\d)/.test(m) || /quota|rate ?limit|insufficient|unauthorized|forbidden|overloaded|capacity|failed to fetch|fetch failed|networkerror|load failed|network|timeout|ECONN|ERR_|abort/i.test(m);
+}
+
 /* ---------- Cerebro demo (sin conexión) ---------- */
 function demoBrain(q){
   q=q.toLowerCase();
@@ -4795,7 +4844,7 @@ async function handleUserText(text){
     const body=addMsg('ai','');
     const cursor=document.createElement('span');cursor.className='stream-cursor';body.appendChild(cursor);
     let acc='';
-    for await(const chunk of streamChat(store.provider,messages,abortCtrl.signal)){
+    for await(const chunk of streamChatWithFailover(messages,abortCtrl.signal)){
       acc+=chunk; cursor.before(document.createTextNode(chunk)); cursor.remove(); body.appendChild(cursor);
       $('#chatLog').scrollTop=$('#chatLog').scrollHeight;
     }
@@ -4803,7 +4852,7 @@ async function handleUserText(text){
     if(!acc){ body.textContent='(Sin respuesta)'; store.history.pop(); }
     else store.history.push({role:'assistant',content:acc,ts:Date.now()});
     setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
-    if(acc){ renderTermChips(body, acc); speak(acc); }
+    if(acc){ renderTermChips(body, acc); speak(acc); if(lastFailoverNote){ const fn=document.createElement('div'); fn.className='failover-note'; fn.textContent='⚡ Respondido con el motor de respaldo: '+lastFailoverNote; body.appendChild(fn); lastFailoverNote=''; } }
   }catch(err){
     typing.closest('.msg').remove();
     if(err.name==='AbortError'){ $('#micBtn').textContent='🎙️'; return; }
@@ -5390,6 +5439,8 @@ function bind(){
     saveStore();
   };
   $('#modelInput').onchange=()=>{ collectSettings(true); };
+  $('#backupProvider').onchange=()=>{ collectSettings(true); saveStore(); toast('💾 Motor de respaldo guardado'); };
+  $('#btnAutoFailover').onclick=()=>{ store.autoFailover=!store.autoFailover; syncAutoFailoverUI(); saveStore(); toast(store.autoFailover?'🔄 Conmutación automática activada':'⏸️ Conmutación automática desactivada'); };
   $('#btnRefreshModels').onclick=refreshModelsViaProxy;
   $('#langSel').onchange=()=>{ store.lang=$('#langSel').value; if(recog)recog.lang=store.lang; saveStore(); renderWelcomeLang(); syncStoryBtnUI(); };
   $('#voiceSel').onchange=()=>{ store.voice=$('#voiceSel').value; saveStore(); syncVoxtralEmotionUI(); syncPiperUI(); if(isPiperVoice()) piperPing(()=>syncPiperUI()); };
@@ -5412,6 +5463,7 @@ function openSettings(){
   $('#settings').classList.add('open'); $('#backdrop').classList.add('show');
   syncCryptoUI(); // ya sincroniza syncRememberUnlockUI() internamente
   $('#provider').value=store.provider; $('#modelInput').value=store.model||'';
+  $('#backupProvider').value=store.backupProvider||'';
   $('#ollamaUrl').value=store.ollamaUrl; $('#groqKey').value=store.groqKey;
   $('#openrouterKey').value=store.openrouterKey; $('#hfToken').value=store.hfToken; $('#mistralKey').value=store.mistralKey;
   $('#langSel').value=store.lang; $('#rate').value=store.rate; $('#pitch').value=store.pitch;
@@ -5432,13 +5484,14 @@ function openSettings(){
   $('#pdfWatermarkText').value=store.pdfWatermarkText||'CONFIDENCIAL';
   $('#pdfCompany').value=store.pdfCompany||'';
   $('#reportLangSel').value=store.reportLang||'es';
-  syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncPdfUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); syncLaboralUI(); syncAutoStartUI(); refreshProviderUI();
+  syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncPdfUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); syncLaboralUI(); syncAutoStartUI(); syncAutoFailoverUI(); refreshProviderUI();
   if(isPiperVoice()) piperPing(()=>syncPiperUI());
 }
 function closeSettings(){ $('#settings').classList.remove('open'); $('#backdrop').classList.remove('show'); }
 function collectSettings(noSave){
   store.provider=$('#provider').value; store.model=$('#modelInput').value.trim()||PROVIDERS[store.provider].models[0];
   if(store.provider) store.modelByProvider[store.provider]=store.model; // persistir elección por motor
+  store.backupProvider=$('#backupProvider').value; store.autoFailover=!!$('#btnAutoFailover').classList.contains('on');
   store.ollamaUrl=$('#ollamaUrl').value.trim()||'http://localhost:11434';
   store.groqKey=$('#groqKey').value.trim(); store.openrouterKey=$('#openrouterKey').value.trim(); store.mistralKey=$('#mistralKey').value.trim();
   store.hfToken=$('#hfToken').value.trim();
@@ -5462,6 +5515,7 @@ function collectSettings(noSave){
   if(store.crypto&&cryptoUnlocked) reEncryptSecrets().then(()=>saveStore()); // re-cifrar claves editadas
   if(!noSave)saveStore();
 }
+function syncAutoFailoverUI(){ const b=$('#btnAutoFailover'); if(b)b.classList.toggle('on',!!store.autoFailover); }
 function syncSearchUI(){ $('#btnSearch').classList.toggle('on',store.search); $('#btnSearchSet').classList.toggle('on',store.search); }
 function syncWakeUI(){ const b=$('#btnWakeSet'); if(b)b.classList.toggle('on',store.wake); syncWakeWordUI(); }
 function syncAutoLangUI(){ const b=$('#btnAutoLang'); if(b)b.classList.toggle('on',store.autoLang); }

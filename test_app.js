@@ -280,6 +280,27 @@ check("refreshPiperOptions conserva la selección no-Piper", script.includes("se
 check("streamChat enruta por proxy cuando proxyOn", /if\(store\.proxyOn&&provider!=='demo'&&provider!=='ollama'\)\{[\s\S]*?url=pb\+'\/v1\/chat\/completions'/.test(script));
 check("proxy no envía Authorization desde el navegador", /if\(store\.proxyOn&&provider!=='demo'&&provider!=='ollama'\)\{[\s\S]*?headers=\{'Content-Type':'application\/json'\}[\s\S]*?headers\['X-Proxy-Token'\]/.test(script));
 check("voxtralPlay enruta TTS por proxy", /function voxtralPlay\(chunk\)\{[\s\S]*?store\.proxyOn&&store\.proxyUrl/.test(script));
+// --- Motor de respaldo: conmutación automática si el principal falla (cuota/401/429/5xx/red) ---
+check("store defaults backupProvider:'' y autoFailover:true", /backupProvider:'', autoFailover:true,/.test(script));
+check("Ajustes: selector de motor de respaldo presente", html.includes('id="backupProvider"') && html.includes('<option value="groq">Groq') && html.includes('<option value="openrouter">OpenRouter'));
+check("Ajustes: toggle de conmutación automática presente", html.includes('id="btnAutoFailover"'));
+check("streamChatWithFailover definida", /async function\*\s+streamChatWithFailover\s*\(messages,signal\)/.test(script));
+check("failover: usa el motor principal primero", /for await\(const c of streamChat\(primary,messages,signal\)\) yield c;/.test(script));
+check("failover: conmuta al respaldo al fallar (con modelo del respaldo)", /const doFailover=store\.autoFailover && !!backup && backup!=='demo' && backup!==primary;/.test(script) && /store\.model=store\.modelByProvider\[backup\]\|\|PROVIDERS\[backup\]\.models\[0\];/.test(script));
+check("failover: no conmuta si no hay respaldo ni con AbortError", /if\(!doFailover \|\| !isFailoverError\(err\)\) throw err;/.test(script) && /if\(err&&err\.name==='AbortError'\) throw err;/.test(script));
+check("failover: restaura el modelo del principal al terminar", /finally\{\s*store\.model=savedModel;/.test(script));
+check("failover: error del respaldo se marca como backupFailed", /e\.backupFailed=true; throw e;/.test(script));
+check("isFailoverError detecta 401/403/429/5xx", /HTTP \(401\|403\|429\|5\\d\\d\)/.test(script));
+check("isFailoverError detecta cuota/rate-limit/red (incl. 'Failed to fetch')", /quota\|rate \?limit\|insufficient\|unauthorized\|forbidden\|overloaded\|capacity\|failed to fetch\|fetch failed\|networkerror\|load failed\|network\|timeout\|ECONN\|ERR_\|abort/.test(script));
+check("failover: chat principal usa streamChatWithFailover", script.includes("for await(const chunk of streamChatWithFailover(messages,abortCtrl.signal)){"));
+check("failover: /read usa streamChatWithFailover", (script.match(/for await\(const chunk of streamChatWithFailover\(messages,abortCtrl\.signal\)\)\{/g)||[]).length===2);
+check("failover: nota visible cuando respondió el respaldo", script.includes("fn.className='failover-note'") && script.includes("⚡ Respondido con el motor de respaldo: ") && html.includes(".failover-note{"));
+check("failover: toast avisa de la conmutación", script.includes("conmutando a '") && script.includes("PROVIDERS[backup].label+'…'"));
+check("openSettings rellena el selector de respaldo", /\$\('#backupProvider'\)\.value=store\.backupProvider\|\|'';/.test(script));
+check("collectSettings persiste backupProvider y autoFailover", /store\.backupProvider=\$\('#backupProvider'\)\.value; store\.autoFailover=!!\$\('#btnAutoFailover'\)\.classList\.contains\('on'\);/.test(script));
+check("syncAutoFailoverUI definida y llamada en openSettings", /function\s+syncAutoFailoverUI\(\)\{/.test(script) && script.includes("syncAutoFailoverUI(); refreshProviderUI();"));
+check("bind: btnAutoFailover alterna store.autoFailover", /\$\('#btnAutoFailover'\)\.onclick=\(\)=>\{ store\.autoFailover=!store\.autoFailover; syncAutoFailoverUI\(\);/.test(script));
+check("bind: backupProvider guarda al cambiar", /\$\('#backupProvider'\)\.onchange=\(\)=>\{ collectSettings\(true\); saveStore\(\);/.test(script));
 // Memoria consistente de la historia: helpers centralizados y marca persistente
 check(`historySeen() definida`, /function\s+historySeen\s*\(/.test(script));
 check(`markHistorySeen() definida`, /function\s+markHistorySeen\s*\(/.test(script));
@@ -476,7 +497,7 @@ check("demoBrain Laboral responde en inglés cuando reportLang=en", script.inclu
 check("demoBrain Laboral mantiene la respuesta en español", script.includes("store.laboral) return '💼 **Modo Laboral**") && script.includes("el parsing es local"));
 check("confirmación hablada del informe respeta reportLang", script.includes("const _tool=TOOL_LABEL[detectToolOutput(text)]||(reportIsEn()?'the tool':'la herramienta');") && script.includes("speak(reportIsEn()") && script.includes("I generated the reconnaissance report from your") && script.includes("He generado el informe de reconocimiento desde tu salida de "));
 check("banner Laboral bilingüe en syncLaboralUI", script.includes("ban.innerHTML=reportIsEn()") && script.includes("LABORAL MODE ACTIVATED") && script.includes("Paste the real nmap output") && script.includes("MODO LABORAL ACTIVADO"));
-check("cambio de reportLang refresca el banner (syncLaboralUI en syncSettings)", script.includes("syncProxyUI(); syncLaboralUI(); syncAutoStartUI(); refreshProviderUI();"));
+check("cambio de reportLang refresca el banner (syncLaboralUI en syncSettings)", script.includes("syncProxyUI(); syncLaboralUI(); syncAutoStartUI(); syncAutoFailoverUI(); refreshProviderUI();"));
 check("tabla de puertos bilingüe", script.includes("| Port | Protocol | State | Service / Version |") && script.includes("| Puerto | Protocolo | Estado | Servicio / Versión |"));
 check("superficie de ataque bilingüe", script.includes("## 3. Attack surface") && script.includes("## 3. Superficie de ataque"));
 check("recomendaciones bilingües", script.includes("## 4. Recommendations") && script.includes("## 4. Recomendaciones"));
@@ -1263,7 +1284,7 @@ await (async () => {
   check("handleFileRead acepta string y array", script.includes("const isArray=Array.isArray(paths)"));
   check("handleFileRead usa bridgeRead", script.includes("const r=await bridgeRead(paths"));
   check("handleFileRead muestra contenido truncado a 4000", script.includes("slice(0,4000)") && script.includes("KB más"));
-  check("handleFileRead analiza con streamChat", script.includes("for await(const chunk of streamChat(store.provider") );
+  check("handleFileRead analiza con streamChatWithFailover", script.includes("for await(const chunk of streamChatWithFailover(messages,abortCtrl.signal))") );
   check("handleFileRead controla error de lectura", script.includes("No pude leer") && script.includes("r.error"));
   check("handleFileRead soporta múltiples archivos", script.includes("files.length") && script.includes("compáralos"));
   check("handler btnReadFile con prompt", /\$\('#btnReadFile'\)\.onclick/.test(script) && script.includes("prompt('"));
