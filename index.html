@@ -2964,8 +2964,13 @@ function nmapPortsTableMd(en){
    críticas (5 por defecto). Deduplica hallazgos repetidos entre mensajes y
    normaliza la severidad a 5 categorías. Bilingüe (reportLang). Devuelve '' si
    no hay salidas de Nessus/Burp o no se detectaron hallazgos. */
-function actaSeveritySummaryMd(en){
-  const h=store.history||[];
+/* Bloque compartido de resumen de hallazgos por severidad: dado un array de
+   hallazgos normalizados {severity, name, host, cvss, meta, path} (los parsers
+   de Nessus/Burp devuelven los campos crudos), cuenta por severidad
+   (crítico/alto/medio/bajo/info) y lista las 5 más críticas. Lo usan el acta
+   (actaSeveritySummaryMd) y los informes de reconocimiento de Nessus/Burp.
+   Bilingüe (reportLang). Devuelve '' si no hay hallazgos. */
+function severitySummaryMd(all, en, title){
   const ORDER=['Critical','High','Medium','Low','Info'];
   const EMOJI={Critical:'🔴',High:'🟠',Medium:'🟡',Low:'🔵',Info:'ℹ️'}
   const RANK={Critical:0,High:1,Medium:2,Low:3,Info:4};
@@ -2975,32 +2980,16 @@ function actaSeveritySummaryMd(en){
     if(/medium|moderate/i.test(t)) return 'Medium';
     if(/low/i.test(t)) return 'Low';
     return 'Info'; };
-  const all=[]; const seen=new Set();
-  for(const m of h){
-    if(!m||!m.content) continue;
-    const nessus=parseNessusOutput(m.content);
-    if(nessus) for(const f of nessus){
-      const key='nessus|'+f.id+'|'+f.host+'|'+f.name;
-      if(seen.has(key)) continue; seen.add(key);
-      all.push({sev:sevOf(f.severity),name:f.name||'—',host:f.host||'',
-        cvss:parseFloat(f.cvss)||0,meta:'Nessus · Plugin #'+f.id});
-    }
-    const burp=parseBurpOutput(m.content);
-    if(burp) for(const i of burp){
-      const key='burp|'+i.name+'|'+i.host;
-      if(seen.has(key)) continue; seen.add(key);
-      all.push({sev:sevOf(i.severity),name:i.name||'—',host:i.host||'',
-        cvss:0,meta:en?'Burp Suite':'Burp Suite',path:i.path||''});
-    }
-  }
-  if(!all.length) return '';
+  const norm=(all||[]).map(f=>({sev:sevOf(f.severity),name:f.name||'—',host:f.host||'',
+    cvss:parseFloat(f.cvss)||0,meta:f.meta||'',path:f.path||''}));
+  if(!norm.length) return '';
   const counts={}; for(const s of ORDER) counts[s]=0;
-  for(const f of all) counts[f.sev]++;
-  const total=all.length;
+  for(const f of norm) counts[f.sev]++;
+  const total=norm.length;
   const sevWord=s=>en?s.toLowerCase():({Critical:'crítico(s)',High:'alto(s)',Medium:'medio(s)',Low:'bajo(s)',Info:'info'})[s];
-  const top=all.slice().sort((a,b)=>RANK[a.sev]-RANK[b.sev]||b.cvss-a.cvss).slice(0,5);
+  const top=norm.slice().sort((a,b)=>RANK[a.sev]-RANK[b.sev]||b.cvss-a.cvss).slice(0,5);
   const cell=s=>String(s==null?'—':s).replace(/\|/g,'\\|').replace(/\r?\n/g,' ').trim();
-  let md='\n## '+(en?'Executive summary of findings (Nessus · Burp Suite)':'Resumen ejecutivo de hallazgos (Nessus · Burp Suite)')+'\n\n';
+  let md='\n## '+title+'\n\n';
   md+='> '+(en?'Findings by severity':'Hallazgos por severidad')+': ';
   md+=ORDER.map(s=>EMOJI[s]+' '+counts[s]+' '+sevWord(s)).join(' · ');
   md+=' — '+total+' '+(en?(total===1?'finding total':'findings total'):(total===1?'hallazgo en total':'hallazgos en total'))+'\n\n';
@@ -3010,10 +2999,108 @@ function actaSeveritySummaryMd(en){
     if(f.host) md+=' — `'+cell(f.host)+'`';
     if(f.cvss) md+=' · CVSS '+f.cvss.toFixed(1);
     if(f.path) md+=' · `'+cell(f.path)+'`';
-    md+=' — *'+f.meta+'*\n';
+    if(f.meta) md+=' — *'+f.meta+'*';
+    md+='\n';
   });
   md+='\n';
+  /* Cruce Nessus × Burp para el resumen ejecutivo: escanea el historial,
+     agrupa hallazgos por host y detecta hosts con hallazgos de AMBAS
+     herramientas. Para cada host compartido lista lo que vio cada herramienta,
+     marca posibles DUPLICADOS (mismo nombre normalizado o contención mutua) y
+     CORRELACIONES (severidad crítica/alta en ambas). Se muestra al final del
+     bloque de severidad (acta y informes de reconocimiento). Devuelve '' si no
+     hay ningún host compartido. Bilingüe (reportLang). */
+  md+=severityCrossMd(en);
   return md;
+}
+/* Cruce de hallazgos Nessus × Burp Suite por host para el resumen ejecutivo.
+   Escanea el historial con los parsers reales, agrupa por host normalizado
+   (ignora esquema/puerto/barra final para que 'https://app.example.com:443'
+   y 'app.example.com' coincidan) y devuelve una sección Markdown con los hosts
+   que tienen hallazgos de ambas herramientas: hallazgos de cada una, posibles
+   duplicados (nombre normalizado igual o con contención) y correlaciones
+   (crítico/alto en ambas). Devuelve '' si no hay hosts compartidos.
+   Bilingüe (reportLang). */
+function severityCrossMd(en){
+  const h=store.history||[];
+  const hostKey=x=>String(x||'').toLowerCase().replace(/^https?:\/\//,'').replace(/:\d+$/,'').replace(/\/+$/,'').trim();
+  const nameKey=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const sevOf=s=>{ const t=String(s||'');
+    if(/critical/i.test(t)) return 'Critical';
+    if(/high/i.test(t)) return 'High';
+    if(/medium|moderate/i.test(t)) return 'Medium';
+    if(/low/i.test(t)) return 'Low';
+    return 'Info'; };
+  const byHost={}; const seen=new Set();
+  for(const m of h){
+    if(!m||!m.content) continue;
+    const nessus=parseNessusOutput(m.content);
+    if(nessus) for(const f of nessus){
+      const key='nessus|'+f.id+'|'+f.host+'|'+f.name;
+      if(seen.has(key)) continue; seen.add(key);
+      const hk=hostKey(f.host); if(!hk) continue;
+      (byHost[hk]=byHost[hk]||[]).push({tool:'nessus',sev:sevOf(f.severity),name:f.name||'—',
+        cvss:parseFloat(f.cvss)||0,meta:'Nessus · Plugin #'+f.id,orig:f.host});
+    }
+    const burp=parseBurpOutput(m.content);
+    if(burp) for(const i of burp){
+      const key='burp|'+i.name+'|'+i.host;
+      if(seen.has(key)) continue; seen.add(key);
+      const hk=hostKey(i.host); if(!hk) continue;
+      (byHost[hk]=byHost[hk]||[]).push({tool:'burp',sev:sevOf(i.severity),name:i.name||'—',
+        cvss:0,path:i.path||'',meta:'Burp Suite',orig:i.host});
+    }
+  }
+  const shared=Object.keys(byHost).filter(hk=>byHost[hk].some(f=>f.tool==='nessus')&&byHost[hk].some(f=>f.tool==='burp'));
+  if(!shared.length) return '';
+  let md='\n## '+(en?'Cross-analysis: Nessus × Burp Suite (shared hosts)':'Análisis cruzado: Nessus × Burp Suite (hosts compartidos)')+'\n\n';
+  md+='> '+(en?shared.length+' host(s) with findings from both tools — possible overlaps or correlations':shared.length+' host(s) con hallazgos de ambas herramientas — posibles solapamientos o correlaciones')+'\n\n';
+  shared.forEach(hk=>{
+    const fs=byHost[hk];
+    const nes=fs.filter(f=>f.tool==='nessus'), bur=fs.filter(f=>f.tool==='burp');
+    const disp=nes[0].orig||bur[0].orig||hk;
+    md+='### '+disp+'\n\n';
+    md+='- **'+(en?'Nessus':'Nessus')+' ('+nes.length+'):** '+nes.map(f=>f.sev+' '+f.name+(f.cvss?' (CVSS '+f.cvss.toFixed(1)+')':'')).join(' · ')+'\n';
+    md+='- **'+(en?'Burp Suite':'Burp Suite')+' ('+bur.length+'):** '+bur.map(f=>f.sev+' '+f.name+(f.path?' @ `'+f.path+'`':'')).join(' · ')+'\n';
+    const dups=[];
+    for(const n of nes) for(const b of bur){
+      const nk=nameKey(n.name), bk=nameKey(b.name);
+      if(!nk||!bk) continue;
+      if(nk===bk||(nk.length>=6&&bk.length>=6&&(nk.includes(bk)||bk.includes(nk)))) dups.push([n.name,b.name]);
+    }
+    if(dups.length){
+      const uniq=[]; const seenD=new Set();
+      for(const d of dups){ const k=d[0]+'|'+d[1]; if(seenD.has(k)) continue; seenD.add(k); uniq.push(d); }
+      md+='- ⚠️ '+(en?'Possible duplicate(s): ':'Posible(s) duplicado(s): ')+uniq.map(d=>'`'+d[0]+'` ≈ `'+d[1]+'`').join(', ')+'\n';
+    }
+    const hiNes=nes.some(f=>f.sev==='Critical'||f.sev==='High');
+    const hiBur=bur.some(f=>f.sev==='Critical'||f.sev==='High');
+    if(hiNes&&hiBur) md+='- 🔀 '+(en?'Correlation: critical/high in both tools — prioritize manual review':'Correlación: crítico/alto en ambas — prioriza la revisión manual')+'\n';
+    md+='\n';
+  });
+  return md;
+}
+function actaSeveritySummaryMd(en){
+  const h=store.history||[];
+  const all=[]; const seen=new Set();
+  for(const m of h){
+    if(!m||!m.content) continue;
+    const nessus=parseNessusOutput(m.content);
+    if(nessus) for(const f of nessus){
+      const key='nessus|'+f.id+'|'+f.host+'|'+f.name;
+      if(seen.has(key)) continue; seen.add(key);
+      all.push({severity:f.severity,name:f.name||'—',host:f.host||'',
+        cvss:f.cvss||'',meta:'Nessus · Plugin #'+f.id});
+    }
+    const burp=parseBurpOutput(m.content);
+    if(burp) for(const i of burp){
+      const key='burp|'+i.name+'|'+i.host;
+      if(seen.has(key)) continue; seen.add(key);
+      all.push({severity:i.severity,name:i.name||'—',host:i.host||'',
+        cvss:'',meta:en?'Burp Suite':'Burp Suite',path:i.path||''});
+    }
+  }
+  return severitySummaryMd(all, en, en?'Executive summary of findings (Nessus · Burp Suite)':'Resumen ejecutivo de hallazgos (Nessus · Burp Suite)');
 }
 /* Contexto de la Ruta Red Team para el acta: lista los checkpoints completados
    (learnDone/aion_ruta) con su tiempo de práctica (pracLog/aion_prac_log),
@@ -3983,12 +4070,12 @@ function nessusReconReport(text){
   const findings=parseNessusOutput(text); if(!findings) return null;
   const en=reportIsEn();
   const fecha=new Date().toLocaleDateString(en?'en-US':(store.lang||'es-ES'),{day:'2-digit',month:'long',year:'numeric'});
-  const crit=findings.filter(f=>/critical/i.test(f.severity)).length;
-  const high=findings.filter(f=>/high/i.test(f.severity)).length;
-  const med=findings.filter(f=>/medium/i.test(f.severity)).length;
+  /* Resumen ejecutivo de hallazgos por severidad (bloque compartido con el
+     acta): conteo crítico/alto/medio/bajo/info + las 5 más críticas listadas. */
+  const sevAll=findings.map(f=>({severity:f.severity,name:f.name||'—',host:f.host||'',
+    cvss:f.cvss||'',meta:'Nessus · Plugin #'+f.id}));
   let md= en?'# Vulnerability Scan Report — Nessus\n\n':'# Informe de Escaneo de Vulnerabilidades — Nessus\n\n';
-  md+= en?'> **Executive summary:** '+findings.length+' finding(s) · '+crit+' critical · '+high+' high · '+med+' medium\n\n'
-        :'> **Resumen ejecutivo:** '+findings.length+' hallazgo(s) · '+crit+' crítico(s) · '+high+' alto(s) · '+med+' medio(s)\n\n';
+  md+=severitySummaryMd(sevAll, en, en?'Executive summary of findings (Nessus)':'Resumen ejecutivo de hallazgos (Nessus)');
   md+= en?'> **Date:** '+fecha+' · **Author:** Aion Sincro · Laboral Mode\n\n':'> **Fecha:** '+fecha+' · **Autor:** Aion Sincro · Modo Laboral\n\n';
   md+= en?'## 1. Findings\n\n':'## 1. Hallazgos\n\n';
   md+= en?'| Severity | Plugin | Name | CVSS | Host |\n|---|---|---|---|---|\n':'| Severidad | Plugin | Nombre | CVSS | Host |\n|---|---|---|---|---|\n';
@@ -4031,8 +4118,12 @@ function burpReconReport(text){
   const issues=parseBurpOutput(text); if(!issues) return null;
   const en=reportIsEn();
   const fecha=new Date().toLocaleDateString(en?'en-US':(store.lang||'es-ES'),{day:'2-digit',month:'long',year:'numeric'});
+  /* Resumen ejecutivo de hallazgos por severidad (bloque compartido con el
+     acta): conteo crítico/alto/medio/bajo/info + las 5 más críticas listadas. */
+  const sevAll=issues.map(i=>({severity:i.severity,name:i.name||'—',host:i.host||'',
+    cvss:'',meta:'Burp Suite',path:i.path||''}));
   let md= en?'# Application Security Report — Burp Suite\n\n':'# Informe de Seguridad de Aplicación — Burp Suite\n\n';
-  md+= en?'> **Executive summary:** '+issues.length+' issue(s) found\n\n':'> **Resumen ejecutivo:** '+issues.length+' hallazgo(s) encontrado(s)\n\n';
+  md+=severitySummaryMd(sevAll, en, en?'Executive summary of findings (Burp Suite)':'Resumen ejecutivo de hallazgos (Burp Suite)');
   md+= en?'> **Date:** '+fecha+' · **Author:** Aion Sincro · Laboral Mode\n\n':'> **Fecha:** '+fecha+' · **Autor:** Aion Sincro · Modo Laboral\n\n';
   md+= en?'## 1. Issues\n\n':'## 1. Hallazgos\n\n';
   md+= en?'| Severity | Issue | Host | Path |\n|---|---|---|---|\n':'| Severidad | Hallazgo | Host | Ruta |\n|---|---|---|---|\n';

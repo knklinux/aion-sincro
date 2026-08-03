@@ -314,6 +314,11 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("acta: resumen usa parseNessusOutput y parseBurpOutput", script.includes("const nessus=parseNessusOutput(m.content);") && script.includes("const burp=parseBurpOutput(m.content);") && script.includes("const key='nessus|'+f.id+'|'+f.host+'|'+f.name;") && script.includes("const key='burp|'+i.name+'|'+i.host;"));
   check("acta: resumen ordena y limita a las 5 más críticas", /RANK\[a\.sev\]-RANK\[b\.sev\]\|\|b\.cvss-a\.cvss/.test(script) && script.includes(".slice(0,5)") && script.includes("const counts={}; for(const s of ORDER) counts[s]=0;"));
   check("acta: resumen bilingüe (Executive summary / Resumen ejecutivo)", script.includes("'Executive summary of findings (Nessus · Burp Suite)'") && script.includes("'Resumen ejecutivo de hallazgos (Nessus · Burp Suite)'") && script.includes("'Most critical findings'") && script.includes("'Hallazgos más críticos'"));
+  // Cruce Nessus × Burp por host en el resumen ejecutivo (duplicados/correlaciones)
+  check("acta: severityCrossMd() definida y llamada desde severitySummaryMd", /function\s+severityCrossMd\s*\(/.test(script) && script.includes("md+=severityCrossMd(en);"));
+  check("acta: cruce normaliza host (esquema/puerto/barra) y agrupa por host", script.includes("hostKey=x=>String(x||'').toLowerCase().replace(/^https?:\\/\\//") && script.includes("byHost[hk]=byHost[hk]||[]") && script.includes("filter(hk=>byHost[hk].some(f=>f.tool==='nessus')&&byHost[hk].some(f=>f.tool==='burp'))"));
+  check("acta: cruce detecta duplicados (nombre normalizado igual o contención) y correlación de severidad", script.includes("const dups=[]") && script.includes("nk===bk||(nk.length>=6&&bk.length>=6&&(nk.includes(bk)||bk.includes(nk)))") && script.includes("'Possible duplicate(s): '") && script.includes("'Correlation: critical/high in both tools"));
+  check("acta: cruce bilingüe y con caso vacío", script.includes("'Cross-analysis: Nessus × Burp Suite (shared hosts)'") && script.includes("'Análisis cruzado: Nessus × Burp Suite (hosts compartidos)'") && script.includes("if(!shared.length) return '';"));
   // Filtro «acta limpia»: omitir salidas crudas de herramientas de la transcripción
   check("actaClean:false por defecto en store", /actaClean:false,/.test(script));
   check("toggle btnActaClean presente en Ajustes (Informes PDF)", html.includes('id="btnActaClean"') && html.includes('✂️ Acta: omitir salidas crudas de herramientas en la transcripción'));
@@ -538,8 +543,11 @@ check("parseNessusOutput() definida", /function\s+parseNessusOutput\s*\(/.test(s
 check("nessusReconReport() definida", /function\s+nessusReconReport\s*\(/.test(script));
 check("parseBurpOutput() definida", /function\s+parseBurpOutput\s*\(/.test(script));
 check("burpReconReport() definida", /function\s+burpReconReport\s*\(/.test(script));
-check("dispatcher detectToolOutput() detecta las 4 herramientas", /function\s+detectToolOutput\s*\(/.test(script) && script.includes("return 'gobuster'") && script.includes("return 'nessus'") && script.includes("return 'burp'"));
-check("dispatcher reconReport() enruta cada herramienta a su generador", /function\s+reconReport\s*\(/.test(script) && script.includes("if(tool==='nmap') return nmapReconReport(text)") && script.includes("if(tool==='gobuster') return gobusterReconReport(text)") && script.includes("if(tool==='nessus') return nessusReconReport(text)") && script.includes("if(tool==='burp') return burpReconReport(text)"));
+check("dispatcher detectToolOutput() detecta las 4 herramientas", /function\s+detectToolOutput\s*\(/.test(script) && script.includes("return 'gobuster'") && script.includes("return 'nessus'") && script.includes("return 'burp'"));  check("dispatcher reconReport() enruta cada herramienta a su generador", /function\s+reconReport\s*\(/.test(script) && script.includes("if(tool==='nmap') return nmapReconReport(text)") && script.includes("if(tool==='gobuster') return gobusterReconReport(text)") && script.includes("if(tool==='nessus') return nessusReconReport(text)") && script.includes("if(tool==='burp') return burpReconReport(text)"));
+  check("severitySummaryMd() definida (bloque compartido informe+acta)", /function\s+severitySummaryMd\s*\(/.test(script));
+  check("nessusReconReport usa severitySummaryMd con título (Nessus)", script.includes("md+=severitySummaryMd(sevAll, en, en?'Executive summary of findings (Nessus)'") && script.includes("meta:'Nessus · Plugin #'+f.id"));
+  check("burpReconReport usa severitySummaryMd con título (Burp Suite)", script.includes("md+=severitySummaryMd(sevAll, en, en?'Executive summary of findings (Burp Suite)'") && script.includes("meta:'Burp Suite'"));
+  check("actaSeveritySummaryMd delega en severitySummaryMd", script.includes("return severitySummaryMd(all, en, en?'Executive summary of findings (Nessus · Burp Suite)'") && /function\s+severitySummaryMd\s*\(/.test(script));
 check("informe gobuster: tabla de rutas + resumen ejecutivo", script.includes("# Informe de Enumeración de Directorios — Gobuster") && script.includes("| Ruta | Estado | Tamaño | Redirección |") && script.includes("## 2. Hallazgos interesantes"));
 check("informe nessus: tabla de hallazgos + detalle críticos/altos", script.includes("# Informe de Escaneo de Vulnerabilidades — Nessus") && script.includes("| Severidad | Plugin | Nombre | CVSS | Host |") && script.includes("## 2. Detalle de críticos/altos"));
 check("informe burp: tabla de hallazgos + detalle altos/críticos", script.includes("# Informe de Seguridad de Aplicación — Burp Suite") && script.includes("| Severidad | Hallazgo | Host | Ruta |") && script.includes("## 2. Detalle de hallazgos altos/críticos"));
@@ -909,7 +917,7 @@ await (async () => {
   // ---------- Parsers dinámicos: gobuster / Nessus / Burp Suite ----------
   console.log("\n[Modo Laboral] Parsers de herramientas (muestras reales)");
   const dynParsers = ["parseNmapOutput", "parseGobusterOutput", "parseNessusOutput", "parseBurpOutput", "parseCurlOutput",
-    "gobusterReconReport", "nessusReconReport", "burpReconReport", "curlReconReport", "executiveReport", "findingsReport", "detectToolOutput", "reconReport", "toolMiniSummary"];
+    "gobusterReconReport", "nessusReconReport", "burpReconReport", "curlReconReport", "executiveReport", "findingsReport", "detectToolOutput", "reconReport", "toolMiniSummary", "severitySummaryMd", "severityCrossMd"];
   const dynSrcs = dynParsers.map(n => [n, extractFn(script, n)]);
   check("parsers y generadores extraíbles del <script>", dynSrcs.every(([, s]) => !!s));
   if (dynSrcs.every(([, s]) => !!s)) {
@@ -917,7 +925,7 @@ await (async () => {
       // reportIsEn() se inyecta como stub falso (es-ES) para los generadores bilingües.
       const src = `"use strict"; const store=arguments[0]; function reportIsEn(){return false;}
         ${dynSrcs.map(([, s]) => s).join("\n")};
-        return {parseNmapOutput,parseGobusterOutput,parseNessusOutput,parseBurpOutput,parseCurlOutput,gobusterReconReport,nessusReconReport,burpReconReport,curlReconReport,executiveReport,findingsReport,detectToolOutput,reconReport,toolMiniSummary};`;
+        return {parseNmapOutput,parseGobusterOutput,parseNessusOutput,parseBurpOutput,parseCurlOutput,gobusterReconReport,nessusReconReport,burpReconReport,curlReconReport,executiveReport,findingsReport,detectToolOutput,reconReport,toolMiniSummary,severitySummaryMd,severityCrossMd};`;
       const fns = new Function(src)({ lang: "es-ES" });
 
       // gobuster: salida real del formato '/path (Status: NNN) [Size: NNN]'
@@ -949,6 +957,7 @@ await (async () => {
       check("nessus: extrae plugins con severidad y CVSS", !!nes && nes.length === 2 && /critical/i.test(nes[1].severity) && nes[1].cvss === "10.0" && nes[1].host === "192.168.1.10");
       const nesMd = fns.nessusReconReport("Plugin #10150 (Windows SMB RCE)\n  Severity: Critical\n  CVSS v2.0 Base Score: 10.0\n  Synopsis: RCE.\n  Solution: Patch.\n");
       check("nessus: informe con resumen y detalle críticos", !!nesMd && nesMd.includes("1 crítico") && nesMd.includes("## 2. Detalle de críticos/altos"));
+      check("nessus: bloque por severidad en el informe (conteo + críticos)", !!nesMd && nesMd.includes("## Resumen ejecutivo de hallazgos (Nessus)") && nesMd.includes("🔴 1 crítico(s)") && nesMd.includes("Hallazgos más críticos") && nesMd.includes("Windows SMB RCE"), (nesMd || "").slice(0, 260));
 
       // Burp Suite: formato 'Issue: Nombre' + campos clave
       const bur = fns.parseBurpOutput(
@@ -967,6 +976,10 @@ await (async () => {
       check("burp: extrae issues con severidad y host", !!bur && bur.length === 2 && /high/i.test(bur[0].severity) && bur[0].path === "/search?q=test");
       const burMd = fns.burpReconReport("Issue: SQL Injection\n  Severity: High\n  Confidence: Certain\n  Host: https://app.example.com\n  Path: /search\n  Description: injectable.\n  Remediation: parameterized queries.\n");
       check("burp: informe con tabla y remediación", !!burMd && burMd.includes("| High | SQL Injection |") && burMd.includes("**Remediación:**"));
+      const burSev = fns.nessusReconReport && fns.severitySummaryMd ? fns.severitySummaryMd([{severity:'Critical',name:'SQL Injection',host:'app.example.com',cvss:'9.8',meta:'Burp Suite',path:'/search'},{severity:'Medium',name:'Weak SSL',host:'app.example.com',cvss:'',meta:'Burp Suite',path:'/'}], false, "Resumen ejecutivo de hallazgos (Burp Suite)") : "";
+      check("burp: severitySummaryMd cuenta 1 crítico + 1 medio y lista primero el crítico", !!burSev && burSev.includes("🔴 1 crítico(s)") && burSev.includes("🟡 1 medio(s)") && burSev.indexOf("SQL Injection") < burSev.indexOf("Weak SSL") && burSev.includes("`/search`"), (burSev || "").slice(0, 200));
+      check("severitySummaryMd: bilingüe (Executive summary / Resumen ejecutivo)", !!fns.severitySummaryMd && fns.severitySummaryMd([{severity:'Low',name:'Info',host:'x',cvss:'',meta:'Nessus'}], true, "Executive summary of findings (Nessus)").includes("Executive summary of findings (Nessus)") && fns.severitySummaryMd([{severity:'Low',name:'Info',host:'x',cvss:'',meta:'Nessus'}], true, "X").includes("low"));
+      check("severitySummaryMd: sin hallazgos -> vacío", !!fns.severitySummaryMd && fns.severitySummaryMd([], false, "X") === "");
 
       // Dispatcher: detección y enrutado de cada formato
       check("detectToolOutput identifica cada formato", fns.detectToolOutput("Nmap scan report for 10.0.0.1") === "nmap" && fns.detectToolOutput("/x (Status: 200) [Size: 1]") === "gobuster" && fns.detectToolOutput("Plugin #1 (x)\nSeverity: High") === "nessus" && fns.detectToolOutput("Issue: X\nSeverity: High") === "burp");
@@ -1180,9 +1193,9 @@ await (async () => {
       }
 
       // Resumen ejecutivo de hallazgos por severidad al inicio del acta: actaSeveritySummaryMd
-      const sevFns = ["actaSeveritySummaryMd"];
+      const sevFns = ["severitySummaryMd", "severityCrossMd", "actaSeveritySummaryMd"];
       const sevSrcs = sevFns.map(n => [n, extractFn(script, n)]);
-      check("actaSeveritySummaryMd extraíble del <script>", sevSrcs.every(([, s]) => !!s));
+      check("severitySummaryMd/severityCrossMd/actaSeveritySummaryMd extraíbles del <script>", sevSrcs.every(([, s]) => !!s));
       if (sevSrcs.every(([, s]) => !!s)) {
         try {
           const sevBase = `"use strict";
@@ -1204,8 +1217,8 @@ await (async () => {
                 if(!cur) continue; const kv=l.match(/^(Severity|Host|Path):\\s*(.*)$/i); if(!kv) continue;
                 const k=kv[1].toLowerCase(); cur[k]=kv[2].trim();
               } return out.length?out:null; }
-            ${sevSrcs.map(([, s]) => s).join("\\n")};
-            return {actaSeveritySummaryMd};`;
+            ${sevSrcs.map(([, s]) => s).join("\n")};
+            return {severitySummaryMd,severityCrossMd,actaSeveritySummaryMd};`;
           const sevFns2 = new Function(sevBase)();
           const md = sevFns2.actaSeveritySummaryMd(false);
           check("actaSeveritySummaryMd: cabecera + conteo por severidad", !!md && md.includes("## Resumen ejecutivo de hallazgos (Nessus · Burp Suite)") && md.includes("🔴 1 crítico(s)") && md.includes("🟠 1 alto(s)") && md.includes("🟡 1 medio(s)") && md.includes("🔵 1 bajo(s)"), (md || "").slice(0, 250));
@@ -1217,9 +1230,46 @@ await (async () => {
             const store={history:[{role:'user',content:'pregunta normal sin salida de herramientas'}]};
             function parseNessusOutput(t){ return null; }
             function parseBurpOutput(t){ return null; }
-            ${sevSrcs.map(([, s]) => s).join("\\n")};
-            return {actaSeveritySummaryMd};`;
+            ${sevSrcs.map(([, s]) => s).join("\n")};
+            return {severitySummaryMd,severityCrossMd,actaSeveritySummaryMd};`;
           check("actaSeveritySummaryMd: sin Nessus/Burp -> sección vacía", new Function(sevNone)().actaSeveritySummaryMd(false) === "");
+
+          // Cruce Nessus × Burp por host: severityCrossMd (hosts compartidos)
+          const sevCrossBase = `"use strict";
+            const store={history:[
+              {role:'user',content:'Export Nessus\\n- app.example.com (Scanner)\\nPlugin #1 (SQL Injection)\\nSeverity: Critical\\nCVSS v3.0 Base Score: 9.8\\nHost: app.example.com\\nPlugin #2 (XSS Reflected)\\nSeverity: High\\nCVSS v3.0 Base Score: 7.5\\nHost: app.example.com\\n'},
+              {role:'user',content:'Salida Burp Suite\\nIssue: SQL Injection\\nSeverity: High\\nHost: https://app.example.com:443\\nPath: /search\\nIssue: Weak SSL Cipher\\nSeverity: Medium\\nHost: app.example.com\\nPath: /\\n'},
+              {role:'ai',content:'pregunta normal sin salida'}
+            ]};
+            function parseNessusOutput(t){ const s=String(t||''); if(!/Export Nessus/i.test(s)) return null;
+              const out=[]; let cur=null; for(const l of s.split(/\\r?\\n/)){
+                const pm=l.match(/^Plugin #(\\d+)\\s*\\(([^)]*)\\)/); if(pm){ cur={id:pm[1],name:pm[2].trim(),severity:'',cvss:'',host:''}; out.push(cur); continue; }
+                if(!cur) continue; const kv=l.match(/^(Severity|CVSS v[23]\\.0 Base Score|Host):\\s*(.*)$/i); if(!kv) continue;
+                const k=kv[1].toLowerCase(); if(k==='severity') cur.severity=kv[2].trim(); else if(/cvss/.test(k)) cur.cvss=kv[2].trim(); else cur.host=kv[2].trim();
+              } return out.length?out:null; }
+            function parseBurpOutput(t){ const s=String(t||''); if(!/Salida Burp/i.test(s)) return null;
+              const out=[]; let cur=null; for(const l of s.split(/\\r?\\n/)){
+                const im=l.match(/^Issue:\\s*(.+)$/i); if(im){ cur={name:im[1].trim(),severity:'',host:'',path:''}; out.push(cur); continue; }
+                if(!cur) continue; const kv=l.match(/^(Severity|Host|Path):\\s*(.*)$/i); if(!kv) continue;
+                const k=kv[1].toLowerCase(); cur[k]=kv[2].trim();
+              } return out.length?out:null; }
+            ${sevSrcs.map(([, s]) => s).join("\n")};
+            return {severitySummaryMd,severityCrossMd,actaSeveritySummaryMd};`;
+          const sevCross2 = new Function(sevCrossBase)();
+          const cross = sevCross2.severityCrossMd(false);
+          check("severityCrossMd: detecta host compartido y lista ambas herramientas", !!cross && cross.includes("## Análisis cruzado: Nessus × Burp Suite (hosts compartidos)") && cross.includes("### app.example.com") && cross.includes("**Nessus (2):**") && cross.includes("**Burp Suite (2):**"), (cross || "").slice(0, 300));
+          check("severityCrossMd: marca duplicado (SQL Injection en ambas)", !!cross && cross.includes("Posible(s) duplicado(s)") && cross.includes("SQL Injection") && cross.includes("≈"));
+          check("severityCrossMd: correlación de severidad crítico/alto en ambas", !!cross && cross.includes("Correlación: crítico/alto en ambas"));
+          check("severityCrossMd: normaliza host (https://app.example.com:443 === app.example.com)", !!cross && cross.includes("### app.example.com") && !cross.includes("### https://app.example.com:443"));
+          const crossEn = sevCross2.severityCrossMd(true);
+          check("severityCrossMd: respeta idioma EN", !!crossEn && crossEn.includes("Cross-analysis: Nessus × Burp Suite (shared hosts)") && crossEn.includes("Possible duplicate(s)") && crossEn.includes("Correlation: critical/high in both tools"));
+          const sevCrossNone = `"use strict";
+            const store={history:[{role:'user',content:'Export Nessus\\nPlugin #1 (X)\\nSeverity: High\\nHost: 10.0.0.5\\n'},{role:'user',content:'Salida Burp Suite\\nIssue: Y\\nSeverity: High\\nHost: otro.host.example\\n'}]};
+            function parseNessusOutput(t){ return /Export Nessus/i.test(String(t||'')) ? [{id:'1',name:'X',severity:'High',host:'10.0.0.5'}] : null; }
+            function parseBurpOutput(t){ return /Salida Burp/i.test(String(t||'')) ? [{name:'Y',severity:'High',host:'otro.host.example'}] : null; }
+            ${sevSrcs.map(([, s]) => s).join("\n")};
+            return {severitySummaryMd,severityCrossMd,actaSeveritySummaryMd};`;
+          check("severityCrossMd: sin hosts compartidos -> sección vacía", new Function(sevCrossNone)().severityCrossMd(false) === "");
         } catch (e) {
           check("actaSeveritySummaryMd ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
         }
