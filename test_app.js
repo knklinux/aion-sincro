@@ -251,6 +251,10 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("cleanMsgs() usada en /read (historial limpio)", script.includes("cleanMsgs(h)"));
   check("regresión 422: ningún streamChat recibe el historial con metadatos crudos", !/streamChatWithFailover\(\{role:'system'[\s\S]{0,120}?\.\.\.h\.slice\(0,-1\)/.test(script) && !/streamChatWithFailover\(\{role:'system'[\s\S]{0,120}?\.\.\.h\,\{role:'user'/.test(script));
   check("sessionActaMd() incluye estadísticas de sesión y transcripción", /## \$\{L\.meta\}[\s\S]*?## '\+L\.trans/.test(script) && /m\.via==='voice'\?' 🎙️':' 📝'/.test(script));
+  check("acta: fila de racha con pracStreak()", /\| \$\{L\.streak\} \| 🔥 \$\{pracStreak\(\)\}/.test(script));
+  check("acta: fila de tiempo medio con pracAvgMs() formateado", /\| \$\{L\.avg\} \| \$\{fmtPrac\(pracAvgMs\(\)\)\}/.test(script));
+  check("acta: fila de sesión de práctica activa solo si hay sesión", /if\(dur\) md\+=\`\| \$\{L\.dur\} \| \$\{fmtPrac\(dur\)\} \|\\n\`/.test(script) && script.includes("const dur=pracSession()&&pracSession().start?Date.now()-pracSession().start:null;"));
+  check("regresión: acta con modo Laboral refleja sesión de práctica completa", /const voiceCount=h\.filter\(m=>m&&m\.via==='voice'\)\.length;/.test(script) && /const turns=h\.filter\(m=>m&&m\.role==='user'\)\.length;/.test(script) && /const msgs=h\.filter\(m=>m&&m\.content\)\.length;/.test(script));
   check("sessionActaMd() escapa/vacía contenido sin romper Markdown", /String\(m\.content\)\.replace\(\/\\n\{3,\}/.test(script));
   check("botones de acta en el footer de la Ruta", html.includes('id="btnActaMd"') && html.includes('id="btnActaPdf"'));
   check("btnActaMd/PDF exportan con sessionActaMd()", script.includes("$('#btnActaMd').onclick=()=>{ const md=sessionActaMd(); downloadMarkdown(md,'acta-sesion-practica'); };") && script.includes("$('#btnActaPdf').onclick=()=>{ const md=sessionActaMd(); exportPdf(md,'Acta de Sesión de Práctica'); };"));
