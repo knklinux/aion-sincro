@@ -536,6 +536,13 @@ check("intercept laboral enruta por palabras clave (ejecutivo/hallazgos)", scrip
 check("TOOL_LABEL incluye curl", script.includes("curl:'curl'"));
 check("chips laboral bilingües con ejecutivo/hallazgos desde terminal", script.includes("Informe ejecutivo: genera el informe ejecutivo para dirección desde la salida real del terminal") && script.includes("Executive report: generate the executive report for management from the real terminal output"));
 check("demoBrain Laboral explica el parsing local", script.includes("el parsing es local"));
+// --- Resumen ejecutivo hablado del informe (3 frases + pregunta de exportación) ---
+check("execSummary() definida", /function\s+execSummary\s*\(/.test(script));
+check("execSummary detecta la herramienta y es bilingüe", script.includes("const tool=detectToolOutput(text);") && script.includes("const q=en?'Do you want me to export it as Markdown, PDF or Word?'") && script.includes("'¿Quieres que lo exporte en Markdown, PDF o Word?'"));
+check("execSummary: nmap con 3 frases + pregunta", script.includes("return [s1,s2,s3,q].join(' ');") && script.includes("Informe de Nmap listo: ") && script.includes("Los servicios más expuestos son ") && script.includes("El sistema detectado es "));
+check("execSummary: ramas por herramienta (gobuster/curl/nessus/burp)", script.includes("if(tool==='gobuster')") && script.includes("if(tool==='curl')") && script.includes("if(tool==='nessus')") && script.includes("if(tool==='burp')"));
+check("execSummary: null/'' con texto irrelevante", /function\s+execSummary[\s\S]*?return '';/.test(script));
+check("Laboral habla el resumen ejecutivo tras generar el informe", script.includes("const spoken=execSummary(text)||") && script.includes("speak(spoken);") && script.includes("He generado el informe de reconocimiento desde tu salida de "));
 
 // --- Re-escaneo nmap desde la barra del informe (flags nuevos en el terminal) ---
 check("termRun acepta callback onDone con salida acumulada", /function\s+termRun\s*\(cmd,\s*onDone\)/.test(script) && script.includes("out+=j.out+'\\n'") && script.includes("if(typeof onDone==='function') onDone(out)"));
@@ -973,6 +980,41 @@ await (async () => {
       const curSum = fns.toolMiniSummary("curl", curlSample);
       check("toolMiniSummary curl: estado + server + cabeceras ausentes", !!curSum && curSum.includes("HTTP 200") && curSum.includes("nginx/1.24.0") && curSum.includes("4 cabecera(s) ausente(s)"));
       check("toolMiniSummary: texto irrelevante -> vacío", fns.toolMiniSummary("nmap", "hola que tal") === "" && fns.toolMiniSummary("gobuster", "nada") === "");
+
+      // Resumen ejecutivo hablado del informe: execSummary (3 frases + pregunta)
+      const execFns = ["execSummary"];
+      const execSrcs = execFns.map(n => [n, extractFn(script, n)]);
+      check("execSummary extraíble del <script>", execSrcs.every(([, s]) => !!s));
+      if (execSrcs.every(([, s]) => !!s)) {
+        try {
+          // Reutiliza los parsers reales extraídos arriba (dynSrcs) + stub de reportIsEn.
+          const execBase = `"use strict";
+            function reportIsEn(){return false;}
+            ${dynSrcs.map(([, s]) => s).join("\n")};
+            ${execSrcs.map(([, s]) => s).join("\n")};
+            return {execSummary};`;
+          const execFns2 = new Function(execBase)();
+          const nmapSample = "Starting Nmap 7.80\nNmap scan report for 10.0.0.1\nPORT     STATE SERVICE\n22/tcp   open  ssh        OpenSSH 8.2p1 Ubuntu\n80/tcp   open  http       Apache httpd 2.4.41\n443/tcp  open  https      nginx 1.24.0\nNmap done: 1 IP address scanned in 3.42 seconds";
+          const es = execFns2.execSummary(nmapSample);
+          check("execSummary nmap: 3 frases + pregunta de exportación", !!es && es.includes("Informe de Nmap listo: 1 host(s) y 3 puerto(s) abierto(s).") && es.includes("Los servicios más expuestos son ssh, http, https.") && es.includes("¿Quieres que lo exporte en Markdown, PDF o Word?"), (es || "").slice(0, 220));
+          check("execSummary nmap: 3 puntos de frase + pregunta (≈4 segmentos)", !!es && (es.split(/[.!?]+/).filter(s => s.trim()).length >= 4), (es || "").slice(0, 220));
+          const esGob = execFns2.execSummary("/admin (Status: 200) [Size: 5123]\n/login (Status: 403) [Size: 178]\n");
+          check("execSummary gobuster: ruta(s) y accesibles", !!esGob && esGob.includes("Enumeración de directorios lista: 2 ruta(s) encontradas.") && esGob.includes("¿Quieres que lo exporte"), (esGob || "").slice(0, 200));
+          const esCurl = execFns2.execSummary("HTTP/1.1 200 OK\nServer: nginx/1.24.0\nStrict-Transport-Security: max-age=31536000\n");
+          check("execSummary curl: estado y cabeceras ausentes", !!esCurl && esCurl.includes("estado 200") && esCurl.includes("Cabeceras de seguridad ausentes: 5"), (esCurl || "").slice(0, 200));
+          const esNes = execFns2.execSummary("Plugin #10150 (Windows SMB RCE)\n  Severity: Critical\n  CVSS v2.0 Base Score: 10.0\n");
+          check("execSummary nessus: críticos/altos", !!esNes && esNes.includes("1 hallazgo(s)") && /1 crítico\(s\)/.test(esNes), (esNes || "").slice(0, 200));
+          const esBur = execFns2.execSummary("Issue: SQL Injection\n  Severity: High\n  Host: app.example.com\n  Path: /\n");
+          check("execSummary burp: hallazgos altos/críticos", !!esBur && esBur.includes("1 hallazgo(s)") && esBur.includes("de severidad alta o crítica"), (esBur || "").slice(0, 200));
+          check("execSummary: texto irrelevante -> ''", execFns2.execSummary("hola que tal") === "");
+          // Versión en inglés: reportIsEn=true
+          const execEn = new Function(execBase.replace("function reportIsEn(){return false;}", "function reportIsEn(){return true;}"))();
+          const esEn = execEn.execSummary(nmapSample);
+          check("execSummary en: frases y pregunta en inglés", !!esEn && esEn.includes("Nmap report ready: 1 host(s) and 3 open port(s).") && esEn.includes("Do you want me to export it as Markdown, PDF or Word?"), (esEn || "").slice(0, 220));
+        } catch (e) {
+          check("execSummary ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
+        }
+      }
 
       // Ruta Red Team en el acta: rutaContextMd (checkpoints completados + tiempos)
       const rutaFns = ["rutaContextMd"];

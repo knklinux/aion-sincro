@@ -3869,6 +3869,62 @@ function reconReport(text){
   if(tool==='burp') return burpReconReport(text);
   return null;
 }
+/* Resumen ejecutivo hablado del informe Laboral: tras generar el informe desde
+   la salida real de una herramienta, Aion resume en 3 frases los datos clave
+   (hosts/puertos/servicios, hallazgos por severidad…) y pregunta si quiere
+   exportarlo. Bilingüe (reportLang). Devuelve el texto a hablar (3 frases +
+   pregunta) o '' si la salida no es reconocible. Se usa solo por voz en el
+   modo Laboral, tras generar el informe. */
+function execSummary(text){
+  const en=reportIsEn();
+  const tool=detectToolOutput(text);
+  const q=en?'Do you want me to export it as Markdown, PDF or Word?':'¿Quieres que lo exporte en Markdown, PDF o Word?';
+  const S1=en?'Nmap report ready: ':'Informe de Nmap listo: ';
+  const S2=en?'The most exposed services are ':'Los servicios más expuestos son ';
+  const S3=en?'Review those services and close the ones you do not need before remediation.':'Revisa esos servicios y cierra los que no necesites antes de la remediación.';
+  if(tool==='nmap'){
+    const hosts=parseNmapOutput(text); if(!hosts) return '';
+    const total=hosts.reduce((a,h)=>a+h.ports.filter(p=>p.state==='open').length,0);
+    const svcs=[...new Set(hosts.flatMap(h=>h.ports.filter(p=>p.state==='open').map(p=>String(p.service).split(/[\s(]/)[0].toLowerCase()).filter(Boolean)))].slice(0,3);
+    const os=hosts.find(h=>h.os||h.running);
+    const s1=S1+hosts.length+(en?' host(s) and ':' host(s) y ')+total+(en?' open port(s).':' puerto(s) abierto(s).');
+    const s2=svcs.length?S2+svcs.join(', ')+'.':(en?'No open services were detected.':'No se detectaron servicios abiertos.');
+    const s3=os?(en?'The detected OS is '+(os.os||os.running)+'.':'El sistema detectado es '+(os.os||os.running)+'.'):S3;
+    return [s1,s2,s3,q].join(' ');
+  }
+  if(tool==='gobuster'){
+    const rows=parseGobusterOutput(text); if(!rows) return '';
+    const ok=rows.filter(r=>r.status===200);
+    const s1=en?'Directory scan ready: '+rows.length+' path(s) found.':'Enumeración de directorios lista: '+rows.length+' ruta(s) encontradas.';
+    const s2=en?'Of those, '+ok.length+' are directly accessible.':'De ellas, '+ok.length+' son accesibles directamente.';
+    const s3=en?'Accessible paths may expose sensitive content or admin areas.':'Las rutas accesibles pueden exponer contenido sensible o áreas de administración.';
+    return [s1,s2,s3,q].join(' ');
+  }
+  if(tool==='curl'){
+    const c=parseCurlOutput(text); if(!c) return '';
+    const s1=en?'HTTP header analysis: status '+c.status+(c.reason?' '+c.reason:'')+'.':'Análisis de cabeceras HTTP: estado '+c.status+(c.reason?' '+c.reason:'')+'.';
+    const s2=en?'Missing security headers: '+c.missing.length+'.':'Cabeceras de seguridad ausentes: '+c.missing.length+'.';
+    const s3=en?'This raises the risk of clickjacking and protocol downgrade attacks.':'Esto eleva el riesgo de clickjacking y degradación de protocolo.';
+    return [s1,s2,s3,q].join(' ');
+  }
+  if(tool==='nessus'){
+    const f=parseNessusOutput(text); if(!f) return '';
+    const crit=f.filter(x=>/critical/i.test(x.severity)).length, high=f.filter(x=>/high/i.test(x.severity)).length;
+    const s1=en?'Vulnerability scan processed: '+f.length+' finding(s).':'Escaneo de vulnerabilidades procesado: '+f.length+' hallazgo(s).';
+    const s2=en?crit+' critical and '+high+' high severity.':crit+' crítico(s) y '+high+' alto(s).';
+    const s3=en?'Prioritize remediation of the critical findings.':'Prioriza la remediación de los hallazgos críticos.';
+    return [s1,s2,s3,q].join(' ');
+  }
+  if(tool==='burp'){
+    const i=parseBurpOutput(text); if(!i) return '';
+    const hi=i.filter(x=>/high|critical/i.test(x.severity)).length;
+    const s1=en?'Application assessment ready: '+i.length+' issue(s).':'Evaluación de la aplicación lista: '+i.length+' hallazgo(s).';
+    const s2=en?hi+' of high or critical severity.':hi+' de severidad alta o crítica.';
+    const s3=en?'Fix the findings before production deployment.':'Corrige los hallazgos antes del despliegue en producción.';
+    return [s1,s2,s3,q].join(' ');
+  }
+  return '';
+}
 /* ---------- curl: cabeceras de seguridad HTTP ---------- */
 function parseCurlOutput(text){
   const s=String(text||'');
@@ -5099,9 +5155,13 @@ async function handleUserText(text){
       setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
       const TOOL_LABEL={nmap:'Nmap',gobuster:'Gobuster',curl:'curl',nessus:'Nessus',burp:'Burp Suite'};
       const _tool=TOOL_LABEL[detectToolOutput(text)]||(reportIsEn()?'the tool':'la herramienta');
-      speak(reportIsEn()
+      /* Resumen ejecutivo hablado: tras generar el informe, Aion resume en 3
+         frases los datos clave y pregunta si quiere exportarlo. Si la salida no
+         es reconocible, cae al mensaje genérico de confirmación. */
+      const spoken=execSummary(text)||(reportIsEn()
         ? 'I generated the reconnaissance report from your '+_tool+' output. You can export it as Markdown or PDF.'
         : 'He generado el informe de reconocimiento desde tu salida de '+_tool+'. Puedes exportarlo en Markdown o PDF.');
+      speak(spoken);
       streaming=false; // el return es previo al try/finally: hay que liberar la flag manualmente
       return;
     }
