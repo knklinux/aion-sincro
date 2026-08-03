@@ -228,6 +228,11 @@ check("certExportMd/PDF usan certMarkdown()", script.includes("$('#certExportMd'
 check("certRecommendations() definida", /function\s+certRecommendations\s*\(/.test(script));
 // Temporizador de sesión de práctica: racha y tiempo medio
 check("pracStart() inicia la sesión en localStorage", /function\s+pracStart\s*\([^)]*\)\{ try\{ localStorage\.setItem\('aion_prac_session'/.test(script));
+check("pracStart() acepta mensaje opcional para el auto-Laboral", /function\s+pracStart\s*\([^)]*msg[^)]*\)\{ try\{ localStorage\.setItem\('aion_prac_session'/.test(script) && script.includes("toast(msg||"));
+check("auto-práctica Laboral: inicia con id 'laboral-<tool>'", script.includes("pracStart('laboral-'+labTool") && script.includes("const labTool=detectToolOutput(text);") && script.includes("const curPrac=pracSession();") && script.includes("String(curPrac.id||'').startsWith('laboral-')"));
+check("auto-práctica Laboral: no pisa una sesión de checkpoint en curso", script.includes("!curPrac||String(curPrac.id||'').startsWith('laboral-')"));
+check("pracFinishLab() cierra la sesión laboral activa", /function\s+pracFinishLab\s*\([^)]*\)\{[\s\S]*?startsWith\('laboral-'\)[\s\S]*?pracFinish\(s\.id\)/.test(script));
+check("exportar el informe cierra la sesión de práctica Laboral", script.includes("pracFinishLab(); downloadMarkdown(text, reportTitle(text))") && script.includes("pracFinishLab(); exportPdf(text, reportTitle(text))") && script.includes("pracFinishLab(); exportDocx(text, reportTitle(text))"));
 check("sesiones de práctica abandonadas >12h se descartan", /const PRAC_STALE=12\*3600\*1000;/.test(script) && /ms>=1000&&ms<PRAC_STALE/.test(script));
 check("tick en vivo se autodestruye al cerrar la Ruta", script.includes("if(!o||!o.classList.contains('show')){ pracTickStop(); return; }"));
 check("pracFinish() registra el tiempo y limpia la sesión", /function\s+pracFinish\s*\([^)]*\)\{[\s\S]*?localStorage\.removeItem\('aion_prac_session'\)[\s\S]*?pracSaveLog\(l\);/.test(script));
@@ -997,6 +1002,45 @@ await (async () => {
         }
       }
 
+      // Auto-práctica Laboral: pracFinishLab (cierre al exportar el informe)
+      const pracFnNames = ["pracFinishLab"];
+      const pracSrcs = pracFnNames.map(n => [n, extractFn(script, n)]);
+      check("pracFinishLab extraíble del <script>", pracSrcs.every(([, s]) => !!s));
+      if (pracSrcs.every(([, s]) => !!s)) {
+        try {
+          // Stubs: sesión activa 'laboral-nmap' iniciada hace 5 s + log existente.
+          const pracNow = Date.now();
+          const pracStub = `"use strict";
+            let _session=${JSON.stringify({ id: "laboral-nmap", start: pracNow - 5000 })};
+            let _log=${JSON.stringify([])};
+            const pracSession=()=>_session;
+            const pracStart=(id)=>{ _session={id,start:Date.now()}; };
+            const pracFinish=(id)=>{ if(!_session||_session.id!==id) return null; const ms=Math.max(0,Date.now()-_session.start); _session=null; _log.push({id,ms,date:'2026-08-03'}); return ms; };
+            const pracLog=()=>_log;
+            const pracSaveLog=()=>{};
+            const pracStreak=()=>1;
+            const fmtPrac=ms=>Math.round(ms/1000)+'s';
+            const isEnglish=()=>false;
+            const toast=()=>{};
+            ${pracSrcs.map(([, s]) => s).join("\n")};
+            return {pracFinishLab, getSession:()=>_session, getLog:()=>_log, pracStart, pracFinish};`;
+          const pracFns = new Function(pracStub)();
+          const ms = pracFns.pracFinishLab();
+          check("pracFinishLab: cierra la sesión laboral y devuelve ~5 s", ms >= 4900 && ms <= 6000, String(ms));
+          check("pracFinishLab: limpia la sesión activa", pracFns.getSession() === null);
+          check("pracFinishLab: registra el tiempo en el log", pracFns.getLog().length === 1 && pracFns.getLog()[0].id === "laboral-nmap" && pracFns.getLog()[0].ms >= 4900);
+          // Con sesión de checkpoint (no laboral-) no debe cerrarse ni registrarse.
+          const pracFns2 = new Function(pracStub.replace("laboral-nmap", "recon-activo-1"))();
+          const ms2 = pracFns2.pracFinishLab();
+          check("pracFinishLab: NO cierra sesiones de checkpoint de la Ruta", ms2 === null && pracFns2.getSession() !== null && pracFns2.getLog().length === 0);
+          // Sin sesión activa -> null.
+          const pracFns3 = new Function(pracStub.replace("let _session=" + JSON.stringify({ id: "laboral-nmap", start: pracNow - 5000 }) + ";", "let _session=null;"))();
+          check("pracFinishLab: sin sesión activa devuelve null", pracFns3.pracFinishLab() === null);
+        } catch (e) {
+          check("pracFinishLab ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
+        }
+      }
+
       // Tabla de puertos/servicios de Nmap al inicio del acta: nmapPortsTableMd
       const nmapTblFns = ["nmapPortsTableMd"];
       const nmapTblSrcs = nmapTblFns.map(n => [n, extractFn(script, n)]);
@@ -1141,7 +1185,7 @@ await (async () => {
   check("cabecera corporativa en header1.xml (org + título + conf)", script.includes('word/header1.xml') && script.includes('CoverOrg') && script.includes('B22222'));
   check("marca de agua VML nativa de Word", script.includes('v:textpath') && script.includes('urn:schemas-microsoft-com:vml'));
   check("usa branding de Ajustes (pdfCompany/pdfWatermarkText/pdfCover)", /store\.pdfCompany/.test(script) && /store\.pdfWatermarkText/.test(script) && /store\.pdfCover/.test(script));
-  check("barra de informe ofrece Word (.docx)", html.includes('Word (.docx)') && script.includes("b2b.onclick=()=>exportDocx(text, reportTitle(text))"));
+  check("barra de informe ofrece Word (.docx)", html.includes('Word (.docx)') && script.includes("b2b.onclick=()=>{ pracFinishLab(); exportDocx(text, reportTitle(text)); }"));
   check("bilingüe: portada respeta reportIsEn", script.includes("en?'Report generated with Aion Sincro · ':'Informe generado con Aion Sincro · '"));
   check("CoverOrg: spacing en pPr (OOXML válido)", /CoverOrg[\s\S]{0,500}?<w:pPr><w:spacing w:before="3000"\/>/.test(script) && !/<w:rPr>[\s\S]{0,140}?<w:spacing/.test(script));
 

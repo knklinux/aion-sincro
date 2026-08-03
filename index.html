@@ -2448,7 +2448,7 @@ function learnTotal(){ return RUTA_PENTEST.reduce((n,p)=>n+p.modules.reduce((m,x
 function learnProgressText(){ const d=learnDone(); const t=learnTotal(); const n=Object.values(d).filter(v=>v).length; return n+'/'+t; }
 /* ---------- Temporizador de sesión de práctica (racha y tiempo medio) ---------- */
 function pracSession(){ try{ return JSON.parse(localStorage.getItem('aion_prac_session')||'null'); }catch(_){ return null; } }
-function pracStart(id){ try{ localStorage.setItem('aion_prac_session',JSON.stringify({id,start:Date.now()})); }catch(_){} toast(isEnglish()?'⏱️ Session started — complete the checkpoint to log your time.':'⏱️ Sesión iniciada — completa el checkpoint para registrar tu tiempo.',2600); }
+function pracStart(id,msg){ try{ localStorage.setItem('aion_prac_session',JSON.stringify({id,start:Date.now()})); }catch(_){} toast(msg||(isEnglish()?'⏱️ Session started — complete the checkpoint to log your time.':'⏱️ Sesión iniciada — completa el checkpoint para registrar tu tiempo.'),2600); }
 function pracLog(){ try{ return JSON.parse(localStorage.getItem('aion_prac_log')||'[]'); }catch(_){ return []; } }
 function pracSaveLog(l){ try{ localStorage.setItem('aion_prac_log',JSON.stringify(l.slice(-300))); }catch(_){} }
 const PRAC_STALE=12*3600*1000; // sesiones de práctica de más de 12h se descartan (sesión abandonada)
@@ -2466,6 +2466,15 @@ function pracFinish(id){
 }
 function pracCount(){ return pracLog().length; }
 function pracAvgMs(){ const l=pracLog(); if(!l.length) return null; return Math.round(l.reduce((n,e)=>n+e.ms,0)/l.length); }
+/* Cierra la sesión de práctica Laboral activa (id 'laboral-<tool>') al exportar
+   el informe: registra el tiempo real desde que se pegó la salida de la
+   herramienta hasta el export. Devuelve los ms registrados o null. */
+function pracFinishLab(){
+  const s=pracSession(); if(!s||!String(s.id||'').startsWith('laboral-')) return null;
+  const ms=pracFinish(s.id);
+  if(ms!=null) toast(isEnglish()?('✅ Practice complete in '+fmtPrac(ms)+' · 🔥 Streak '+pracStreak()+' days'):('✅ Práctica completada en '+fmtPrac(ms)+' · 🔥 Racha '+pracStreak()+' días'),2800);
+  return ms;
+}
 function pracStreak(){
   const days=new Set(pracLog().map(e=>e.date));
   if(!days.size) return 0;
@@ -4434,12 +4443,12 @@ function renderTermChips(bodyEl,text){
     const bar=document.createElement('div'); bar.className='exportBar';
     const lab=document.createElement('span'); lab.className='expLab'; lab.textContent='Exportar informe:'; bar.appendChild(lab);
     const b1=document.createElement('button'); b1.className='exportChip'; b1.textContent='📥 Markdown';
-    b1.onclick=()=>downloadMarkdown(text, reportTitle(text)); bar.appendChild(b1);
+    b1.onclick=()=>{ pracFinishLab(); downloadMarkdown(text, reportTitle(text)); }; bar.appendChild(b1);
     const b2=document.createElement('button'); b2.className='exportChip'; b2.textContent='📄 PDF';
-    b2.onclick=()=>exportPdf(text, reportTitle(text)); bar.appendChild(b2);
+    b2.onclick=()=>{ pracFinishLab(); exportPdf(text, reportTitle(text)); }; bar.appendChild(b2);
     const b2b=document.createElement('button'); b2b.className='exportChip'; b2b.textContent='📝 Word (.docx)';
     b2b.title='Exportar a Microsoft Word (.docx) con cabecera corporativa y marca de agua de confidencialidad (configurable en Ajustes)';
-    b2b.onclick=()=>exportDocx(text, reportTitle(text)); bar.appendChild(b2b);
+    b2b.onclick=()=>{ pracFinishLab(); exportDocx(text, reportTitle(text)); }; bar.appendChild(b2b);
     /* Re-escaneo nmap: solo si el texto es un informe de reconocimiento generado
        desde salida real de nmap (título del informe + host en la sección 2). */
     const nmapH=text.match(/### 2\.\d+ `([^`]+)`/);
@@ -5071,6 +5080,17 @@ async function handleUserText(text){
     else if(/informe de hallazgos|findings report/i.test(text)) report=findingsReport(text); // sin el bare 'hallazgos': no roba rutas de gobuster
     else report=reconReport(text);
     if(report){
+      /* Auto-práctica Laboral: al detectar una salida de herramienta pegada con
+         el modo Laboral activo, Aion inicia sola una sesión de práctica
+         (id 'laboral-<tool>') que se cierra al exportar el informe. No pisa una
+         sesión de checkpoint de la Ruta en curso. */
+      const labTool=detectToolOutput(text);
+      const curPrac=pracSession();
+      if(labTool&&(!curPrac||String(curPrac.id||'').startsWith('laboral-'))){
+        pracStart('laboral-'+labTool,isEnglish()
+          ? '⏱️ Practice session started — '+labTool+' output detected. Export the report to log your time.'
+          : '⏱️ Sesión de práctica iniciada — salida de '+labTool+' detectada. Exporta el informe para registrar tu tiempo.');
+      }
       typing.closest('.msg').remove();
       const body=addMsg('ai','');
       body.textContent=report;
