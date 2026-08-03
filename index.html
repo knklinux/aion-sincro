@@ -2861,6 +2861,11 @@ function sessionActaMd(){
   md+=`| ${L.streak} | 🔥 ${pracStreak()} ${en?'days':'días'} |\n`;
   md+=`| ${L.avg} | ${fmtPrac(pracAvgMs())} |\n`;
   if(dur) md+=`| ${L.dur} | ${fmtPrac(dur)} |\n`;
+  /* Tabla de puertos/servicios de Nmap: si la conversación contiene una salida
+     de nmap, se añade al inicio del acta (antes de la transcripción) una tabla
+     Markdown con los puertos detectados (host, puerto/proto, estado, servicio).
+     Deduplicada entre mensajes; no aparece si no hay salida de nmap. */
+  md+=nmapPortsTableMd(en);
   /* Sección de contexto: solo aparece si hubo modo Laboral o alguna salida de
      herramienta pegada en la conversación. Lista las herramientas usadas con
      un fragmento de su salida real (recortado a 600 chars). */
@@ -2899,6 +2904,39 @@ function sessionActaMd(){
   }
   if(!n) md+='_'+(en?'No conversation recorded yet.':'Aún no hay conversación registrada.')+'_\n\n';
   md+='---\n*'+L.foot+'*\n';
+  return md;
+}
+/* Tabla de puertos/servicios de Nmap para el acta: si la conversación contiene
+   alguna salida de nmap, se añade al inicio del acta (antes de la transcripción)
+   una tabla Markdown con los puertos, estado y servicio detectados por
+   parseNmapOutput(). Deduplica puertos repetidos entre mensajes y escapa las
+   celdas para no romper la tabla. Bilingüe (reportLang). Devuelve '' si no hay
+   salida de nmap o no se detectaron puertos. */
+function nmapPortsTableMd(en){
+  const h=store.history||[];
+  const rows=[]; const seen=new Set();
+  for(const m of h){
+    if(!m||!m.content) continue;
+    const hosts=parseNmapOutput(m.content);
+    if(!hosts) continue;
+    for(const hst of hosts){
+      for(const p of (hst.ports||[])){
+        const key=hst.host+'|'+p.port+'|'+p.proto;
+        if(seen.has(key)) continue;
+        seen.add(key);
+        rows.push({host:hst.host,port:p.port,proto:p.proto,state:p.state,service:p.service});
+      }
+    }
+  }
+  if(!rows.length) return '';
+  rows.sort((a,b)=>a.port-b.port);
+  const cell=s=>String(s==null?'—':s).replace(/\|/g,'\\|').replace(/\r?\n/g,' ').trim();
+  let md='\n## '+(en?'Detected ports & services (Nmap)':'Puertos y servicios detectados (Nmap)')+'\n\n';
+  md+=(en?'| Host | Port | State | Service |\n|---|---|---|---|\n':'| Host | Puerto | Estado | Servicio |\n|---|---|---|---|\n');
+  for(const r of rows){
+    md+='| '+cell(r.host)+' | '+r.port+'/'+r.proto+' | '+cell(r.state)+' | '+cell(r.service)+' |\n';
+  }
+  md+='\n';
   return md;
 }
 /* Contexto de la Ruta Red Team para el acta: lista los checkpoints completados

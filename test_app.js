@@ -279,6 +279,13 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("acta: rutaContextMd usa el tiempo de práctica (fmtPrac)", /timeById\[e\.id\]=e\.ms/.test(script) && /⏱️ '\+fmtPrac\(t\)/.test(script));
   check("acta: sección Ruta invocada antes de la transcripción", script.includes("md+=rutaContextMd(en);") && script.includes("md+='\\n## '+L.trans+'\\n\\n';"));
   check("acta: rutaContextMd bilingüe (Red Team Route / Ruta Red Team)", script.includes("'Red Team Route'") && script.includes("'Ruta Red Team'"));
+  // Tabla de puertos/servicios de Nmap al inicio del acta
+  check("acta: nmapPortsTableMd() definida", /function\s+nmapPortsTableMd\s*\(/.test(script));
+  check("acta: la tabla usa parseNmapOutput y deduplica host+puerto+proto", /const hosts=parseNmapOutput\(m\.content\);/.test(script) && /const key=hst\.host\+'\|'\+p\.port\+'\|'\+p\.proto;/.test(script));
+  check("acta: la tabla se inserta antes de la transcripción", script.includes("md+=nmapPortsTableMd(en);") && script.indexOf("md+=nmapPortsTableMd(en);") < script.indexOf("md+='\\n## '+L.trans+'\\n\\n';") && script.includes("md+=nmapPortsTableMd(en);") && script.includes("/* Tabla de puertos/servicios de Nmap"));
+  check("acta: tabla nmap devuelve '' sin salida de nmap", /if\(!rows\.length\) return '';/.test(script));
+  check("acta: tabla nmap ordena por puerto y escapa celdas", /rows\.sort\(\(a,b\)=>a\.port-b\.port\);/.test(script) && /const cell=s=>String\(s==null\?'—':s\)\.replace/.test(script));
+  check("acta: tabla nmap bilingüe (Detected ports / Puertos y servicios)", script.includes("'Detected ports & services (Nmap)'") && script.includes("'Puertos y servicios detectados (Nmap)'") && script.includes("'| Host | Port | State | Service |\\n|---|---|---|---|\\n'") && script.includes("'| Host | Puerto | Estado | Servicio |\\n|---|---|---|---|\\n'"));
   // Filtro «acta limpia»: omitir salidas crudas de herramientas de la transcripción
   check("actaClean:false por defecto en store", /actaClean:false,/.test(script));
   check("toggle btnActaClean presente en Ajustes (Informes PDF)", html.includes('id="btnActaClean"') && html.includes('✂️ Acta: omitir salidas crudas de herramientas en la transcripción'));
@@ -987,6 +994,37 @@ await (async () => {
           check("rutaContextMd: sin checkpoints completados -> sección vacía", new Function(rutaNone)().rutaContextMd(false) === "");
         } catch (e) {
           check("rutaContextMd ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
+        }
+      }
+
+      // Tabla de puertos/servicios de Nmap al inicio del acta: nmapPortsTableMd
+      const nmapTblFns = ["nmapPortsTableMd"];
+      const nmapTblSrcs = nmapTblFns.map(n => [n, extractFn(script, n)]);
+      check("nmapPortsTableMd extraíble del <script>", nmapTblSrcs.every(([, s]) => !!s));
+      if (nmapTblSrcs.every(([, s]) => !!s)) {
+        try {
+          const nmapTblBase = `"use strict";
+            const store={history:[
+              {role:'user',content:'Nmap scan report for 10.0.0.1\\nPORT     STATE SERVICE\\n80/tcp   open  http        Apache httpd 2.4.41\\n22/tcp   open  ssh         OpenSSH 8.2p1\\n'},
+              {role:'ai',content:'pregunta normal sin salida'},
+              {role:'user',content:'Nmap scan report for 10.0.0.1\\nPORT     STATE SERVICE\\n80/tcp   open  http        Apache httpd 2.4.41\\n'}
+            ]};
+            function parseNmapOutput(t){ const s=String(t||''); if(!/Nmap scan report for/i.test(s)) return null; return [{host:'10.0.0.1',ports:[{port:80,proto:'tcp',state:'open',service:'http Apache httpd 2.4.41'},{port:22,proto:'tcp',state:'open',service:'ssh OpenSSH 8.2p1'}]}]; }
+            ${nmapTblSrcs.map(([, s]) => s).join("\n")};
+            return {nmapPortsTableMd};`;
+          const nmapTblFns2 = new Function(nmapTblBase)();
+          const tbl = nmapTblFns2.nmapPortsTableMd(false);
+          check("nmapPortsTableMd: cabecera + filas de puertos", !!tbl && tbl.includes("## Puertos y servicios detectados (Nmap)") && tbl.includes("| 22/tcp |") && tbl.includes("| 80/tcp |") && tbl.includes("ssh OpenSSH") && tbl.includes("http Apache httpd"), (tbl || "").slice(0, 200));
+          check("nmapPortsTableMd: deduplica puertos repetidos entre mensajes", !!tbl && (tbl.match(/\| 80\/tcp \|/g) || []).length === 1);
+          check("nmapPortsTableMd: respeta idioma EN", !!tbl && nmapTblFns2.nmapPortsTableMd(true).includes("Detected ports & services (Nmap)") && nmapTblFns2.nmapPortsTableMd(true).includes("| Host | Port | State | Service |"));
+          const nmapTblNone = `"use strict";
+            const store={history:[{role:'user',content:'pregunta normal sin salida de herramientas'}]};
+            function parseNmapOutput(t){ return null; }
+            ${nmapTblSrcs.map(([, s]) => s).join("\n")};
+            return {nmapPortsTableMd};`;
+          check("nmapPortsTableMd: sin salida de nmap -> sección vacía", new Function(nmapTblNone)().nmapPortsTableMd(false) === "");
+        } catch (e) {
+          check("nmapPortsTableMd ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
         }
       }
     } catch (e) {
