@@ -276,6 +276,13 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("acta: resumen calculado sobre el contenido completo (no el fragmento recortado)", script.includes("sum:toolMiniSummary(t,m.content)"));
   check("acta: resumen renderizado en cursiva junto al nombre de la herramienta", script.includes("(x.sum?' — *'+x.sum+'*':'')"));
   check("acta: toolMiniSummary respeta reportLang", script.includes("const en=reportIsEn();") && script.includes("open port(s)") && script.includes("puerto(s) abierto(s)"));
+  // Chip «Solo resumen» del acta: exporta solo la sección de Herramientas usadas
+  check("acta: actaSummaryMd() definida", /function\s+actaSummaryMd\s*\(/.test(script));
+  check("acta: actaSummaryMd reutiliza detectToolOutput + toolMiniSummary", /const t=detectToolOutput\(m\.content\);/.test(script) && script.includes("sum:toolMiniSummary(t,m.content)"));
+  check("acta: actaSummaryMd SIN transcripción (solo herramientas)", !/function\s+actaSummaryMd[\s\S]*?L\.trans/.test(script) && /function\s+actaSummaryMd[\s\S]*?No tool outputs were detected[\s\S]*?return md;/.test(script));
+  check("acta: actaSummaryMd bilingüe", script.includes("'Tools Used — Session Summary'") && script.includes("'Herramientas Usadas — Resumen de Sesión'") && script.includes("(no transcript)") && script.includes("(sin transcripción)"));
+  check("acta: actaSummaryMd con aviso si no hay herramientas ni Laboral", /'No tools or Laboral mode in this session\.'/.test(script) && /'Sin herramientas ni modo Laboral en esta sesión\.'/.test(script));
+  check("acta: chip '📊 Solo resumen' en la export bar del acta", /b3\.textContent='📊 Solo resumen'/.test(script) && script.includes("actaSummaryMd()") && /downloadMarkdown\(md,'resumen-herramientas'\)/.test(script));
   // Contexto de la Ruta Red Team: checkpoints completados con sus tiempos
   check("acta: rutaContextMd() definida", /function\s+rutaContextMd\s*\(/.test(script));
   check("acta: rutaContextMd lee learnDone() y pracLog()", /const d=learnDone\(\);/.test(script) && /const log=pracLog\(\)\|\|\[\];/.test(script));
@@ -1111,6 +1118,44 @@ await (async () => {
           check("nmapPortsTableMd: sin salida de nmap -> sección vacía", new Function(nmapTblNone)().nmapPortsTableMd(false) === "");
         } catch (e) {
           check("nmapPortsTableMd ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
+        }
+      }
+
+      // Chip «Solo resumen» del acta: actaSummaryMd (Herramientas usadas, sin transcripción)
+      const actaSumFns = ["actaSummaryMd"];
+      const actaSumSrcs = actaSumFns.map(n => [n, extractFn(script, n)]);
+      check("actaSummaryMd extraíble del <script>", actaSumSrcs.every(([, s]) => !!s));
+      if (actaSumSrcs.every(([, s]) => !!s)) {
+        try {
+          const actaSumBase = `"use strict";
+            const store={laboral:true, history:[
+              {role:'user',content:'Nmap scan report for 10.0.0.1\\nPORT     STATE SERVICE\\n80/tcp   open  http        Apache httpd 2.4.41\\n22/tcp   open  ssh         OpenSSH 8.2p1\\n'},
+              {role:'ai',content:'pregunta normal sin salida'}
+            ]};
+            function reportIsEn(){return false;}
+            function detectToolOutput(t){ return /Nmap scan report for/i.test(String(t||'')) ? 'nmap' : null; }
+            function toolMiniSummary(tool,frag){ return tool==='nmap' ? '1 host(s) · 2 puerto(s) abierto(s)' : ''; }
+            ${actaSumSrcs.map(([, s]) => s).join("\n")};
+            return {actaSummaryMd};`;
+          const actaSumFns2 = new Function(actaSumBase)();
+          const sum = actaSumFns2.actaSummaryMd();
+          check("actaSummaryMd: título + sección de herramientas con mini-resumen", !!sum && sum.includes("# Herramientas Usadas — Resumen de Sesión") && sum.includes("## Herramientas usadas") && sum.includes("**Nmap** — *1 host(s) · 2 puerto(s) abierto(s)*") && sum.includes("80/tcp"), (sum || "").slice(0, 220));
+          check("actaSummaryMd: SIN transcripción (no incluye turnos)", !!sum && !sum.includes("**Tú**") && !sum.includes("## Transcripción") && !sum.includes("### 1."));
+          check("actaSummaryMd: refleja modo Laboral con 💼", !!sum && sum.includes("💼 Modo Laboral activo"));
+          const actaSumEn = new Function(actaSumBase.replace("function reportIsEn(){return false;}", "function reportIsEn(){return true;}"))();
+          const sumEn = actaSumEn.actaSummaryMd();
+          check("actaSummaryMd: versión en inglés", !!sumEn && sumEn.includes("# Tools Used — Session Summary") && sumEn.includes("## Tools used") && sumEn.includes("no transcript") && sumEn.includes("💼 Laboral mode active"), (sumEn || "").slice(0, 220));
+          const actaSumNone = `"use strict";
+            const store={laboral:false, history:[{role:'user',content:'pregunta normal sin herramientas'}]};
+            function reportIsEn(){return false;}
+            function detectToolOutput(t){ return null; }
+            function toolMiniSummary(){ return ''; }
+            ${actaSumSrcs.map(([, s]) => s).join("\n")};
+            return {actaSummaryMd};`;
+          const sumNone = new Function(actaSumNone)().actaSummaryMd();
+          check("actaSummaryMd: sin herramientas ni Laboral -> aviso", !!sumNone && sumNone.includes("Sin herramientas ni modo Laboral en esta sesión."));
+        } catch (e) {
+          check("actaSummaryMd ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
         }
       }
     } catch (e) {

@@ -2983,6 +2983,43 @@ function rutaContextMd(en){
   if(!any) md+='_'+(en?'Completed checkpoints with no practice times yet.':'Checkpoints completados sin tiempos de práctica registrados.')+'_\n\n';
   return md;
 }
+function actaSummaryMd(){
+  /* «Solo resumen»: exporta únicamente la sección de Herramientas usadas con
+     sus mini-resúmenes (toolMiniSummary) y un fragmento de la salida real de
+     cada herramienta — SIN la transcripción completa. Se usa desde el chip
+     «📊 Solo resumen» del acta. Bilingüe (reportLang). Si no hay herramientas
+     ni modo Laboral, devuelve una nota en vez de una sección vacía. */
+  const en=reportIsEn();
+  const h=store.history||[];
+  const TOOL_NAMES={nmap:'Nmap',gobuster:'Gobuster',curl:'curl',nessus:'Nessus',burp:'Burp Suite'};
+  const toolsSeen=new Set();
+  const tools=[];
+  for(const m of h){
+    if(!m||!m.content) continue;
+    const t=detectToolOutput(m.content);
+    if(t&&!toolsSeen.has(t)){
+      toolsSeen.add(t);
+      const frag=String(m.content).replace(/\n{3,}/g,'\n\n').trim();
+      tools.push({tool:t, frag:frag.slice(0,600), sum:toolMiniSummary(t,m.content)});
+    }
+  }
+  const inLaboral=!!store.laboral;
+  let md='# '+(en?'Tools Used — Session Summary':'Herramientas Usadas — Resumen de Sesión')+'\n\n';
+  md+='> '+(en?'Only the tools detected in this session, with mini-summaries and a fragment of each real output (no transcript).':'Solo las herramientas detectadas en esta sesión, con mini-resúmenes y un fragmento de cada salida real (sin transcripción).')+'\n\n';
+  if(inLaboral||tools.length){
+    md+='## '+(en?'Tools used':'Herramientas usadas')+'\n\n';
+    if(inLaboral) md+='> '+(en?'💼 Laboral mode active':'💼 Modo Laboral activo')+'\n\n';
+    if(!tools.length) md+='_'+(en?'No tool outputs were detected in this session.':'No se detectaron salidas de herramientas en esta sesión.')+'_\n\n';
+    else tools.forEach(x=>{
+      const cut=x.frag.length>=600?'\n\n── ['+(en?'truncated':'truncado')+' — '+(x.frag.length-600)+' '+(en?'chars':'caracteres')+'] ──':'';
+      md+='- **'+TOOL_NAMES[x.tool]+'**'+(x.sum?' — *'+x.sum+'*':'')+'\n\n```\n'+x.frag+cut+'\n```\n\n';
+    });
+  }else{
+    md+='_'+(en?'No tools or Laboral mode in this session.':'Sin herramientas ni modo Laboral en esta sesión.')+'_\n\n';
+  }
+  md+='---\n*'+(en?'Summary generated with Aion Sincro — free & open-source · authorized labs only.':'Resumen generado con Aion Sincro — gratuito y de código abierto · solo laboratorios autorizados.')+'*\n';
+  return md;
+}
 function showActaInChat(){
   /* Muestra el acta de la sesión como mensaje del chat y añade JUSTO DEBAJO
      los botones de exportación (📥 Markdown / 📄 PDF) — sin pasar por el
@@ -3000,6 +3037,9 @@ function showActaInChat(){
   const b2=document.createElement('button'); b2.className='exportChip'; b2.textContent='📄 PDF';
   b2.title='Exporta la transcripción de esta sesión como acta de práctica (PDF)';
   b2.onclick=()=>exportPdf(sessionActaMd(),'Acta de Sesión de Práctica'); bar.appendChild(b2);
+  const b3=document.createElement('button'); b3.className='exportChip'; b3.textContent='📊 Solo resumen';
+  b3.title=reportIsEn()?'Exports only the Tools used section with mini-summaries (no transcript)':'Exporta solo la sección de Herramientas usadas con mini-resúmenes (sin transcripción)';
+  b3.onclick=()=>{ const md=actaSummaryMd(); downloadMarkdown(md,'resumen-herramientas'); if(reportIsEn()) toast('📊 Tools summary exported (Markdown)'); else toast('📊 Resumen de herramientas exportado (Markdown)'); }; bar.appendChild(b3);
   body.appendChild(bar);
   $('#chatLog').scrollTop=$('#chatLog').scrollHeight;
   return body;
