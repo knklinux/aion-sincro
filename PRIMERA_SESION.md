@@ -37,6 +37,8 @@ Qué hace:
   reutiliza siempre, así el puente y la app se entienden entre arranques.
 - Crea el acceso directo **`Aion Sincro.lnk`** en tu **Escritorio**.
 
+![Instalador de Aion Sincro en la consola](screenshots/paso1-instalador.png)
+
 > 💡 **Alternativa sin instalar:** también puedes usar la app directamente
 > desde el repo con el lanzador (Paso 3). Instalar solo la hace más estable.
 
@@ -99,6 +101,8 @@ sigue estos pasos manuales:
 5. **Guarda** (la clave se **cifra con WebCrypto** AES-GCM 256 en tu
    navegador; nadie más puede leerla sin tu contraseña maestra).
 
+![Asistente de primera configuración de Aion Sincro](screenshots/paso2-asistente.png)
+
 > 🔑 **Modelo por defecto:** Aion usa uno de Mistral gratis/compatible.
 > Si no hay clave Mistral, también puedes usar **Ollama** local
 > (`ollama pull hermes3`), **Groq**, **OpenRouter** o **HuggingFace**
@@ -138,6 +142,8 @@ En la app ya abierta:
 | **Micrófono** | Botón 🎤 | Se enciende al pulsarlo (requiere localhost) |
 | **Terminal** | Pestaña Terminal | Punto **verde** y «Puente conectado (127.0.0.1:8765)» |
 | **Piper** | Ajustes → Voz | Estado del servidor en verde / voz Piper disponible |
+
+![Pestaña Terminal con el puente conectado (punto verde)](screenshots/paso3-terminal.png)
 
 ### Prueba rápida de 30 segundos
 
