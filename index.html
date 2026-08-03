@@ -2824,8 +2824,27 @@ function sessionActaMd(){
     streak:en?'Streak':'Racha',
     avg:en?'Average time':'Tiempo medio',
     trans:en?'Transcript':'Transcripción',
+    tools:en?'Tools used':'Herramientas usadas',
+    laboral:en?'💼 Laboral mode active':'💼 Modo Laboral activo',
     foot:en?'Minutes generated with Aion Sincro — free & open-source · authorized labs only.':'Acta generada con Aion Sincro — gratuito y de código abierto · solo laboratorios autorizados.'
   };
+  /* Contexto de la sesión: herramientas usadas (modo Laboral o salidas de
+     herramientas pegadas). Recorre el historial con detectToolOutput() y
+     lista cada herramienta detectada con un fragmento de su salida real.
+     Solo se incluye la sección si hubo modo Laboral o alguna salida. */
+  const TOOL_NAMES={nmap:'Nmap',gobuster:'Gobuster',curl:'curl',nessus:'Nessus',burp:'Burp Suite'};
+  const toolsSeen=new Set();
+  const tools=[];
+  for(const m of h){
+    if(!m||!m.content) continue;
+    const t=detectToolOutput(m.content);
+    if(t&&!toolsSeen.has(t)){
+      toolsSeen.add(t);
+      const frag=String(m.content).replace(/\n{3,}/g,'\n\n').trim();
+      tools.push({tool:t, frag:frag.slice(0,600)});
+    }
+  }
+  const inLaboral=!!store.laboral;
   let md=`# ${L.title}\n\n> ${L.sub}\n\n## ${L.meta}\n\n`;
   md+=`| ${L.fecha} | ${fecha} |\n`;
   md+=`| ${L.turns} | ${turns} |\n`;
@@ -2834,6 +2853,18 @@ function sessionActaMd(){
   md+=`| ${L.streak} | 🔥 ${pracStreak()} ${en?'days':'días'} |\n`;
   md+=`| ${L.avg} | ${fmtPrac(pracAvgMs())} |\n`;
   if(dur) md+=`| ${L.dur} | ${fmtPrac(dur)} |\n`;
+  /* Sección de contexto: solo aparece si hubo modo Laboral o alguna salida de
+     herramienta pegada en la conversación. Lista las herramientas usadas con
+     un fragmento de su salida real (recortado a 600 chars). */
+  if(inLaboral||tools.length){
+    md+='\n## '+L.tools+'\n\n';
+    if(inLaboral) md+='> '+L.laboral+'\n\n';
+    if(!tools.length) md+='_'+(en?'No tool outputs were detected in this session.':'No se detectaron salidas de herramientas en esta sesión.')+'_\n\n';
+    else tools.forEach(x=>{
+      const cut=x.frag.length>=600?'\n\n── ['+(en?'truncated':'truncado')+' — '+(x.frag.length-600)+' '+ (en?'chars':'caracteres')+'] ──':'';
+      md+='- **'+TOOL_NAMES[x.tool]+'**\n\n```\n'+x.frag+cut+'\n```\n\n';
+    });
+  }
   md+='\n## '+L.trans+'\n\n';
   let n=0;
   for(const m of h){

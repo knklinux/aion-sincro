@@ -256,6 +256,15 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("acta: fila de sesión de práctica activa solo si hay sesión", /if\(dur\) md\+=\`\| \$\{L\.dur\} \| \$\{fmtPrac\(dur\)\} \|\\n\`/.test(script) && script.includes("const dur=pracSession()&&pracSession().start?Date.now()-pracSession().start:null;"));
   check("regresión: acta con modo Laboral refleja sesión de práctica completa", /const voiceCount=h\.filter\(m=>m&&m\.via==='voice'\)\.length;/.test(script) && /const turns=h\.filter\(m=>m&&m\.role==='user'\)\.length;/.test(script) && /const msgs=h\.filter\(m=>m&&m\.content\)\.length;/.test(script));
   check("sessionActaMd() escapa/vacía contenido sin romper Markdown", /String\(m\.content\)\.replace\(\/\\n\{3,\}/.test(script));
+  // Sección de contexto «Herramientas usadas»: refleja modo Laboral y salidas pegadas
+  check("acta: label de Herramientas usadas (es/en)", /tools:en\?'Tools used':'Herramientas usadas'/.test(script));
+  check("acta: detecta herramientas del historial con detectToolOutput()", /const t=detectToolOutput\(m\.content\);/.test(script) && /toolsSeen\.has\(t\)/.test(script));
+  check("acta: TOOL_NAMES cubre las 5 herramientas", /const TOOL_NAMES=\{nmap:'Nmap',gobuster:'Gobuster',curl:'curl',nessus:'Nessus',burp:'Burp Suite'\}/.test(script));
+  check("acta: sección solo si modo Laboral o hay herramientas", /if\(inLaboral\|\|tools\.length\)\{\s*md\+='\\n## '\+L\.tools/.test(script) && /const inLaboral=!!store\.laboral;/.test(script));
+  check("acta: fragmento de salida recortado a 600 chars con marca de truncado", /frag\.slice\(0,600\)/.test(script) && /x\.frag\.length>=600/.test(script) && /truncated/.test(script) && /truncado/.test(script));
+  check("acta: cada herramienta con bloque de código de su salida", /md\+='- \*\*'\+TOOL_NAMES\[x\.tool\]\+'\*\*\\n\\n```\\n'\+x\.frag/.test(script));
+  check("acta: sin salidas detectadas muestra aviso (es/en)", /'No tool outputs were detected in this session\.'/.test(script) && /'No se detectaron salidas de herramientas en esta sesión\.'/.test(script));
+  check("acta: modo Laboral reflejado con 💼", /laboral:en\?'💼 Laboral mode active':'💼 Modo Laboral activo'/.test(script) && /if\(inLaboral\) md\+='> '\+L\.laboral/.test(script));
   check("botones de acta en el footer de la Ruta", html.includes('id="btnActaMd"') && html.includes('id="btnActaPdf"'));
   check("btnActaMd/PDF exportan con sessionActaMd()", script.includes("$('#btnActaMd').onclick=()=>{ const md=sessionActaMd(); downloadMarkdown(md,'acta-sesion-practica'); };") && script.includes("$('#btnActaPdf').onclick=()=>{ const md=sessionActaMd(); exportPdf(md,'Acta de Sesión de Práctica'); };"));
   // Botón en el chat: exportar el acta directamente (MD/PDF) sin el overlay de Ruta
