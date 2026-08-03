@@ -2871,6 +2871,9 @@ function sessionActaMd(){
       md+='- **'+TOOL_NAMES[x.tool]+'**'+(x.sum?' — *'+x.sum+'*':'')+'\n\n```\n'+x.frag+cut+'\n```\n\n';
     });
   }
+  /* Contexto de la Ruta Red Team: checkpoints completados con sus tiempos de
+     práctica, agrupados por fase. Solo aparece si hay algún checkpoint hecho. */
+  md+=rutaContextMd(en);
   md+='\n## '+L.trans+'\n\n';
   let n=0;
   for(const m of h){
@@ -2884,6 +2887,41 @@ function sessionActaMd(){
   }
   if(!n) md+='_'+(en?'No conversation recorded yet.':'Aún no hay conversación registrada.')+'_\n\n';
   md+='---\n*'+L.foot+'*\n';
+  return md;
+}
+/* Contexto de la Ruta Red Team para el acta: lista los checkpoints completados
+   (learnDone/aion_ruta) con su tiempo de práctica (pracLog/aion_prac_log),
+   agrupados por fase. Solo se emite la sección si hay algún checkpoint hecho.
+   El tiempo es el último registro de práctica para ese checkpoint. Bilingüe. */
+function rutaContextMd(en){
+  const d=learnDone();
+  const log=pracLog()||[];
+  const doneIds=Object.keys(d).filter(k=>d[k]);
+  if(!doneIds.length) return '';
+  const timeById={};
+  for(const e of log){ if(e&&e.id&&e.ms!=null) timeById[e.id]=e.ms; }
+  const titleOf=id=>{ for(const p of RUTA_PENTEST) for(const m of p.modules){ const c=m.cp.find(x=>x.id===id||p.key+'-'+x.id===id); if(c) return (en?c.t_en:c.t).replace(/<\/?b>/g,''); } return id; };
+  /* Un checkpoint está completado si aparece con su forma canónica (p.key+'-'+c.id)
+     o con su id corto (c.id): el código históricamente ha usado ambas. */
+  const isDone=id=>{ for(const p of RUTA_PENTEST) for(const m of p.modules) for(const c of m.cp){
+    const canon=p.key+'-'+c.id;
+    if(id===canon||id===c.id) return !!(d[canon]||d[c.id]);
+  } return false; };
+  let md='\n## '+(en?'Red Team Route':'Ruta Red Team')+'\n\n';
+  md+='> '+(en?'Progress':'Progreso')+': **'+doneIds.length+'/'+learnTotal()+'** '+(en?'checkpoints':'checkpoints')+' · 🧭\n\n';
+  let any=false;
+  for(const p of RUTA_PENTEST){
+    const items=[];
+    for(const m of p.modules) for(const c of m.cp){
+      const canon=p.key+'-'+c.id;
+      if(!isDone(canon)) continue;
+      const t=timeById[canon]||timeById[c.id];
+      items.push('- **'+titleOf(canon)+'**'+(t!=null?' — ⏱️ '+fmtPrac(t):''));
+      any=true;
+    }
+    if(items.length) md+='### '+p.ico+' '+(en?p.name_en:p.name)+'\n\n'+items.join('\n')+'\n\n';
+  }
+  if(!any) md+='_'+(en?'Completed checkpoints with no practice times yet.':'Checkpoints completados sin tiempos de práctica registrados.')+'_\n\n';
   return md;
 }
 function showActaInChat(){

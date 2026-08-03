@@ -271,6 +271,14 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("acta: resumen calculado sobre el contenido completo (no el fragmento recortado)", script.includes("sum:toolMiniSummary(t,m.content)"));
   check("acta: resumen renderizado en cursiva junto al nombre de la herramienta", script.includes("(x.sum?' — *'+x.sum+'*':'')"));
   check("acta: toolMiniSummary respeta reportLang", script.includes("const en=reportIsEn();") && script.includes("open port(s)") && script.includes("puerto(s) abierto(s)"));
+  // Contexto de la Ruta Red Team: checkpoints completados con sus tiempos
+  check("acta: rutaContextMd() definida", /function\s+rutaContextMd\s*\(/.test(script));
+  check("acta: rutaContextMd lee learnDone() y pracLog()", /const d=learnDone\(\);/.test(script) && /const log=pracLog\(\)\|\|\[\];/.test(script));
+  check("acta: rutaContextMd agrupa por fase (p.ico + nombre)", /md\+='### '\+p\.ico\+' '\+\(en\?p\.name_en:p\.name\)/.test(script));
+  check("acta: rutaContextMd resuelve el título con c.t/c.t_en", /return \(en\?c\.t_en:c\.t\)\.replace/.test(script));
+  check("acta: rutaContextMd usa el tiempo de práctica (fmtPrac)", /timeById\[e\.id\]=e\.ms/.test(script) && /⏱️ '\+fmtPrac\(t\)/.test(script));
+  check("acta: sección Ruta invocada antes de la transcripción", script.includes("md+=rutaContextMd(en);") && script.includes("md+='\\n## '+L.trans+'\\n\\n';"));
+  check("acta: rutaContextMd bilingüe (Red Team Route / Ruta Red Team)", script.includes("'Red Team Route'") && script.includes("'Ruta Red Team'"));
   check("botones de acta en el footer de la Ruta", html.includes('id="btnActaMd"') && html.includes('id="btnActaPdf"'));
   check("btnActaMd/PDF exportan con sessionActaMd()", script.includes("$('#btnActaMd').onclick=()=>{ const md=sessionActaMd(); downloadMarkdown(md,'acta-sesion-practica'); };") && script.includes("$('#btnActaPdf').onclick=()=>{ const md=sessionActaMd(); exportPdf(md,'Acta de Sesión de Práctica'); };"));
   // Botón en el chat: exportar el acta directamente (MD/PDF) sin el overlay de Ruta
@@ -944,6 +952,34 @@ await (async () => {
       const curSum = fns.toolMiniSummary("curl", curlSample);
       check("toolMiniSummary curl: estado + server + cabeceras ausentes", !!curSum && curSum.includes("HTTP 200") && curSum.includes("nginx/1.24.0") && curSum.includes("4 cabecera(s) ausente(s)"));
       check("toolMiniSummary: texto irrelevante -> vacío", fns.toolMiniSummary("nmap", "hola que tal") === "" && fns.toolMiniSummary("gobuster", "nada") === "");
+
+      // Ruta Red Team en el acta: rutaContextMd (checkpoints completados + tiempos)
+      const rutaFns = ["rutaContextMd"];
+      const rutaSrcs = rutaFns.map(n => [n, extractFn(script, n)]);
+      check("rutaContextMd extraíble del <script>", rutaSrcs.every(([, s]) => !!s));
+      if (rutaSrcs.every(([, s]) => !!s)) {
+        try {
+          const rutaBase = `"use strict";
+            const RUTA_PENTEST=[{key:'recon',ico:'🔭',name:'Reconocimiento',name_en:'Reconnaissance',modules:[{cp:[{id:'r1',t:'Check <b>A</b>',t_en:'Check <b>A</b>'},{id:'r2',t:'Check B',t_en:'Check B'}]}]}];
+            const learnDone=()=>(${JSON.stringify({ "recon-r1": true, "recon-r2": true })});
+            const pracLog=()=>(${JSON.stringify([{ id: "recon-r1", ms: 125000, date: "2026-08-03" }, { id: "recon-r2", ms: 60000, date: "2026-08-03" }])});
+            const learnTotal=()=>2;
+            const fmtPrac=ms=>Math.round(ms/1000)+'s';
+            ${rutaSrcs.map(([, s]) => s).join("\n")};
+            return {rutaContextMd};`;
+          const rutaFns2 = new Function(rutaBase)();
+          const rmd = rutaFns2.rutaContextMd(false);
+          check("rutaContextMd: lista checkpoints completados agrupados por fase", !!rmd && rmd.includes("## Ruta Red Team") && rmd.includes("### 🔭 Reconocimiento") && rmd.includes("Check A") && rmd.includes("Check B"), (rmd || "").slice(0, 200));
+          check("rutaContextMd: incluye el tiempo de práctica de cada checkpoint", !!rmd && rmd.includes("125s") && rmd.includes("60s"));
+          check("rutaContextMd: progreso n/total", !!rmd && rmd.includes("**2/2**"));
+          const rmdEn = rutaFns2.rutaContextMd(true);
+          check("rutaContextMd: respeta idioma en (Reconnaissance)", !!rmdEn && rmdEn.includes("Reconnaissance") && rmdEn.includes("Red Team Route"));
+          const rutaNone = rutaBase.replace("(" + JSON.stringify({ "recon-r1": true, "recon-r2": true }) + ")", "({})");
+          check("rutaContextMd: sin checkpoints completados -> sección vacía", new Function(rutaNone)().rutaContextMd(false) === "");
+        } catch (e) {
+          check("rutaContextMd ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
+        }
+      }
     } catch (e) {
       check("parsers dinámicos ejecutan sin error", false, (e && e.message || e).toString().slice(0, 200));
     }
