@@ -315,10 +315,15 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("acta: resumen ordena y limita a las 5 más críticas", /RANK\[a\.sev\]-RANK\[b\.sev\]\|\|b\.cvss-a\.cvss/.test(script) && script.includes(".slice(0,5)") && script.includes("const counts={}; for(const s of ORDER) counts[s]=0;"));
   check("acta: resumen bilingüe (Executive summary / Resumen ejecutivo)", script.includes("'Executive summary of findings (Nessus · Burp Suite)'") && script.includes("'Resumen ejecutivo de hallazgos (Nessus · Burp Suite)'") && script.includes("'Most critical findings'") && script.includes("'Hallazgos más críticos'"));
   // Cruce Nessus × Burp por host en el resumen ejecutivo (duplicados/correlaciones)
-  check("acta: severityCrossMd() definida y llamada desde severitySummaryMd", /function\s+severityCrossMd\s*\(/.test(script) && script.includes("md+=severityCrossMd(en);"));
+  check("acta: severityCrossMd() definida y llamada desde severitySummaryMd", /function\s+severityCrossMd\s*\(/.test(script) && script.includes("md+=severityCrossMd(en, minSev);"));
   check("acta: cruce normaliza host (esquema/puerto/barra) y agrupa por host", script.includes("hostKey=x=>String(x||'').toLowerCase().replace(/^https?:\\/\\//") && script.includes("byHost[hk]=byHost[hk]||[]") && script.includes("filter(hk=>byHost[hk].some(f=>f.tool==='nessus')&&byHost[hk].some(f=>f.tool==='burp'))"));
   check("acta: cruce detecta duplicados (nombre normalizado igual o contención) y correlación de severidad", script.includes("const dups=[]") && script.includes("nk===bk||(nk.length>=6&&bk.length>=6&&(nk.includes(bk)||bk.includes(nk)))") && script.includes("'Possible duplicate(s): '") && script.includes("'Correlation: critical/high in both tools"));
   check("acta: cruce bilingüe y con caso vacío", script.includes("'Cross-analysis: Nessus × Burp Suite (shared hosts)'") && script.includes("'Análisis cruzado: Nessus × Burp Suite (hosts compartidos)'") && script.includes("if(!shared.length) return '';"));
+  // Filtro por severidad mínima en el resumen ejecutivo del acta (minSev)
+  check("acta: severitySummaryMd acepta minSev y filtra por rango", /function\s+severitySummaryMd\s*\(all\s*,\s*en\s*,\s*title\s*,\s*minSev\)/.test(script) && script.includes("norm=norm.filter(f=>RANK[f.sev]<=mr)") && script.includes("const mr=RANK[sevOf(minSev)]"));
+  check("acta: severityCrossMd acepta minSev y respeta el umbral", /function\s+severityCrossMd\s*\(en\s*,\s*minSev\)/.test(script) && script.includes("const minRank=minSev?(RANK[sevOf(minSev)]") && script.includes("const keep=f=>RANK[f.sev]<=minRank") && script.includes("if(!keep({sev})) continue;"));
+  check("acta: actaSeveritySummaryMd acepta minSev y refleja el filtro en el título", /function\s+actaSeveritySummaryMd\s*\(en\s*,\s*minSev\)/.test(script) && script.includes("' — '+minSev+' and above only'") && script.includes("({Critical:'críticos',High:'críticos/altos'"));
+  check("acta: chip «Solo críticos/altos» en la export bar", script.includes("'🔴 Solo críticos/altos'") && script.includes("actaSeveritySummaryMd(reportIsEn(),'High')") && script.includes("downloadMarkdown(md,'resumen-criticos-altos')"));
   // Filtro «acta limpia»: omitir salidas crudas de herramientas de la transcripción
   check("actaClean:false por defecto en store", /actaClean:false,/.test(script));
   check("toggle btnActaClean presente en Ajustes (Informes PDF)", html.includes('id="btnActaClean"') && html.includes('✂️ Acta: omitir salidas crudas de herramientas en la transcripción'));
@@ -547,7 +552,7 @@ check("dispatcher detectToolOutput() detecta las 4 herramientas", /function\s+de
   check("severitySummaryMd() definida (bloque compartido informe+acta)", /function\s+severitySummaryMd\s*\(/.test(script));
   check("nessusReconReport usa severitySummaryMd con título (Nessus)", script.includes("md+=severitySummaryMd(sevAll, en, en?'Executive summary of findings (Nessus)'") && script.includes("meta:'Nessus · Plugin #'+f.id"));
   check("burpReconReport usa severitySummaryMd con título (Burp Suite)", script.includes("md+=severitySummaryMd(sevAll, en, en?'Executive summary of findings (Burp Suite)'") && script.includes("meta:'Burp Suite'"));
-  check("actaSeveritySummaryMd delega en severitySummaryMd", script.includes("return severitySummaryMd(all, en, en?'Executive summary of findings (Nessus · Burp Suite)'") && /function\s+severitySummaryMd\s*\(/.test(script));
+  check("actaSeveritySummaryMd delega en severitySummaryMd (con minSev opcional)", script.includes("return severitySummaryMd(all, en, title)") && script.includes("return severitySummaryMd(all, en, title+suf, minSev)") && /function\s+severitySummaryMd\s*\(all\s*,\s*en\s*,\s*title\s*,\s*minSev\)/.test(script));
 check("informe gobuster: tabla de rutas + resumen ejecutivo", script.includes("# Informe de Enumeración de Directorios — Gobuster") && script.includes("| Ruta | Estado | Tamaño | Redirección |") && script.includes("## 2. Hallazgos interesantes"));
 check("informe nessus: tabla de hallazgos + detalle críticos/altos", script.includes("# Informe de Escaneo de Vulnerabilidades — Nessus") && script.includes("| Severidad | Plugin | Nombre | CVSS | Host |") && script.includes("## 2. Detalle de críticos/altos"));
 check("informe burp: tabla de hallazgos + detalle altos/críticos", script.includes("# Informe de Seguridad de Aplicación — Burp Suite") && script.includes("| Severidad | Hallazgo | Host | Ruta |") && script.includes("## 2. Detalle de hallazgos altos/críticos"));
@@ -1226,6 +1231,13 @@ await (async () => {
           check("actaSeveritySummaryMd: críticos listados primero (SQL Injection antes que XSS)", !!md && md.indexOf("SQL Injection") < md.indexOf("XSS Reflected"));
           check("actaSeveritySummaryMd: meta de herramienta y host", !!md && md.includes("Nessus · Plugin #1") && md.includes("`10.0.0.5`") && md.includes("Burp Suite"));
           check("actaSeveritySummaryMd: respeta idioma EN", !!md && sevFns2.actaSeveritySummaryMd(true).includes("Executive summary of findings (Nessus · Burp Suite)") && sevFns2.actaSeveritySummaryMd(true).includes("critical"));
+          // Filtro por severidad mínima: solo críticos/altos
+          const mdHigh = sevFns2.actaSeveritySummaryMd(false,'High');
+          check("actaSeveritySummaryMd: minSev='High' filtra a críticos/altos", !!mdHigh && mdHigh.includes("solo críticos/altos") && mdHigh.includes("🔴 1 crítico(s)") && mdHigh.includes("🟠 1 alto(s)") && mdHigh.includes("🟡 0 medio(s)") && mdHigh.includes("🔵 0 bajo(s)") && mdHigh.includes("2 hallazgos en total") && !mdHigh.includes("Weak SSL Cipher") && !mdHigh.includes("Info Disclosure"), (mdHigh || "").slice(0, 260));
+          const mdHighEn = sevFns2.actaSeveritySummaryMd(true,'High');
+          check("actaSeveritySummaryMd: minSev EN ('— High and above only')", !!mdHighEn && mdHighEn.includes("High and above only") && mdHighEn.includes("2 findings total") && !mdHighEn.includes("Weak SSL Cipher"));
+          const mdCrit = sevFns2.actaSeveritySummaryMd(false,'Critical');
+          check("actaSeveritySummaryMd: minSev='Critical' deja solo el crítico", !!mdCrit && mdCrit.includes("solo críticos") && mdCrit.includes("🔴 1 crítico(s)") && mdCrit.includes("🟠 0 alto(s)") && mdCrit.includes("1 hallazgo en total") && !mdCrit.includes("XSS Reflected"));
           const sevNone = `"use strict";
             const store={history:[{role:'user',content:'pregunta normal sin salida de herramientas'}]};
             function parseNessusOutput(t){ return null; }

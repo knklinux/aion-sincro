@@ -2970,7 +2970,7 @@ function nmapPortsTableMd(en){
    (crítico/alto/medio/bajo/info) y lista las 5 más críticas. Lo usan el acta
    (actaSeveritySummaryMd) y los informes de reconocimiento de Nessus/Burp.
    Bilingüe (reportLang). Devuelve '' si no hay hallazgos. */
-function severitySummaryMd(all, en, title){
+function severitySummaryMd(all, en, title, minSev){
   const ORDER=['Critical','High','Medium','Low','Info'];
   const EMOJI={Critical:'🔴',High:'🟠',Medium:'🟡',Low:'🔵',Info:'ℹ️'}
   const RANK={Critical:0,High:1,Medium:2,Low:3,Info:4};
@@ -2980,8 +2980,12 @@ function severitySummaryMd(all, en, title){
     if(/medium|moderate/i.test(t)) return 'Medium';
     if(/low/i.test(t)) return 'Low';
     return 'Info'; };
-  const norm=(all||[]).map(f=>({sev:sevOf(f.severity),name:f.name||'—',host:f.host||'',
+  let norm=(all||[]).map(f=>({sev:sevOf(f.severity),name:f.name||'—',host:f.host||'',
     cvss:parseFloat(f.cvss)||0,meta:f.meta||'',path:f.path||''}));
+  /* Filtro opcional por severidad mínima (p. ej. minSev='High' → solo
+     críticos/altos): descarta los hallazgos con rango inferior al umbral
+     antes de contar y listar. El cruce por host respeta el mismo filtro. */
+  if(minSev){ const mr=RANK[sevOf(minSev)]!=null?RANK[sevOf(minSev)]:99; norm=norm.filter(f=>RANK[f.sev]<=mr); }
   if(!norm.length) return '';
   const counts={}; for(const s of ORDER) counts[s]=0;
   for(const f of norm) counts[f.sev]++;
@@ -3010,7 +3014,7 @@ function severitySummaryMd(all, en, title){
      CORRELACIONES (severidad crítica/alta en ambas). Se muestra al final del
      bloque de severidad (acta y informes de reconocimiento). Devuelve '' si no
      hay ningún host compartido. Bilingüe (reportLang). */
-  md+=severityCrossMd(en);
+  md+=severityCrossMd(en, minSev);
   return md;
 }
 /* Cruce de hallazgos Nessus × Burp Suite por host para el resumen ejecutivo.
@@ -3021,7 +3025,7 @@ function severitySummaryMd(all, en, title){
    duplicados (nombre normalizado igual o con contención) y correlaciones
    (crítico/alto en ambas). Devuelve '' si no hay hosts compartidos.
    Bilingüe (reportLang). */
-function severityCrossMd(en){
+function severityCrossMd(en, minSev){
   const h=store.history||[];
   const hostKey=x=>String(x||'').toLowerCase().replace(/^https?:\/\//,'').replace(/:\d+$/,'').replace(/\/+$/,'').trim();
   const nameKey=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
@@ -3031,6 +3035,10 @@ function severityCrossMd(en){
     if(/medium|moderate/i.test(t)) return 'Medium';
     if(/low/i.test(t)) return 'Low';
     return 'Info'; };
+  const RANK={Critical:0,High:1,Medium:2,Low:3,Info:4};
+  /* Mismo filtro que severitySummaryMd: solo hallazgos con rango <= al umbral. */
+  const minRank=minSev?(RANK[sevOf(minSev)]!=null?RANK[sevOf(minSev)]:99):99;
+  const keep=f=>RANK[f.sev]<=minRank;
   const byHost={}; const seen=new Set();
   for(const m of h){
     if(!m||!m.content) continue;
@@ -3038,16 +3046,18 @@ function severityCrossMd(en){
     if(nessus) for(const f of nessus){
       const key='nessus|'+f.id+'|'+f.host+'|'+f.name;
       if(seen.has(key)) continue; seen.add(key);
+      const sev=sevOf(f.severity); if(!keep({sev})) continue;
       const hk=hostKey(f.host); if(!hk) continue;
-      (byHost[hk]=byHost[hk]||[]).push({tool:'nessus',sev:sevOf(f.severity),name:f.name||'—',
+      (byHost[hk]=byHost[hk]||[]).push({tool:'nessus',sev:sev,name:f.name||'—',
         cvss:parseFloat(f.cvss)||0,meta:'Nessus · Plugin #'+f.id,orig:f.host});
     }
     const burp=parseBurpOutput(m.content);
     if(burp) for(const i of burp){
       const key='burp|'+i.name+'|'+i.host;
       if(seen.has(key)) continue; seen.add(key);
+      const sev=sevOf(i.severity); if(!keep({sev})) continue;
       const hk=hostKey(i.host); if(!hk) continue;
-      (byHost[hk]=byHost[hk]||[]).push({tool:'burp',sev:sevOf(i.severity),name:i.name||'—',
+      (byHost[hk]=byHost[hk]||[]).push({tool:'burp',sev:sev,name:i.name||'—',
         cvss:0,path:i.path||'',meta:'Burp Suite',orig:i.host});
     }
   }
@@ -3080,7 +3090,7 @@ function severityCrossMd(en){
   });
   return md;
 }
-function actaSeveritySummaryMd(en){
+function actaSeveritySummaryMd(en, minSev){
   const h=store.history||[];
   const all=[]; const seen=new Set();
   for(const m of h){
@@ -3100,7 +3110,15 @@ function actaSeveritySummaryMd(en){
         cvss:'',meta:en?'Burp Suite':'Burp Suite',path:i.path||''});
     }
   }
-  return severitySummaryMd(all, en, en?'Executive summary of findings (Nessus · Burp Suite)':'Resumen ejecutivo de hallazgos (Nessus · Burp Suite)');
+  /* minSev filtra a solo hallazgos desde una severidad (p. ej. 'High' =
+     críticos/altos); el sufijo del título lo refleja para que el export
+     filtrado se distinga del completo. */
+  const title=en?'Executive summary of findings (Nessus · Burp Suite)':'Resumen ejecutivo de hallazgos (Nessus · Burp Suite)';
+  if(minSev){
+    const suf=en?(' — '+minSev+' and above only'):(' — solo '+({Critical:'críticos',High:'críticos/altos',Medium:'desde medio',Low:'desde bajo'})[minSev]||minSev);
+    return severitySummaryMd(all, en, title+suf, minSev);
+  }
+  return severitySummaryMd(all, en, title);
 }
 /* Contexto de la Ruta Red Team para el acta: lista los checkpoints completados
    (learnDone/aion_ruta) con su tiempo de práctica (pracLog/aion_prac_log),
@@ -3245,6 +3263,9 @@ function showActaInChat(){
   const b3=document.createElement('button'); b3.className='exportChip'; b3.textContent='📊 Solo resumen';
   b3.title=reportIsEn()?'Exports only the Tools used section with mini-summaries (no transcript)':'Exporta solo la sección de Herramientas usadas con mini-resúmenes (sin transcripción)';
   b3.onclick=()=>{ const md=actaSummaryMd(); downloadMarkdown(md,'resumen-herramientas'); if(reportIsEn()) toast('📊 Tools summary exported (Markdown)'); else toast('📊 Resumen de herramientas exportado (Markdown)'); }; bar.appendChild(b3);
+  const b4=document.createElement('button'); b4.className='exportChip'; b4.textContent='🔴 Solo críticos/altos';
+  b4.title=reportIsEn()?'Exports only Critical/High findings (Nessus/Burp) with cross-analysis — executive summary filtered':'Exporta solo los hallazgos críticos/altos (Nessus/Burp) con su análisis cruzado — resumen ejecutivo filtrado';
+  b4.onclick=()=>{ const md=actaSeveritySummaryMd(reportIsEn(),'High'); downloadMarkdown(md,'resumen-criticos-altos'); if(reportIsEn()) toast('🔴 Critical/High findings exported (Markdown)'); else toast('🔴 Hallazgos críticos/altos exportados (Markdown)'); }; bar.appendChild(b4);
   body.appendChild(bar);
   $('#chatLog').scrollTop=$('#chatLog').scrollHeight;
   return body;
