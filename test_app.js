@@ -283,6 +283,15 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("acta: actaSummaryMd bilingüe", script.includes("'Tools Used — Session Summary'") && script.includes("'Herramientas Usadas — Resumen de Sesión'") && script.includes("(no transcript)") && script.includes("(sin transcripción)"));
   check("acta: actaSummaryMd con aviso si no hay herramientas ni Laboral", /'No tools or Laboral mode in this session\.'/.test(script) && /'Sin herramientas ni modo Laboral en esta sesión\.'/.test(script));
   check("acta: chip '📊 Solo resumen' en la export bar del acta", /b3\.textContent='📊 Solo resumen'/.test(script) && script.includes("actaSummaryMd()") && /downloadMarkdown\(md,'resumen-herramientas'\)/.test(script));
+  // Sección comparativa del acta: cruce nmap×gobuster (puertos web + rutas 200/403)
+  check("acta: actaCrossCompareMd() definida", /function\s+actaCrossCompareMd\s*\(/.test(script));
+  check("acta: actaCrossCompareMd usa parseNmapOutput + parseGobusterOutput", script.includes("hosts=parseNmapOutput(m.content)") && script.includes("gbRows=parseGobusterOutput(m.content)"));
+  check("acta: cruce solo con puertos web (http/https/ssl o 80/443/8080/8443)", /\/http\|https\|ssl\/i\.test\(svc\)/.test(script) && script.includes("[80,443,8080,8443].includes(p.port)") && script.includes("p.state==='open'&&isWeb"));
+  check("acta: solo rutas calientes 200/403 de gobuster", script.includes("r.status===200||r.status===403") && script.includes("const hot=gbRows.filter"));
+  check("acta: esquema https para 443/8443 y http para el resto", /scheme=\(\/https\|ssl\/i\.test\(w\.service\)\|\|w\.port===443/.test(script) && script.includes("'https':'http'"));
+  check("acta: tabla bilingüe de cruce (Cross-reference / Cruce de referencias)", script.includes("'Cross-reference (Nmap × Gobuster)'") && script.includes("'Cruce de referencias (Nmap × Gobuster)'") && script.includes("'| Host | URL | Status |\\n|---|---|---|\\n'") && script.includes("'| Host | URL | Estado |\\n|---|---|---|\\n'"));
+  check("acta: sección comparativa invocada antes de la Ruta", script.includes("md+=actaCrossCompareMd(en);") && script.indexOf("md+=actaCrossCompareMd(en);") < script.indexOf("md+=rutaContextMd(en);"));
+  check("acta: sin cruce (falta nmap o gobuster) devuelve vacío", /if\(!hosts\|\|!gbRows\) return '';/.test(script) && /if\(!web\.length\) return '';/.test(script) && /if\(!hot\.length\) return '';/.test(script) && /if\(!rows\.length\) return '';/.test(script));
   // Contexto de la Ruta Red Team: checkpoints completados con sus tiempos
   check("acta: rutaContextMd() definida", /function\s+rutaContextMd\s*\(/.test(script));
   check("acta: rutaContextMd lee learnDone() y pracLog()", /const d=learnDone\(\);/.test(script) && /const log=pracLog\(\)\|\|\[\];/.test(script));
@@ -549,6 +558,11 @@ check("execSummary detecta la herramienta y es bilingüe", script.includes("cons
 check("execSummary: nmap con 3 frases + pregunta", script.includes("return [s1,s2,s3,q].join(' ');") && script.includes("Informe de Nmap listo: ") && script.includes("Los servicios más expuestos son ") && script.includes("El sistema detectado es "));
 check("execSummary: ramas por herramienta (gobuster/curl/nessus/burp)", script.includes("if(tool==='gobuster')") && script.includes("if(tool==='curl')") && script.includes("if(tool==='nessus')") && script.includes("if(tool==='burp')"));
 check("execSummary: null/'' con texto irrelevante", /function\s+execSummary[\s\S]*?return '';/.test(script));
+// --- Mini-resumen por herramienta en informe y portada PDF (no solo en el acta) ---
+check("toolsUsedSummaryMd() definida y bilingüe", /function\s+toolsUsedSummaryMd\s*\(/.test(script) && script.includes("detectToolOutput(m.content)") && script.includes("toolMiniSummary(t,m.content)") && script.includes("'Tools used'") && script.includes("'Herramientas usadas'"));
+check("withToolsSummary() inserta tras el resumen ejecutivo", /function\s+withToolsSummary\s*\(/.test(script) && script.includes("md.indexOf('\\n## ')") && script.includes("report=withToolsSummary(report)") && script.includes("withToolsSummary(nmapReconReport(out))"));
+check("pdfCoverToolsHtml() en la portada + CSS .pc-tools", /function\s+pdfCoverToolsHtml\s*\(/.test(script) && script.includes("+pdfCoverToolsHtml()") && script.includes(".pdf-cover .pc-tools{") && script.includes("Herramientas usadas en esta sesión") && script.includes("Tools used in this session"));
+check("pdfCoverToolsHtml escapa con escH (XSS)", script.includes("escH(TOOL_NAMES[x.tool]||x.tool)"));
 check("Laboral habla el resumen ejecutivo tras generar el informe", script.includes("const spoken=execSummary(text)||") && script.includes("speak(spoken);") && script.includes("He generado el informe de reconocimiento desde tu salida de "));
 
 // --- Re-escaneo nmap desde la barra del informe (flags nuevos en el terminal) ---
@@ -560,7 +574,7 @@ check("nmapRescan sanea flags y host (anti-inyección, puente shell=True)", scri
 check("botón nmap quita '(ip)' del host antes de re-escanear", script.includes("nmapRescan(nmapH[1].split("));
 check("nmapRescan avisa si el terminal está ocupado", script.includes("if(termBusy){ toast('⏳ El terminal está ocupado") );
 check("nmapRescan vuelve al chat con el informe regenerado", script.includes("switchTab('chat'); // volvemos al chat para ver el informe regenerado"));
-check("nmapRescan regenera el informe con la salida fresca", script.includes("const fresh=nmapReconReport(out)") && script.includes("renderTermChips(body, fresh)"));
+check("nmapRescan regenera el informe con la salida fresca", script.includes("const fresh=withToolsSummary(nmapReconReport(out))") && script.includes("renderTermChips(body, fresh)"));
 check("nmapRescan usa prompt por defecto -sV -sC -p-", script.includes("prompt('Flags de nmap para el re-escaneo (p. ej. -sV -sC -p-):','-sV -sC -p-')"));
 
 // --- Modo Laboral: idioma de los informes (es/en) ---
@@ -988,6 +1002,43 @@ await (async () => {
       check("toolMiniSummary curl: estado + server + cabeceras ausentes", !!curSum && curSum.includes("HTTP 200") && curSum.includes("nginx/1.24.0") && curSum.includes("4 cabecera(s) ausente(s)"));
       check("toolMiniSummary: texto irrelevante -> vacío", fns.toolMiniSummary("nmap", "hola que tal") === "" && fns.toolMiniSummary("gobuster", "nada") === "");
 
+      // Mini-resumen por herramienta en informe y portada PDF (toolsUsedSummaryMd / withToolsSummary / pdfCoverToolsHtml)
+      const toolsSecFns = ["toolsUsedSummaryMd", "withToolsSummary", "pdfCoverToolsHtml"];
+      const toolsSecSrcs = toolsSecFns.map(n => [n, extractFn(script, n)]);
+      check("toolsUsedSummaryMd/withToolsSummary/pdfCoverToolsHtml extraíbles", toolsSecSrcs.every(([, s]) => !!s));
+      if (toolsSecSrcs.every(([, s]) => !!s)) {
+        try {
+          const toolsBase = `"use strict";
+            const store=arguments[0];
+            function reportIsEn(){return false;}
+            function escH(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+            ${dynSrcs.map(([, s]) => s).join("\n")};
+            ${toolsSecSrcs.map(([, s]) => s).join("\n")};
+            return {toolsUsedSummaryMd,withToolsSummary,pdfCoverToolsHtml};`;
+          const histTools = {
+            lang: "es-ES",
+            history: [
+              { role: "user", content: "Nmap scan report for 10.0.0.1\nPORT     STATE SERVICE\n80/tcp   open  http        Apache httpd 2.4.41\n22/tcp   open  ssh         OpenSSH 8.2p1\n" },
+              { role: "user", content: "/admin (Status: 200) [Size: 5123]\n/login (Status: 301) [Size: 178] [--> /login/]\n" }
+            ]
+          };
+          const fnsT = new Function(toolsBase)(histTools);
+          const tsm = fnsT.toolsUsedSummaryMd(false);
+          check("toolsUsedSummaryMd: lista herramientas con mini-resumen", !!tsm && tsm.includes("## Herramientas usadas") && tsm.includes("**Nmap**") && tsm.includes("**Gobuster**") && tsm.includes("puerto(s) abierto(s)"), (tsm || "").slice(0, 220));
+          const tsmEn = new Function(toolsBase.replace("function reportIsEn(){return false;}", "function reportIsEn(){return true;}"))(histTools).toolsUsedSummaryMd(true);
+          check("toolsUsedSummaryMd: versión en inglés", !!tsmEn && tsmEn.includes("## Tools used") && tsmEn.includes("open port"), (tsmEn || "").slice(0, 220));
+          const wts = fnsT.withToolsSummary("# Informe de Reconocimiento — Nmap\n\n> **Resumen ejecutivo:** 1 host(s)\n\n## 1. Alcance y contexto\n\ncuerpo");
+          check("withToolsSummary inserta tras el resumen ejecutivo", !!wts && wts.indexOf("## Herramientas usadas") < wts.indexOf("## 1. Alcance") && wts.includes("**Nmap**"), (wts || "").slice(0, 220));
+          const wtsNone = new Function(toolsBase)({ lang: "es-ES", history: [{ role: "user", content: "hola" }] }).withToolsSummary("# Título\n\n## 1. Sección\n\ncuerpo");
+          check("withToolsSummary: sin herramientas deja el informe intacto", wtsNone === "# Título\n\n## 1. Sección\n\ncuerpo");
+          const cov = fnsT.pdfCoverToolsHtml();
+          check("pdfCoverToolsHtml: HTML de herramientas en la portada", !!cov && cov.includes("pc-tools") && cov.includes("Herramientas usadas en esta sesión") && cov.includes("<span>Nmap") && cov.includes("<span>Gobuster"), (cov || "").slice(0, 220));
+          check("pdfCoverToolsHtml: sin herramientas -> vacío", new Function(toolsBase)({ lang: "es-ES", history: [] }).pdfCoverToolsHtml() === "");
+        } catch (e) {
+          check("toolsUsedSummaryMd harness ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
+        }
+      }
+
       // Resumen ejecutivo hablado del informe: execSummary (3 frases + pregunta)
       const execFns = ["execSummary"];
       const execSrcs = execFns.map(n => [n, extractFn(script, n)]);
@@ -1156,6 +1207,49 @@ await (async () => {
           check("actaSummaryMd: sin herramientas ni Laboral -> aviso", !!sumNone && sumNone.includes("Sin herramientas ni modo Laboral en esta sesión."));
         } catch (e) {
           check("actaSummaryMd ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
+        }
+      }
+
+      // Sección comparativa del acta: actaCrossCompareMd (nmap × gobuster)
+      const actaCrossFns = ["actaCrossCompareMd"];
+      const actaCrossSrcs = actaCrossFns.map(n => [n, extractFn(script, n)]);
+      check("actaCrossCompareMd extraíble del <script>", actaCrossSrcs.every(([, s]) => !!s));
+      if (actaCrossSrcs.every(([, s]) => !!s)) {
+        try {
+          const actaCrossBase = `"use strict";
+            const store={history:[
+              {role:'user',content:'Nmap scan report for 10.0.0.1\\nPORT     STATE SERVICE\\n80/tcp   open  http        Apache httpd 2.4.41\\n443/tcp  open  ssl/http   Apache httpd 2.4.41\\n22/tcp   open  ssh         OpenSSH 8.2p1\\n'},
+              {role:'user',content:'/admin (Status: 200) [Size: 5123]\\n/login (Status: 200) [Size: 178]\\n/backup (Status: 403) [Size: 212]\\n'}
+            ]};
+            function parseNmapOutput(t){ if(!/Nmap scan report for/i.test(String(t||''))) return null; return [{host:'10.0.0.1',ports:[{port:80,proto:'tcp',state:'open',service:'http Apache httpd 2.4.41'},{port:443,proto:'tcp',state:'open',service:'ssl/http Apache httpd'},{port:22,proto:'tcp',state:'open',service:'ssh OpenSSH'}]}]; }
+            function parseGobusterOutput(t){ if(!/\\/admin/.test(String(t||''))) return null; return [{path:'/admin',status:200,size:5123},{path:'/login',status:200,size:178},{path:'/backup',status:403,size:212}]; }
+            ${actaCrossSrcs.map(([, s]) => s).join("\n")};
+            return {actaCrossCompareMd};`;
+          const actaCrossFns2 = new Function(actaCrossBase)();
+          const cr = actaCrossFns2.actaCrossCompareMd(false);
+          check("actaCrossCompareMd: tabla de cruce con rutas 200/403 en puertos web", !!cr && cr.includes("## Cruce de referencias (Nmap × Gobuster)") && cr.includes("http://10.0.0.1/admin") && cr.includes("https://10.0.0.1/login") && cr.includes("| 403 |") && cr.includes("http://10.0.0.1/backup"), (cr || "").slice(0, 220));
+          check("actaCrossCompareMd: NO cruza puertos no web (22/ssh)", !!cr && !cr.includes("10.0.0.1:22") && (cr.match(/admin/g) || []).length <= 2);
+          const crEn = new Function(actaCrossBase.replace("function parseGobusterOutput", "function parseGobusterOutput"))();
+          check("actaCrossCompareMd: tabla de cruce en inglés", !!crEn.actaCrossCompareMd(true) && crEn.actaCrossCompareMd(true).includes("## Cross-reference (Nmap × Gobuster)") && crEn.actaCrossCompareMd(true).includes("| Host | URL | Status |"), (crEn.actaCrossCompareMd(true) || "").slice(0, 220));
+          const actaCrossNmapOnly = `"use strict";
+            const store={history:[{role:'user',content:'Nmap scan report for 10.0.0.1\\nPORT     STATE SERVICE\\n80/tcp   open  http\\n'}]};
+            function parseNmapOutput(t){ return [{host:'10.0.0.1',ports:[{port:80,proto:'tcp',state:'open',service:'http'}]}]; }
+            function parseGobusterOutput(t){ return null; }
+            ${actaCrossSrcs.map(([, s]) => s).join("\n")};
+            return {actaCrossCompareMd};`;
+          check("actaCrossCompareMd: sin gobuster -> sección vacía", new Function(actaCrossNmapOnly)().actaCrossCompareMd(false) === "");
+          const actaCrossNoWeb = `"use strict";
+            const store={history:[
+              {role:'user',content:'Nmap scan report for 10.0.0.1\\nPORT     STATE SERVICE\\n22/tcp   open  ssh\\n'},
+              {role:'user',content:'/admin (Status: 200) [Size: 5123]\\n'}
+            ]};
+            function parseNmapOutput(t){ return [{host:'10.0.0.1',ports:[{port:22,proto:'tcp',state:'open',service:'ssh'}]}]; }
+            function parseGobusterOutput(t){ return [{path:'/admin',status:200,size:5123}]; }
+            ${actaCrossSrcs.map(([, s]) => s).join("\n")};
+            return {actaCrossCompareMd};`;
+          check("actaCrossCompareMd: sin puertos web en nmap -> sección vacía", new Function(actaCrossNoWeb)().actaCrossCompareMd(false) === "");
+        } catch (e) {
+          check("actaCrossCompareMd ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
         }
       }
     } catch (e) {

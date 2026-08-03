@@ -2889,6 +2889,10 @@ function sessionActaMd(){
       md+='- **'+TOOL_NAMES[x.tool]+'**'+(x.sum?' — *'+x.sum+'*':'')+'\n\n```\n'+x.frag+cut+'\n```\n\n';
     });
   }
+  /* Sección comparativa: si hay salidas de nmap Y gobuster, cruza los puertos
+     web con las rutas 200/403 para señalar URLs de acceso directo a contenido
+     sensible. Solo se emite si hay cruce real (nmap + gobuster). */
+  md+=actaCrossCompareMd(en);
   /* Contexto de la Ruta Red Team: checkpoints completados con sus tiempos de
      práctica, agrupados por fase. Solo aparece si hay algún checkpoint hecho. */
   md+=rutaContextMd(en);
@@ -2981,6 +2985,54 @@ function rutaContextMd(en){
     if(items.length) md+='### '+p.ico+' '+(en?p.name_en:p.name)+'\n\n'+items.join('\n')+'\n\n';
   }
   if(!any) md+='_'+(en?'Completed checkpoints with no practice times yet.':'Checkpoints completados sin tiempos de práctica registrados.')+'_\n\n';
+  return md;
+}
+function actaCrossCompareMd(en){
+  /* Sección comparativa del acta: si la conversación contiene salidas de nmap
+     Y de gobuster, cruza los puertos web (http/https) de cada host de nmap con
+     las rutas 200/403 de gobuster para señalar URLs que probablemente sirven
+     contenido sensible en el host escaneado (p. ej. rutas 200 en el puerto 80).
+     Solo se emite si hay cruce real. Bilingüe (reportLang). */
+  const h=store.history||[];
+  let hosts=null, gbRows=null;
+  for(const m of h){
+    if(!m||!m.content) continue;
+    if(!hosts) hosts=parseNmapOutput(m.content);
+    if(!gbRows) gbRows=parseGobusterOutput(m.content);
+    if(hosts&&gbRows) break;
+  }
+  if(!hosts||!gbRows) return '';
+  /* Puertos web detectados por nmap: estado abierto y servicio http/https/ssl
+     (o puertos clásicos 80/443/8080/8443 con servicio no vacío). */
+  const web=[];
+  for(const hs of hosts){
+    for(const p of (hs.ports||[])){
+      const svc=String(p.service||'').toLowerCase();
+      const isWeb=(/http|https|ssl/i.test(svc))||[80,443,8080,8443].includes(p.port);
+      if(p.state==='open'&&isWeb) web.push({host:hs.host,port:p.port,service:p.service||''});
+    }
+  }
+  if(!web.length) return '';
+  /* Rutas calientes de gobuster: 200 (accesible) o 403 (existe pero restringida). */
+  const hot=gbRows.filter(r=>r.status===200||r.status===403);
+  if(!hot.length) return '';
+  const rows=[];
+  for(const w of web){
+    const scheme=(/https|ssl/i.test(w.service)||w.port===443||w.port===8443)?'https':'http';
+    for(const r of hot){
+      const port=(scheme==='https'&&w.port===443)||(scheme==='http'&&w.port===80)?'':':'+w.port;
+      rows.push({host:w.host,url:scheme+'://'+w.host+port+r.path,status:r.status});
+    }
+  }
+  if(!rows.length) return '';
+  let md='\n## '+(en?'Cross-reference (Nmap × Gobuster)':'Cruce de referencias (Nmap × Gobuster)')+'\n\n';
+  md+=(en
+    ? 'Paths with status **200/403** from Gobuster mapped to the web ports detected by Nmap — likely direct access to sensitive content:\n\n'
+    : 'Rutas con estado **200/403** de Gobuster mapeadas a los puertos web detectados por Nmap — posible acceso directo a contenido sensible:\n\n');
+  md+=en?'| Host | URL | Status |\n|---|---|---|\n':'| Host | URL | Estado |\n|---|---|---|\n';
+  rows.slice(0,30).forEach(r=>{ md+='| '+r.host+' | `'+r.url+'` | '+r.status+' |\n'; });
+  if(rows.length>30) md+='\n_'+(en?'('+(rows.length-30)+' more crossings not shown)':'(+'+(rows.length-30)+' cruces más no mostrados)')+'_\n';
+  md+='\n';
   return md;
 }
 function actaSummaryMd(){
@@ -3693,7 +3745,7 @@ function nmapRescan(host,flags){
   termPrintText('↻ Re-escaneo nmap: '+cmd,'ai');
   switchTab('term');
   termRun(cmd,(out)=>{
-    const fresh=nmapReconReport(out);
+    const fresh=withToolsSummary(nmapReconReport(out));
     if(!fresh){ termPrintText('No se pudo generar el informe con la salida fresca (¿nmap instalado o puerto abierto?)','warn'); return; }
     const body=addMsg('ai','');
     body.textContent=fresh;
@@ -3767,6 +3819,42 @@ function toolMiniSummary(tool,frag){
     }
   }catch(_){}
   return '';
+}
+/* Mini-resumen por herramienta para el informe PDF de reconocimiento (como en
+   el acta): escanea el historial, detecta las herramientas pegadas y devuelve
+   una sección Markdown con el mini-resumen de cada una (toolMiniSummary).
+   Devuelve '' si no hay ninguna. Bilingüe (reportLang). */
+function toolsUsedSummaryMd(en){
+  const h=store.history||[];
+  const TOOL_NAMES={nmap:'Nmap',gobuster:'Gobuster',curl:'curl',nessus:'Nessus',burp:'Burp Suite'};
+  const seen=new Set(); const tools=[];
+  for(const m of h){
+    if(!m||!m.content) continue;
+    const t=detectToolOutput(m.content);
+    if(t&&!seen.has(t)){
+      seen.add(t);
+      tools.push({tool:t, sum:toolMiniSummary(t,m.content)});
+    }
+  }
+  if(!tools.length) return '';
+  let md='## '+(en?'Tools used':'Herramientas usadas')+'\n\n';
+  tools.forEach(x=>{ md+='- **'+(TOOL_NAMES[x.tool]||x.tool)+'**'+(x.sum?' — *'+x.sum+'*':'')+'\n'; });
+  md+='\n';
+  return md;
+}
+/* Inserta la sección de herramientas usadas en un informe de reconocimiento,
+   justo después del resumen ejecutivo (antes de la primera sección ##), para
+   que aparezca también en la portada/resumen ejecutivo del PDF, no solo en el
+   acta. Devuelve el markdown original si no hay herramientas o si no hay
+   sección ## donde insertar. */
+function withToolsSummary(md){
+  if(!md) return md;
+  const en=reportIsEn();
+  const sec=toolsUsedSummaryMd(en);
+  if(!sec) return md;
+  const idx=md.indexOf('\n## ');
+  if(idx>0) return md.slice(0,idx+1)+sec+md.slice(idx+1);
+  return md+'\n'+sec;
 }
 /* gobuster: líneas '/path (Status: NNN) [Size: NNN]' (+ redirección opcional). */
 function parseGobusterOutput(text){
@@ -4264,12 +4352,38 @@ function pdfExtraCss(){
       +'.pdf-cover .pc-org{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:#0f4c81;font-weight:700;margin-bottom:40px}'
       +'.pdf-cover h1{font-size:28px;color:#0f4c81;border:none;margin:0 0 12px;padding:0}'
       +'.pdf-cover .pc-sub{font-size:13px;color:#555;margin-bottom:30px}'
+      +'.pdf-cover .pc-tools{max-width:540px;margin:0 auto 34px;font-size:12px;color:#333;background:#f4f8fc;border:1px solid #d5e2f0;border-radius:8px;padding:12px 16px;line-height:1.8;text-align:left}'
+      +'.pdf-cover .pc-tools b{color:#0f4c81;font-size:11px;letter-spacing:.5px;text-transform:uppercase}'
+      +'.pdf-cover .pc-tools .pc-sep{color:#9db6cc}'
       +'.pdf-cover .pc-conf{display:inline-block;border:2px solid #b22222;color:#b22222;font-size:11px;font-weight:700;letter-spacing:3px;padding:6px 18px;border-radius:20px;text-transform:uppercase}';
   }
   if(store.pdfWatermark&&(store.pdfWatermarkText||'').trim()){
     c+='.pdf-wm{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:52px;font-weight:800;letter-spacing:12px;color:rgba(178,34,34,.09);white-space:nowrap;pointer-events:none;z-index:9999;border:3px solid rgba(178,34,34,.12);padding:10px 28px;border-radius:10px;text-transform:uppercase}';
   }
   return c;
+}
+/* Mini-resumen por herramienta en la portada del PDF: igual que en el acta y
+   en el resumen ejecutivo del informe, escanea el historial y lista cada
+   herramienta detectada con su toolMiniSummary. Devuelve HTML escapado (o ''
+   si no hay herramientas). Barrera XSS: todo pasa por escH. */
+function pdfCoverToolsHtml(){
+  const en=reportIsEn();
+  const TOOL_NAMES={nmap:'Nmap',gobuster:'Gobuster',curl:'curl',nessus:'Nessus',burp:'Burp Suite'};
+  const h=store.history||[];
+  const seen=new Set(); const tools=[];
+  for(const m of h){
+    if(!m||!m.content) continue;
+    const t=detectToolOutput(m.content);
+    if(t&&!seen.has(t)){
+      seen.add(t);
+      tools.push({tool:t, sum:toolMiniSummary(t,m.content)});
+    }
+  }
+  if(!tools.length) return '';
+  let html='<div class="pc-tools"><b>'+(en?'Tools used in this session: ':'Herramientas usadas en esta sesión: ')+'</b>';
+  html+=tools.map(x=>'<span>'+escH(TOOL_NAMES[x.tool]||x.tool)+(x.sum?' — '+escH(x.sum):'')+'</span>').join('<span class="pc-sep"> · </span>');
+  html+='</div>';
+  return html;
 }
 function pdfCoverHtml(text, title){
   // Barrera XSS: todo lo que toca el usuario pasa por escH.
@@ -4281,6 +4395,7 @@ function pdfCoverHtml(text, title){
   return '<div class="pc-org">'+org+'</div>'
     +'<h1>'+tt+'</h1>'
     +'<div class="pc-sub">'+(en?'Report generated with Aion Sincro · ':'Informe generado con Aion Sincro · ')+hoy+'</div>'
+    +pdfCoverToolsHtml()
     +'<div class="pc-conf">'+conf+'</div>';
 }
 function exportPdf(text, title){
@@ -5176,6 +5291,11 @@ async function handleUserText(text){
     else if(/informe de hallazgos|findings report/i.test(text)) report=findingsReport(text); // sin el bare 'hallazgos': no roba rutas de gobuster
     else report=reconReport(text);
     if(report){
+      /* Mini-resumen por herramienta en el propio informe (como en el acta):
+         se inserta tras el resumen ejecutivo para que aparezca también en la
+         portada/resumen ejecutivo del PDF de reconocimiento, no solo en el
+         acta. Solo se añade si hay salidas de herramientas en el historial. */
+      report=withToolsSummary(report);
       /* Auto-práctica Laboral: al detectar una salida de herramienta pegada con
          el modo Laboral activo, Aion inicia sola una sesión de práctica
          (id 'laboral-<tool>') que se cierra al exportar el informe. No pisa una
