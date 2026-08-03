@@ -1320,6 +1320,13 @@ await (async () => {
   check("/read: rechaza binarios", pyRead.includes("archivo binario no soportado") && jsRead.includes("archivo binario no soportado"));
   check("/read: verifica que la ruta queda dentro del proyecto", pyRead.includes("fuera del proyecto") && jsRead.includes("fuera del proyecto"));
   check("/read: array máximo 10 archivos", pyRead.includes("máximo 10 archivos") && jsRead.includes("maximo 10 archivos"));
+  // El harness de mutación cubre la guarda ALLOWED_READ de /read (defensa en
+  // profundidad): si se elimina, los checks de metadatos inyectados deben caer.
+  const mutSrc = fs.readFileSync("test_mutacion.py", "utf8");
+  check("test_mutacion.py: caso read_allowlist presente", mutSrc.includes('"id": "read_allowlist"') && mutSrc.includes("campo no permitido en /read"));
+  check("test_mutacion.py: la mutación elimina el rechazo de ALLOWED_READ", mutSrc.includes('s.replace(READ_ALLOW_REJECT, "", 1)') && mutSrc.includes('READ_ALLOW_REJECT not in s and "ALLOWED_READ" in s'));
+  check("test_mutacion.py: el lote combinado del puente incluye el allow-list", /"id": "lote_bridge"/.test(mutSrc) && mutSrc.includes('"LOTE: Host/Origin laxos + /read sin ALLOWED_READ"') && /checks": \[c for caso in \(CASES\[3\], CASES\[4\]\)/.test(mutSrc) && mutSrc.includes('.replace(READ_ALLOW_REJECT, "", 1)'));
+  check("test_mutacion.py: checks esperados del caso read_allowlist", mutSrc.includes('"/read history+via/ts inyectado → 400"') && mutSrc.includes('"/read messages inyectado → 400"') && mutSrc.includes('"/read via/ts sueltos → 400"'));
 
   // ---------- Anclar a la barra de tareas (metodo menu Inicio) ----------
   check("anclar-barra-tareas.ps1 existe", fs.existsSync("windows/anclar-barra-tareas.ps1"));

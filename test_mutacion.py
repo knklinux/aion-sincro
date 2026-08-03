@@ -15,6 +15,8 @@ Casos:
   2. autolock_min       : se quita la guarda `min<=0` de maybeAutoLock
   3. locksecrets_purga  : se quita el purgado de claves en memoria de lockSecrets
   4. bridge_hostorigin  : se debilitan los filtros Host/Origin del puente
+  5. read_allowlist     : se elimina la guarda ALLOWED_READ de /read (los
+                          metadatos de historial inyectados ya no dan 400)
 
 Uso:
   python test_mutacion.py              # todos los casos (exit 0 = todos detectados)
@@ -51,6 +53,11 @@ ORIGIN_RE_LINE = 'ORIGIN_RE = re.compile(r"^https?://(localhost|127\\.0\\.0\\.1)
 ORIGIN_RE_WEAK = 'ORIGIN_RE = re.compile(r"^https?://(localhost|127\\.0\\.0\\.1)")'
 HOST_RE_LINE = '    return bool(re.match(r"^((localhost|127\\.0\\.0\\.1)(:\\d+)?)$", h))'
 HOST_RE_WEAK = '    return bool(re.match(r"^(localhost|127\\.0\\.0\\.1)", h))'
+# Guard de campos extra de /read (contrato estricto ALLOWED_READ): si se elimina,
+# el puente acepta metadatos de historial inyectados (history/messages/via/ts)
+# en lugar de responder 400 — la defensa en profundidad que añadimos al puente.
+READ_ALLOW_REJECT = """            if extra_read:
+                return self._json({"ok": False, "error": "campo no permitido en /read: " + ", ".join(extra_read)}, 400)"""
 
 
 def _mutar_bridge(src):
@@ -116,6 +123,22 @@ CASES = [
         "mutar": _mutar_bridge,
         "control_ok": lambda s: ORIGIN_RE_WEAK in s and HOST_RE_WEAK in s,
         "control_err": "los filtros Host/Origin no se encontraron en bridge.py",
+    },
+    {
+        "id": "read_allowlist",
+        "titulo": "el puente acepta metadatos inyectados en /read (sin ALLOWED_READ)",
+        "linea": "`if extra_read: return ...campo no permitido...` (guarda ALLOWED_READ en /read)",
+        "archivo": "bridge.py",
+        "env_var": "AION_BRIDGE",
+        "suite": [sys.executable, "test_bridge.py"],
+        "checks": [
+            "/read history+via/ts inyectado → 400",
+            "/read messages inyectado → 400",
+            "/read via/ts sueltos → 400",
+        ],
+        "mutar": lambda s: s.replace(READ_ALLOW_REJECT, "", 1),
+        "control_ok": lambda s: READ_ALLOW_REJECT not in s and "ALLOWED_READ" in s,
+        "control_err": "la guarda ALLOWED_READ de /read no se encontró en bridge.py",
     },
 ]
 
@@ -200,8 +223,18 @@ def _lote_combinado(tmpdir):
                                 and PURGE_LINE not in s and "function saveStore" in s,
     })
     resultado["html"] = _ejecutar_caso(html_case, tmpdir, mostrar=False)
-    # 2) bridge.py con el filtro debilitado.
-    resultado["bridge"] = _ejecutar_caso(CASES[3], tmpdir, mostrar=False)
+    # 2) bridge.py con el filtro Host/Origin debilitado Y la guarda ALLOWED_READ
+    #    de /read eliminada (defensa en profundidad: las dos capas a la vez).
+    bridge_case = dict(CASES[3])
+    bridge_case.update({
+        "id": "lote_bridge",
+        "titulo": "LOTE: Host/Origin laxos + /read sin ALLOWED_READ",
+        "checks": [c for caso in (CASES[3], CASES[4]) for c in caso["checks"]],
+        "mutar": lambda s: _mutar_bridge(s).replace(READ_ALLOW_REJECT, "", 1),
+        "control_ok": lambda s: ORIGIN_RE_WEAK in s and HOST_RE_WEAK in s and READ_ALLOW_REJECT not in s and "ALLOWED_READ" in s,
+        "control_err": "los filtros Host/Origin o la guarda ALLOWED_READ no se encontraron en bridge.py",
+    })
+    resultado["bridge"] = _ejecutar_caso(bridge_case, tmpdir, mostrar=False)
     return resultado
 
 
