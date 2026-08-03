@@ -339,6 +339,16 @@ http
       }
 
       if (req.url === "/run" && req.method === "POST") {
+        // Defensa en profundidad: /run acepta EXCLUSIVAMENTE su contrato
+        // (token/cmd). Rechaza metadatos de historial inyectados (history,
+        // messages, via, ts…) — espejo de cleanMsgs(), igual que /read.
+        const ALLOWED_RUN = new Set(["token", "cmd"]);
+        const extraRun = Object.keys(data).filter((k) => !ALLOWED_RUN.has(k));
+        if (extraRun.length > 0) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "campo no permitido en /run: " + extraRun.join(", ") }));
+          return;
+        }
         const cmd = typeof data.cmd === "string" ? data.cmd.trim() : "";
         if (!cmd) {
           res.writeHead(400, { "Content-Type": "application/json" });

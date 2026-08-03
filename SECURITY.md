@@ -56,6 +56,14 @@ máquina). Sus componentes y superficie de ataque:
   rechaza con **HTTP 400** en ambos puentes (bridge.py y bridge.mjs). Así, si
   un cliente (o un atacante) intenta colar metadatos de sesión a través del
   puente, se bloquea en el servidor además de en el navegador.
+- **`/run` con contrato estricto (defensa en profundidad)**: el endpoint de
+  ejecución acepta EXCLUSIVAMENTE su contrato (`token`/`cmd`). Cualquier otro
+  campo — metadatos de historial inyectados (`history`, `messages`, `via`,
+  `ts`…) — se rechaza con **HTTP 400** en ambos puentes, con el mismo
+  `ALLOWED_RUN` que `/read` usa con `ALLOWED_READ`. La ejecución de comandos
+  es el endpoint más sensible del puente, así que el contrato se aplica antes
+  incluso de validar el comando: si el body trae algo fuera de `token`/`cmd`,
+  no se ejecuta nada.
 
 ### En el proxy de claves (proxy.py — opcional)
 - **Bind exclusivo a `127.0.0.1`** en el puerto 8797: las API keys viven SOLO

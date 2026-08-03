@@ -242,6 +242,20 @@ def test_bridge():
         # 2.6 POST /run con cmd vacío → 400
         st, _ = raw_http(port, "/run", method="POST", body=json.dumps({"token": token, "cmd": "  "}))
         check("/run cmd vacío → 400", st == 400, f"got {st}")
+        # 2.6b /run con metadatos de historial inyectados → 400 (contrato
+        #      estricto: /run acepta SOLO token/cmd, como /read con su
+        #      ALLOWED_READ — los metadatos via/ts que cleanMsgs() purga en el
+        #      frontend no pueden colarse por el puente)
+        st, _ = raw_http(port, "/run", method="POST",
+                         body=json.dumps({"token": token, "cmd": "echo x",
+                                          "history": [{"role": "user", "content": "hola", "via": "voice", "ts": 123}]}))
+        check("/run history+via/ts inyectado → 400", st == 400, f"got {st}")
+        st, _ = raw_http(port, "/run", method="POST",
+                         body=json.dumps({"token": token, "cmd": "echo x", "messages": [{"role": "user", "content": "x"}]}))
+        check("/run messages inyectado → 400", st == 400, f"got {st}")
+        st, _ = raw_http(port, "/run", method="POST",
+                         body=json.dumps({"token": token, "cmd": "echo x", "via": "voice", "ts": 999}))
+        check("/run via/ts sueltos → 400", st == 400, f"got {st}")
         # 2.7 POST /kill con token → 200
         st, body = raw_http(port, "/kill", method="POST", body=json.dumps({"token": token}))
         check("/kill → 200", st == 200, f"got {st}")
@@ -355,6 +369,18 @@ def test_bridge_node():
         # 3.6 POST /run con cmd vacío → 400
         st, _ = raw_http(port, "/run", method="POST", body=json.dumps({"token": token, "cmd": "  "}))
         check("node /run cmd vacío → 400", st == 400, f"got {st}")
+        # 3.6b /run con metadatos de historial inyectados → 400 (contrato
+        #      estricto, mismo ALLOWED_RUN que bridge.py)
+        st, _ = raw_http(port, "/run", method="POST",
+                         body=json.dumps({"token": token, "cmd": "echo x",
+                                          "history": [{"role": "user", "content": "hola", "via": "voice", "ts": 123}]}))
+        check("node /run history+via/ts inyectado → 400", st == 400, f"got {st}")
+        st, _ = raw_http(port, "/run", method="POST",
+                         body=json.dumps({"token": token, "cmd": "echo x", "messages": [{"role": "user", "content": "x"}]}))
+        check("node /run messages inyectado → 400", st == 400, f"got {st}")
+        st, _ = raw_http(port, "/run", method="POST",
+                         body=json.dumps({"token": token, "cmd": "echo x", "via": "voice", "ts": 999}))
+        check("node /run via/ts sueltos → 400", st == 400, f"got {st}")
         # 3.7 POST /kill con token → 200
         st, body = raw_http(port, "/kill", method="POST", body=json.dumps({"token": token}))
         check("node /kill → 200", st == 200, f"got {st}")

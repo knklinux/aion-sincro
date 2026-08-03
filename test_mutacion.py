@@ -58,6 +58,11 @@ HOST_RE_WEAK = '    return bool(re.match(r"^(localhost|127\\.0\\.0\\.1)", h))'
 # en lugar de responder 400 — la defensa en profundidad que añadimos al puente.
 READ_ALLOW_REJECT = """            if extra_read:
                 return self._json({"ok": False, "error": "campo no permitido en /read: " + ", ".join(extra_read)}, 400)"""
+# Guard de campos extra de /run (contrato estricto token/cmd): si se elimina,
+# el puente ejecuta comandos aunque el body traiga metadatos de historial
+# inyectados (history/messages/via/ts) — el endpoint más sensible del puente.
+RUN_ALLOW_REJECT = """            if extra_run:
+                return self._json({"ok": False, "error": "campo no permitido en /run: " + ", ".join(extra_run)}, 400)"""
 
 
 def _mutar_bridge(src):
@@ -139,6 +144,22 @@ CASES = [
         "mutar": lambda s: s.replace(READ_ALLOW_REJECT, "", 1),
         "control_ok": lambda s: READ_ALLOW_REJECT not in s and "ALLOWED_READ" in s,
         "control_err": "la guarda ALLOWED_READ de /read no se encontró en bridge.py",
+    },
+    {
+        "id": "run_allowlist",
+        "titulo": "el puente ejecuta /run con metadatos inyectados (sin ALLOWED_RUN)",
+        "linea": "`if extra_run: return ...campo no permitido...` (guarda ALLOWED_RUN en /run)",
+        "archivo": "bridge.py",
+        "env_var": "AION_BRIDGE",
+        "suite": [sys.executable, "test_bridge.py"],
+        "checks": [
+            "/run history+via/ts inyectado → 400",
+            "/run messages inyectado → 400",
+            "/run via/ts sueltos → 400",
+        ],
+        "mutar": lambda s: s.replace(RUN_ALLOW_REJECT, "", 1),
+        "control_ok": lambda s: RUN_ALLOW_REJECT not in s and "ALLOWED_RUN" in s,
+        "control_err": "la guarda ALLOWED_RUN de /run no se encontró en bridge.py",
     },
 ]
 
@@ -223,16 +244,17 @@ def _lote_combinado(tmpdir):
                                 and PURGE_LINE not in s and "function saveStore" in s,
     })
     resultado["html"] = _ejecutar_caso(html_case, tmpdir, mostrar=False)
-    # 2) bridge.py con el filtro Host/Origin debilitado Y la guarda ALLOWED_READ
-    #    de /read eliminada (defensa en profundidad: las dos capas a la vez).
+    # 2) bridge.py con el filtro Host/Origin debilitado Y las guardas
+    #    ALLOWED_READ (/read) y ALLOWED_RUN (/run) eliminadas a la vez
+    #    (defensa en profundidad: las tres capas del puente juntas).
     bridge_case = dict(CASES[3])
     bridge_case.update({
         "id": "lote_bridge",
-        "titulo": "LOTE: Host/Origin laxos + /read sin ALLOWED_READ",
-        "checks": [c for caso in (CASES[3], CASES[4]) for c in caso["checks"]],
-        "mutar": lambda s: _mutar_bridge(s).replace(READ_ALLOW_REJECT, "", 1),
-        "control_ok": lambda s: ORIGIN_RE_WEAK in s and HOST_RE_WEAK in s and READ_ALLOW_REJECT not in s and "ALLOWED_READ" in s,
-        "control_err": "los filtros Host/Origin o la guarda ALLOWED_READ no se encontraron en bridge.py",
+        "titulo": "LOTE: Host/Origin laxos + /read y /run sin allow-list",
+        "checks": [c for caso in (CASES[3], CASES[4], CASES[5]) for c in caso["checks"]],
+        "mutar": lambda s: _mutar_bridge(s).replace(READ_ALLOW_REJECT, "", 1).replace(RUN_ALLOW_REJECT, "", 1),
+        "control_ok": lambda s: ORIGIN_RE_WEAK in s and HOST_RE_WEAK in s and READ_ALLOW_REJECT not in s and RUN_ALLOW_REJECT not in s and "ALLOWED_RUN" in s,
+        "control_err": "los filtros Host/Origin o las guardas ALLOWED_READ/ALLOWED_RUN no se encontraron en bridge.py",
     })
     resultado["bridge"] = _ejecutar_caso(bridge_case, tmpdir, mostrar=False)
     return resultado

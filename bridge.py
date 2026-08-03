@@ -345,6 +345,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(result)
 
         if self.path == "/run":
+            # Defensa en profundidad: /run acepta EXCLUSIVAMENTE su contrato
+            # (token/cmd). Rechaza cualquier campo extra — p. ej. metadatos de
+            # historial inyectados (history, messages, via, ts…) que el frontend
+            # purga con cleanMsgs(). Si algo intenta colarse por el puente, 400.
+            ALLOWED_RUN = {"token", "cmd"}
+            extra_run = sorted(set(data) - ALLOWED_RUN)
+            if extra_run:
+                return self._json({"ok": False, "error": "campo no permitido en /run: " + ", ".join(extra_run)}, 400)
             cmd = data.get("cmd")
             if not isinstance(cmd, str) or not cmd.strip():
                 return self._json({"ok": False, "error": "cmd vacío"}, 400)
