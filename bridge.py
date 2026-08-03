@@ -284,6 +284,15 @@ class Handler(BaseHTTPRequestHandler):
             #   { "lines": N }                  → opcional: solo las últimas N líneas (cola)
             #   { "offset": M }                 → opcional: saltar las primeras M líneas (>=0)
             # Seguridad: solo rutas relativas, sin '..', dentro de BASE_DIR.
+            # Defensa en profundidad: /read acepta EXCLUSIVAMENTE su contrato
+            # (token/path/paths/lines/offset). Rechaza cualquier campo extra —
+            # p. ej. metadatos de historial inyectados (history, messages, via,
+            # ts…) que el frontend purga con cleanMsgs() antes de hablar con el
+            # motor. Si algo intenta colarse por el puente, 400.
+            ALLOWED_READ = {"token", "path", "paths", "lines", "offset"}
+            extra_read = sorted(set(data) - ALLOWED_READ)
+            if extra_read:
+                return self._json({"ok": False, "error": "campo no permitido en /read: " + ", ".join(extra_read)}, 400)
             paths = data.get("paths")
             # Validar /lines/ (entero positivo, max 50000)
             lines = data.get("lines")

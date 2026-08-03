@@ -48,6 +48,14 @@ máquina). Sus componentes y superficie de ataque:
   asegúrate de que `token` no sea accesible desde una ruta pública no deseada
   — se sirve solo por el origen local del lanzador.
 - **Body limitado a 1 MB** en ambos puentes (Python y Node).
+- **`/read` con contrato estricto (defensa en profundidad)**: el endpoint de
+  lectura de archivos acepta EXCLUSIVAMENTE su contrato
+  (`token`/`path`/`paths`/`lines`/`offset`). Cualquier otro campo — p. ej.
+  metadatos de historial inyectados (`history`, `messages`, `via`, `ts`…) que
+  el frontend purga con `cleanMsgs()` antes de hablar con el motor — se
+  rechaza con **HTTP 400** en ambos puentes (bridge.py y bridge.mjs). Así, si
+  un cliente (o un atacante) intenta colar metadatos de sesión a través del
+  puente, se bloquea en el servidor además de en el navegador.
 
 ### En el proxy de claves (proxy.py — opcional)
 - **Bind exclusivo a `127.0.0.1`** en el puerto 8797: las API keys viven SOLO

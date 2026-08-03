@@ -301,7 +301,21 @@ def test_bridge():
         check("/read multi+lines → 200", st == 200, f"got {st}")
         txt = body.decode("utf-8", "replace")
         check("/read multi+lines → tail en cada archivo", txt.count('"tail": true') == 2, txt[:160])
-        # 2.19 Ruta desconocida → 403
+        # 2.19 /read con metadatos de historial inyectados → 400 (defensa en
+        #      profundidad: /read acepta SOLO su contrato token/path/paths/
+        #      lines/offset; los metadatos via/ts que cleanMsgs() purga en el
+        #      frontend no pueden colarse por el puente)
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "README.md",
+                                          "history": [{"role": "user", "content": "hola", "via": "voice", "ts": 123}]}))
+        check("/read history+via/ts inyectado → 400", st == 400, f"got {st}")
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "README.md", "messages": [{"role": "user", "content": "x"}]}))
+        check("/read messages inyectado → 400", st == 400, f"got {st}")
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "README.md", "via": "voice", "ts": 999}))
+        check("/read via/ts sueltos → 400", st == 400, f"got {st}")
+        # 2.22 Ruta desconocida → 403
         st, _ = raw_http(port, "/otra-cosa")
         check("ruta desconocida → 403", st == 403, f"got {st}")
     finally:
@@ -395,7 +409,19 @@ def test_bridge_node():
         check("node /read multi+lines → 200", st == 200, f"got {st}")
         txt = body.decode("utf-8", "replace")
         check("node /read multi+lines → tail en cada archivo", txt.count('"tail":true') == 2, txt[:160])
-        # 3.18 Body > 1 MB → 413 (límite propio del puente Node)
+        # 3.18 /read con metadatos de historial inyectados → 400 (defensa en
+        #      profundidad: mismo contrato estricto que bridge.py)
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "README.md",
+                                          "history": [{"role": "user", "content": "hola", "via": "voice", "ts": 123}]}))
+        check("node /read history+via/ts inyectado → 400", st == 400, f"got {st}")
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "README.md", "messages": [{"role": "user", "content": "x"}]}))
+        check("node /read messages inyectado → 400", st == 400, f"got {st}")
+        st, _ = raw_http(port, "/read", method="POST",
+                         body=json.dumps({"token": token, "path": "README.md", "via": "voice", "ts": 999}))
+        check("node /read via/ts sueltos → 400", st == 400, f"got {st}")
+        # 3.21 Body > 1 MB → 413 (límite propio del puente Node)
         big = '{"token":"' + token + '","cmd":"' + "a" * 1_100_000 + '"}'
         st, _ = raw_http(port, "/run", method="POST", body=big, timeout=10)
         check("node body > 1 MB → 413", st == 413, f"got {st}")

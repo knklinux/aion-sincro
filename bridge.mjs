@@ -221,6 +221,16 @@ http
         //   { "lines": N }                  → opcional: solo las últimas N líneas (cola)
         //   { "offset": M }                 → opcional: saltar las primeras M líneas (>=0)
         // Seguridad: solo rutas relativas, sin '..', dentro de __dirname.
+        // Defensa en profundidad: /read acepta EXCLUSIVAMENTE su contrato
+        // (token/path/paths/lines/offset). Rechaza metadatos de historial
+        // inyectados (history, messages, via, ts…) — espejo de cleanMsgs().
+        const ALLOWED_READ = new Set(["token", "path", "paths", "lines", "offset"]);
+        const extraRead = Object.keys(data).filter((k) => !ALLOWED_READ.has(k));
+        if (extraRead.length > 0) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "campo no permitido en /read: " + extraRead.join(", ") }));
+          return;
+        }
         // Validar /lines/ (entero positivo, max 50000)
         let lines = data.lines;
         if (lines != null) {
