@@ -2870,6 +2870,11 @@ function sessionActaMd(){
   md+=`| ${L.streak} | 🔥 ${pracStreak()} ${en?'days':'días'} |\n`;
   md+=`| ${L.avg} | ${fmtPrac(pracAvgMs())} |\n`;
   if(dur) md+=`| ${L.dur} | ${fmtPrac(dur)} |\n`;
+  /* Resumen ejecutivo de hallazgos por severidad: si la conversación contiene
+     salidas de Nessus o Burp, se añade al inicio del acta (antes incluso de la
+     tabla de nmap) un conteo de hallazgos por severidad (crítico/alto/medio/
+     bajo/info) con las 5 más críticas listadas. Devuelve '' si no hay hallazgos. */
+  md+=actaSeveritySummaryMd(en);
   /* Tabla de puertos/servicios de Nmap: si la conversación contiene una salida
      de nmap, se añade al inicio del acta (antes de la transcripción) una tabla
      Markdown con los puertos detectados (host, puerto/proto, estado, servicio).
@@ -2949,6 +2954,63 @@ function nmapPortsTableMd(en){
   for(const r of rows){
     md+='| '+cell(r.host)+' | '+r.port+'/'+r.proto+' | '+cell(r.state)+' | '+cell(r.service)+' |\n';
   }
+  md+='\n';
+  return md;
+}
+/* Resumen ejecutivo de hallazgos por severidad para el acta: si la conversación
+   contiene salidas de Nessus o Burp Suite, añade al inicio del acta un conteo de
+   hallazgos por severidad (crítico/alto/medio/bajo/info) y lista las N más
+   críticas (5 por defecto). Deduplica hallazgos repetidos entre mensajes y
+   normaliza la severidad a 5 categorías. Bilingüe (reportLang). Devuelve '' si
+   no hay salidas de Nessus/Burp o no se detectaron hallazgos. */
+function actaSeveritySummaryMd(en){
+  const h=store.history||[];
+  const ORDER=['Critical','High','Medium','Low','Info'];
+  const EMOJI={Critical:'🔴',High:'🟠',Medium:'🟡',Low:'🔵',Info:'ℹ️'}
+  const RANK={Critical:0,High:1,Medium:2,Low:3,Info:4};
+  const sevOf=s=>{ const t=String(s||'');
+    if(/critical/i.test(t)) return 'Critical';
+    if(/high/i.test(t)) return 'High';
+    if(/medium|moderate/i.test(t)) return 'Medium';
+    if(/low/i.test(t)) return 'Low';
+    return 'Info'; };
+  const all=[]; const seen=new Set();
+  for(const m of h){
+    if(!m||!m.content) continue;
+    const nessus=parseNessusOutput(m.content);
+    if(nessus) for(const f of nessus){
+      const key='nessus|'+f.id+'|'+f.host+'|'+f.name;
+      if(seen.has(key)) continue; seen.add(key);
+      all.push({sev:sevOf(f.severity),name:f.name||'—',host:f.host||'',
+        cvss:parseFloat(f.cvss)||0,meta:'Nessus · Plugin #'+f.id});
+    }
+    const burp=parseBurpOutput(m.content);
+    if(burp) for(const i of burp){
+      const key='burp|'+i.name+'|'+i.host;
+      if(seen.has(key)) continue; seen.add(key);
+      all.push({sev:sevOf(i.severity),name:i.name||'—',host:i.host||'',
+        cvss:0,meta:en?'Burp Suite':'Burp Suite',path:i.path||''});
+    }
+  }
+  if(!all.length) return '';
+  const counts={}; for(const s of ORDER) counts[s]=0;
+  for(const f of all) counts[f.sev]++;
+  const total=all.length;
+  const sevWord=s=>en?s.toLowerCase():({Critical:'crítico(s)',High:'alto(s)',Medium:'medio(s)',Low:'bajo(s)',Info:'info'})[s];
+  const top=all.slice().sort((a,b)=>RANK[a.sev]-RANK[b.sev]||b.cvss-a.cvss).slice(0,5);
+  const cell=s=>String(s==null?'—':s).replace(/\|/g,'\\|').replace(/\r?\n/g,' ').trim();
+  let md='\n## '+(en?'Executive summary of findings (Nessus · Burp Suite)':'Resumen ejecutivo de hallazgos (Nessus · Burp Suite)')+'\n\n';
+  md+='> '+(en?'Findings by severity':'Hallazgos por severidad')+': ';
+  md+=ORDER.map(s=>EMOJI[s]+' '+counts[s]+' '+sevWord(s)).join(' · ');
+  md+=' — '+total+' '+(en?(total===1?'finding total':'findings total'):(total===1?'hallazgo en total':'hallazgos en total'))+'\n\n';
+  md+='### '+(en?'Most critical findings':'Hallazgos más críticos')+'\n\n';
+  top.forEach((f,n)=>{
+    md+=(n+1)+'. **'+EMOJI[f.sev]+' '+f.sev+'** — '+cell(f.name);
+    if(f.host) md+=' — `'+cell(f.host)+'`';
+    if(f.cvss) md+=' · CVSS '+f.cvss.toFixed(1);
+    if(f.path) md+=' · `'+cell(f.path)+'`';
+    md+=' — *'+f.meta+'*\n';
+  });
   md+='\n';
   return md;
 }

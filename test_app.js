@@ -307,6 +307,13 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("acta: tabla nmap devuelve '' sin salida de nmap", /if\(!rows\.length\) return '';/.test(script));
   check("acta: tabla nmap ordena por puerto y escapa celdas", /rows\.sort\(\(a,b\)=>a\.port-b\.port\);/.test(script) && /const cell=s=>String\(s==null\?'—':s\)\.replace/.test(script));
   check("acta: tabla nmap bilingüe (Detected ports / Puertos y servicios)", script.includes("'Detected ports & services (Nmap)'") && script.includes("'Puertos y servicios detectados (Nmap)'") && script.includes("'| Host | Port | State | Service |\\n|---|---|---|---|\\n'") && script.includes("'| Host | Puerto | Estado | Servicio |\\n|---|---|---|---|\\n'"));
+  // Resumen ejecutivo de hallazgos por severidad (Nessus/Burp) al inicio del acta
+  check("acta: actaSeveritySummaryMd() definida", /function\s+actaSeveritySummaryMd\s*\(/.test(script));
+  check("acta: resumen se inserta antes de la tabla nmap", script.includes("md+=actaSeveritySummaryMd(en);") && script.indexOf("md+=actaSeveritySummaryMd(en);") < script.indexOf("md+=nmapPortsTableMd(en);") && script.indexOf("md+=nmapPortsTableMd(en);") < script.indexOf("md+='\\n## '+L.trans+'\\n\\n';"));
+  check("acta: resumen normaliza severidad a 5 categorías", /\/critical\/i\.test\(t\)/.test(script) && /\/medium\|moderate\/i\.test\(t\)/.test(script) && script.includes("return 'Info';"));
+  check("acta: resumen usa parseNessusOutput y parseBurpOutput", script.includes("const nessus=parseNessusOutput(m.content);") && script.includes("const burp=parseBurpOutput(m.content);") && script.includes("const key='nessus|'+f.id+'|'+f.host+'|'+f.name;") && script.includes("const key='burp|'+i.name+'|'+i.host;"));
+  check("acta: resumen ordena y limita a las 5 más críticas", /RANK\[a\.sev\]-RANK\[b\.sev\]\|\|b\.cvss-a\.cvss/.test(script) && script.includes(".slice(0,5)") && script.includes("const counts={}; for(const s of ORDER) counts[s]=0;"));
+  check("acta: resumen bilingüe (Executive summary / Resumen ejecutivo)", script.includes("'Executive summary of findings (Nessus · Burp Suite)'") && script.includes("'Resumen ejecutivo de hallazgos (Nessus · Burp Suite)'") && script.includes("'Most critical findings'") && script.includes("'Hallazgos más críticos'"));
   // Filtro «acta limpia»: omitir salidas crudas de herramientas de la transcripción
   check("actaClean:false por defecto en store", /actaClean:false,/.test(script));
   check("toggle btnActaClean presente en Ajustes (Informes PDF)", html.includes('id="btnActaClean"') && html.includes('✂️ Acta: omitir salidas crudas de herramientas en la transcripción'));
@@ -1169,6 +1176,52 @@ await (async () => {
           check("nmapPortsTableMd: sin salida de nmap -> sección vacía", new Function(nmapTblNone)().nmapPortsTableMd(false) === "");
         } catch (e) {
           check("nmapPortsTableMd ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
+        }
+      }
+
+      // Resumen ejecutivo de hallazgos por severidad al inicio del acta: actaSeveritySummaryMd
+      const sevFns = ["actaSeveritySummaryMd"];
+      const sevSrcs = sevFns.map(n => [n, extractFn(script, n)]);
+      check("actaSeveritySummaryMd extraíble del <script>", sevSrcs.every(([, s]) => !!s));
+      if (sevSrcs.every(([, s]) => !!s)) {
+        try {
+          const sevBase = `"use strict";
+            const store={history:[
+              {role:'user',content:'Export Nessus\\n- 10.0.0.5 (Scanner)\\nPlugin #1 (SQL Injection)\\nSeverity: Critical\\nCVSS v3.0 Base Score: 9.8\\nSynopsis: Remote code exec risk\\nHost: 10.0.0.5\\n'},
+              {role:'user',content:'Export Nessus\\nPlugin #2 (XSS Reflected)\\nSeverity: High\\nCVSS v3.0 Base Score: 7.5\\nHost: 10.0.0.5\\nPlugin #3 (Info Disclosure)\\nSeverity: Low\\nHost: 10.0.0.5\\n'},
+              {role:'user',content:'Salida Burp Suite\\nIssue: Weak SSL Cipher\\nSeverity: Medium\\nHost: app.example.com\\nPath: /login\\n'},
+              {role:'ai',content:'pregunta normal sin salida'}
+            ]};
+            function parseNessusOutput(t){ const s=String(t||''); if(!/Export Nessus/i.test(s)) return null;
+              const out=[]; let cur=null; for(const l of s.split(/\\r?\\n/)){
+                const pm=l.match(/^Plugin #(\\d+)\\s*\\(([^)]*)\\)/); if(pm){ cur={id:pm[1],name:pm[2].trim(),severity:'',cvss:'',host:''}; out.push(cur); continue; }
+                if(!cur) continue; const kv=l.match(/^(Severity|CVSS v[23]\\.0 Base Score|Host):\\s*(.*)$/i); if(!kv) continue;
+                const k=kv[1].toLowerCase(); if(k==='severity') cur.severity=kv[2].trim(); else if(/cvss/.test(k)) cur.cvss=kv[2].trim(); else cur.host=kv[2].trim();
+              } return out.length?out:null; }
+            function parseBurpOutput(t){ const s=String(t||''); if(!/Salida Burp/i.test(s)) return null;
+              const out=[]; let cur=null; for(const l of s.split(/\\r?\\n/)){
+                const im=l.match(/^Issue:\\s*(.+)$/i); if(im){ cur={name:im[1].trim(),severity:'',host:'',path:''}; out.push(cur); continue; }
+                if(!cur) continue; const kv=l.match(/^(Severity|Host|Path):\\s*(.*)$/i); if(!kv) continue;
+                const k=kv[1].toLowerCase(); cur[k]=kv[2].trim();
+              } return out.length?out:null; }
+            ${sevSrcs.map(([, s]) => s).join("\\n")};
+            return {actaSeveritySummaryMd};`;
+          const sevFns2 = new Function(sevBase)();
+          const md = sevFns2.actaSeveritySummaryMd(false);
+          check("actaSeveritySummaryMd: cabecera + conteo por severidad", !!md && md.includes("## Resumen ejecutivo de hallazgos (Nessus · Burp Suite)") && md.includes("🔴 1 crítico(s)") && md.includes("🟠 1 alto(s)") && md.includes("🟡 1 medio(s)") && md.includes("🔵 1 bajo(s)"), (md || "").slice(0, 250));
+          check("actaSeveritySummaryMd: total de hallazgos", !!md && md.includes("4 hallazgos en total") && md.includes("Hallazgos más críticos"));
+          check("actaSeveritySummaryMd: críticos listados primero (SQL Injection antes que XSS)", !!md && md.indexOf("SQL Injection") < md.indexOf("XSS Reflected"));
+          check("actaSeveritySummaryMd: meta de herramienta y host", !!md && md.includes("Nessus · Plugin #1") && md.includes("`10.0.0.5`") && md.includes("Burp Suite"));
+          check("actaSeveritySummaryMd: respeta idioma EN", !!md && sevFns2.actaSeveritySummaryMd(true).includes("Executive summary of findings (Nessus · Burp Suite)") && sevFns2.actaSeveritySummaryMd(true).includes("critical"));
+          const sevNone = `"use strict";
+            const store={history:[{role:'user',content:'pregunta normal sin salida de herramientas'}]};
+            function parseNessusOutput(t){ return null; }
+            function parseBurpOutput(t){ return null; }
+            ${sevSrcs.map(([, s]) => s).join("\\n")};
+            return {actaSeveritySummaryMd};`;
+          check("actaSeveritySummaryMd: sin Nessus/Burp -> sección vacía", new Function(sevNone)().actaSeveritySummaryMd(false) === "");
+        } catch (e) {
+          check("actaSeveritySummaryMd ejecuta sin error", false, (e && e.message || e).toString().slice(0, 200));
         }
       }
 
