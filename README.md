@@ -88,6 +88,8 @@ y su huella, para reconocerse en cualquier futuro:
 
 ## 🚀 Inicio rápido
 
+> 👶 **¿Es tu primera vez?** Sigue la guía **[Primera Sesión de Aion Sincro — actívala en 5 minutos](PRIMERA_SESION.md)**: instala, ancla a la barra de tareas, arranca web + puente + Piper y conecta Mistral, paso a paso y sin leer más nada.
+
 1. Abre `index.html` en **Chrome o Edge**.
 2. Pulsa **▶ INICIAR AION SINCRÓ**.
 3. Habla, escribe o usa las tarjetas del panel de bienvenida.
