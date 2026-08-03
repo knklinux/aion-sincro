@@ -1301,6 +1301,14 @@ await (async () => {
   check("chat: lee/analiza/léeme/abre como verbos de lectura", /lee\|analiza\|l\[ée\]eme\|abre\|mu\[ée\]strame/.test(script));
   check("chat: soporta múltiples rutas separadas por coma", script.includes("paths=raw.split(',').map(s=>s.trim()).filter(Boolean)"));
   check("chat: error controlado si no se puede leer", script.includes("No pude leer") && script.includes("streaming=false"));
+  // Frontend detecta el 400 de /read por campo fuera de contrato (cliente desactualizado)
+  check("bridgeRead: marca error de contrato cuando el puente responde 400", script.includes("resp.status===400&&data&&!data.ok&&/campo no permitido en \\/read/i.test(data.error||'')") && script.includes("data.contractError=true"));
+  check("bridgeRead: no rompe con respuesta no JSON (defensivo)", script.includes("respuesta no JSON (HTTP '") && script.includes("try{ data=await resp.json(); }catch(_){"));
+  check("isReadContractError() definida", /function\s+isReadContractError\s*\(r\)/.test(script) && script.includes("r&&r.contractError"));
+  check("handleFileRead: aviso de cliente desactualizado en el chat", script.includes("isReadContractError(r)") && script.includes("frontend desactualizado") && script.includes("toast('⚠️ Cliente desactualizado: /read envió campos fuera de contrato','4200')"));
+  check("comando /read: aviso de contrato en rama individual y múltiple", (script.match(/isReadContractError\(r\)/g)||[]).length>=3);
+  check("termReadBtn: aviso de contrato como warn en el terminal", script.includes("termPrintText('⚠️ '+r.error,'warn')"));
+  check("termReadBtn: rama múltiple también avisa de contrato", script.includes("isReadContractError(r)") && (script.match(/Actualiza ambos a la misma versión\.','warn'/g)||[]).length>=2);
   check("bridge.py: acepta paths (array) y path (string)", fs.readFileSync("bridge.py","utf8").includes('data.get("paths")') && fs.readFileSync("bridge.py","utf8").includes('data.get("path")') && fs.readFileSync("bridge.py","utf8").includes("_read_single_file"));
   check("bridge.mjs: acepta paths (array) y path (string)", fs.readFileSync("bridge.mjs","utf8").includes('data.paths') && fs.readFileSync("bridge.mjs","utf8").includes('_readSingleFile'));
   // Seguridad del endpoint /read en el puente

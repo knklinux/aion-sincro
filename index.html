@@ -3380,13 +3380,26 @@ async function bridgeRead(paths, opts={}){
     );
     const resp=await fetch(BRIDGE+'/read',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify(body)});
-    const data=await resp.json();
+    let data;
+    try{ data=await resp.json(); }catch(_){ data={ok:false,error:'respuesta no JSON (HTTP '+resp.status+')'}; }
+    /* Contrato estricto de /read: si el puente rechaza con 400 por campos fuera
+       del contrato (p. ej. metadatos del historial que bridgeRead nunca debería
+       enviar), lo marcamos como error de contrato. Señal de un frontend
+       desactualizado frente al puente — se avisa en la UI. */
+    if(resp.status===400&&data&&!data.ok&&/campo no permitido en \/read/i.test(data.error||'')){
+      data.contractError=true;
+      data.error=(data.error||'')+' (posible frontend desactualizado vs. el puente)';
+    }
     if(isArray&&data.files&&opts.onProgress){
       data.files.forEach((f,i)=>opts.onProgress((i+1)/data.files.length,f.path,f.size));
     }
     return data;
   }catch(e){ return {ok:false,error:e.message}; }
 }
+/* Señal de cliente desactualizado: el puente rechazó el body de /read por
+   contener campos fuera de su contrato (ALLOWED_READ). bridgeRead() marca el
+   resultado con contractError=true cuando ocurre. */
+function isReadContractError(r){ return !!(r&&r.contractError); }
 async function handleFileRead(paths, opts){
   // Botón 📎 del chat: lee uno o varios archivos via el puente (/read)
   // y los analiza con el motor activo.
@@ -3411,8 +3424,14 @@ async function handleFileRead(paths, opts){
   if(!r.ok){
     typing.closest('.msg').remove();
     const body=addMsg('ai','');
-    body.textContent='❌ No pude leer «'+esc(label)+'»: '+esc(r.error)+'.';
-    body.closest('.msg').classList.add('sys');
+    if(isReadContractError(r)){
+      body.textContent='⚠️ El puente rechazó la petición de lectura: '+esc(r.error)+'.\n\nEsto es señal de un **frontend desactualizado** frente al puente (envía campos fuera del contrato de /read). Recarga la app con la misma versión que el puente, o actualiza ambos.';
+      body.closest('.msg').classList.add('sys');
+      toast('⚠️ Cliente desactualizado: /read envió campos fuera de contrato','4200');
+    }else{
+      body.textContent='❌ No pude leer «'+esc(label)+'»: '+esc(r.error)+'.';
+      body.closest('.msg').classList.add('sys');
+    }
     store.history.push({role:'assistant',content:body.textContent});
     setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
     streaming=false;
@@ -4952,8 +4971,15 @@ async function handleUserText(text){
         return;
       }else{
         typing.closest('.msg').remove();
-        const body=addMsg('ai','❌ No pude leer «'+esc(rpath)+'»: '+esc(r.error)+'.\n\n📂 Puedes leer archivos con el botón **📂 Leer** de la pestaña Terminal, o pedírmelo en el chat con «lee nombre-del-archivo».');
-        body.classList.add('err');
+        let body;
+        if(isReadContractError(r)){
+          body=addMsg('ai','⚠️ El puente rechazó la petición de lectura: '+esc(r.error)+'.\n\nEsto es señal de un **frontend desactualizado** frente al puente (envía campos fuera del contrato de /read). Recarga la app con la misma versión que el puente, o actualiza ambos.');
+          body.classList.add('sys');
+          toast('⚠️ Cliente desactualizado: /read envió campos fuera de contrato','4200');
+        }else{
+          body=addMsg('ai','❌ No pude leer «'+esc(rpath)+'»: '+esc(r.error)+'.\n\n📂 Puedes leer archivos con el botón **📂 Leer** de la pestaña Terminal, o pedírmelo en el chat con «lee nombre-del-archivo».');
+          body.classList.add('err');
+        }
         store.history.push({role:'assistant',content:body.textContent});
         streaming=false;
         return;
@@ -4963,8 +4989,15 @@ async function handleUserText(text){
       const r=await bridgeRead(paths);
       if(!r.ok||!r.files){
         typing.closest('.msg').remove();
-        const body=addMsg('ai','❌ Error al leer los archivos: '+esc(r.error||'desconocido'));
-        body.classList.add('err');
+        let body;
+        if(isReadContractError(r)){
+          body=addMsg('ai','⚠️ El puente rechazó la petición de lectura: '+esc(r.error)+'.\n\nEsto es señal de un **frontend desactualizado** frente al puente (envía campos fuera del contrato de /read). Recarga la app con la misma versión que el puente, o actualiza ambos.');
+          body.classList.add('sys');
+          toast('⚠️ Cliente desactualizado: /read envió campos fuera de contrato','4200');
+        }else{
+          body=addMsg('ai','❌ Error al leer los archivos: '+esc(r.error||'desconocido'));
+          body.classList.add('err');
+        }
         store.history.push({role:'assistant',content:body.textContent});
         streaming=false;
         return;
@@ -5449,7 +5482,12 @@ function bind(){
         termPrintText(preview+(lines.length>60?'\n── … ('+(lines.length-60)+' líneas más) ──':''));
         if(r.size>3000) termPrintText('💡 El archivo completo ('+r.size+' bytes) está disponible en el chat. Pregúntale a Aion «analiza '+paths[0]+'» y te lo desglosará.');
       }else{
-        termPrintText('❌ '+r.error,'err');
+        if(isReadContractError(r)){
+          termPrintText('⚠️ '+r.error,'warn');
+          termPrintText('Esto es señal de un frontend desactualizado frente al puente (envía campos fuera del contrato de /read). Actualiza ambos a la misma versión.','warn');
+        }else{
+          termPrintText('❌ '+r.error,'err');
+        }
       }
     }else{
       const r=await bridgeRead(paths);
@@ -5466,7 +5504,12 @@ function bind(){
         });
         termPrintText('💡 También puedes usar el botón 📎 del chat para leer y analizar estos archivos juntos.');
       }else{
-        termPrintText('❌ '+r.error,'err');
+        if(isReadContractError(r)){
+          termPrintText('⚠️ '+r.error,'warn');
+          termPrintText('Esto es señal de un frontend desactualizado frente al puente (envía campos fuera del contrato de /read). Actualiza ambos a la misma versión.','warn');
+        }else{
+          termPrintText('❌ '+r.error,'err');
+        }
       }
     }
   };
