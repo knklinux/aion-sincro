@@ -262,9 +262,15 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("acta: TOOL_NAMES cubre las 5 herramientas", /const TOOL_NAMES=\{nmap:'Nmap',gobuster:'Gobuster',curl:'curl',nessus:'Nessus',burp:'Burp Suite'\}/.test(script));
   check("acta: sección solo si modo Laboral o hay herramientas", /if\(inLaboral\|\|tools\.length\)\{\s*md\+='\\n## '\+L\.tools/.test(script) && /const inLaboral=!!store\.laboral;/.test(script));
   check("acta: fragmento de salida recortado a 600 chars con marca de truncado", /frag\.slice\(0,600\)/.test(script) && /x\.frag\.length>=600/.test(script) && /truncated/.test(script) && /truncado/.test(script));
-  check("acta: cada herramienta con bloque de código de su salida", /md\+='- \*\*'\+TOOL_NAMES\[x\.tool\]\+'\*\*\\n\\n```\\n'\+x\.frag/.test(script));
+  check("acta: cada herramienta con bloque de código de su salida", /md\+='- \*\*'\+TOOL_NAMES\[x\.tool\]\+'\*\*'\+\(x\.sum\?' — \*'\+x\.sum\+'\*':''\)\+'\\n\\n```\\n'\+x\.frag/.test(script));
   check("acta: sin salidas detectadas muestra aviso (es/en)", /'No tool outputs were detected in this session\.'/.test(script) && /'No se detectaron salidas de herramientas en esta sesión\.'/.test(script));
   check("acta: modo Laboral reflejado con 💼", /laboral:en\?'💼 Laboral mode active':'💼 Modo Laboral activo'/.test(script) && /if\(inLaboral\) md\+='> '\+L\.laboral/.test(script));
+  // Mini-resumen por herramienta en el acta (parsers existentes -> datos clave)
+  check("acta: toolMiniSummary() definida", /function\s+toolMiniSummary\s*\(/.test(script));
+  check("acta: toolMiniSummary cubre las 5 herramientas", /if\(tool==='nmap'\)\{/.test(script) && /if\(tool==='gobuster'\)\{/.test(script) && /if\(tool==='nessus'\)\{/.test(script) && /if\(tool==='burp'\)\{/.test(script) && /if\(tool==='curl'\)\{/.test(script));
+  check("acta: resumen calculado sobre el contenido completo (no el fragmento recortado)", script.includes("sum:toolMiniSummary(t,m.content)"));
+  check("acta: resumen renderizado en cursiva junto al nombre de la herramienta", script.includes("(x.sum?' — *'+x.sum+'*':'')"));
+  check("acta: toolMiniSummary respeta reportLang", script.includes("const en=reportIsEn();") && script.includes("open port(s)") && script.includes("puerto(s) abierto(s)"));
   check("botones de acta en el footer de la Ruta", html.includes('id="btnActaMd"') && html.includes('id="btnActaPdf"'));
   check("btnActaMd/PDF exportan con sessionActaMd()", script.includes("$('#btnActaMd').onclick=()=>{ const md=sessionActaMd(); downloadMarkdown(md,'acta-sesion-practica'); };") && script.includes("$('#btnActaPdf').onclick=()=>{ const md=sessionActaMd(); exportPdf(md,'Acta de Sesión de Práctica'); };"));
   // Botón en el chat: exportar el acta directamente (MD/PDF) sin el overlay de Ruta
@@ -839,7 +845,7 @@ await (async () => {
   // ---------- Parsers dinámicos: gobuster / Nessus / Burp Suite ----------
   console.log("\n[Modo Laboral] Parsers de herramientas (muestras reales)");
   const dynParsers = ["parseNmapOutput", "parseGobusterOutput", "parseNessusOutput", "parseBurpOutput", "parseCurlOutput",
-    "gobusterReconReport", "nessusReconReport", "burpReconReport", "curlReconReport", "executiveReport", "findingsReport", "detectToolOutput", "reconReport"];
+    "gobusterReconReport", "nessusReconReport", "burpReconReport", "curlReconReport", "executiveReport", "findingsReport", "detectToolOutput", "reconReport", "toolMiniSummary"];
   const dynSrcs = dynParsers.map(n => [n, extractFn(script, n)]);
   check("parsers y generadores extraíbles del <script>", dynSrcs.every(([, s]) => !!s));
   if (dynSrcs.every(([, s]) => !!s)) {
@@ -847,7 +853,7 @@ await (async () => {
       // reportIsEn() se inyecta como stub falso (es-ES) para los generadores bilingües.
       const src = `"use strict"; const store=arguments[0]; function reportIsEn(){return false;}
         ${dynSrcs.map(([, s]) => s).join("\n")};
-        return {parseGobusterOutput,parseNessusOutput,parseBurpOutput,parseCurlOutput,gobusterReconReport,nessusReconReport,burpReconReport,curlReconReport,executiveReport,findingsReport,detectToolOutput,reconReport};`;
+        return {parseNmapOutput,parseGobusterOutput,parseNessusOutput,parseBurpOutput,parseCurlOutput,gobusterReconReport,nessusReconReport,burpReconReport,curlReconReport,executiveReport,findingsReport,detectToolOutput,reconReport,toolMiniSummary};`;
       const fns = new Function(src)({ lang: "es-ES" });
 
       // gobuster: salida real del formato '/path (Status: NNN) [Size: NNN]'
@@ -925,6 +931,19 @@ await (async () => {
       check("executiveReport: métricas desde curl (cabeceras)", !!execCurl && execCurl.includes("# Informe Ejecutivo") && execCurl.includes("Cabeceras de seguridad ausentes") && execCurl.includes("4"));
       check("executiveReport/findingsReport null con texto irrelevante", fns.executiveReport("hola que tal") === null && fns.findingsReport("hola que tal") === null);
       check("detectToolOutput identifica curl como 'curl'", fns.detectToolOutput(curlSample) === "curl");
+
+      // Mini-resumen por herramienta para el acta (es-ES en este harness)
+      const nmapSum = fns.toolMiniSummary("nmap", "Nmap scan report for 10.0.0.1\nPORT     STATE SERVICE\n80/tcp   open  http        Apache httpd 2.4.41\n22/tcp   open  ssh         OpenSSH 8.2p1\n");
+      check("toolMiniSummary nmap: hosts + puertos + servicios", !!nmapSum && nmapSum.includes("1 host(s)") && nmapSum.includes("2 puerto(s) abierto(s)") && nmapSum.includes("http"));
+      const gobSum = fns.toolMiniSummary("gobuster", "/admin (Status: 200) [Size: 5123]\n/login (Status: 301) [Size: 178] [--> /login/]\n/backup (Status: 403) [Size: 212]\n");
+      check("toolMiniSummary gobuster: rutas + estados", !!gobSum && gobSum.includes("3 ruta(s)") && gobSum.includes("1 con 200"));
+      const nesSum = fns.toolMiniSummary("nessus", "Plugin #11936 (OS Identification)\n  Severity: Medium\nPlugin #10150 (Windows SMB Remote Code Execution)\n  Severity: Critical\n");
+      check("toolMiniSummary nessus: críticos y altos", !!nesSum && nesSum.includes("2 hallazgo(s)") && nesSum.includes("1 crítico(s)"));
+      const burSum = fns.toolMiniSummary("burp", "Issue: SQL Injection\n  Severity: High\nIssue: Missing X-Frame-Options\n  Severity: Medium\n");
+      check("toolMiniSummary burp: severidades altas/críticas", !!burSum && burSum.includes("2 hallazgo(s)") && burSum.includes("1 alto(s)/crítico(s)"));
+      const curSum = fns.toolMiniSummary("curl", curlSample);
+      check("toolMiniSummary curl: estado + server + cabeceras ausentes", !!curSum && curSum.includes("HTTP 200") && curSum.includes("nginx/1.24.0") && curSum.includes("4 cabecera(s) ausente(s)"));
+      check("toolMiniSummary: texto irrelevante -> vacío", fns.toolMiniSummary("nmap", "hola que tal") === "" && fns.toolMiniSummary("gobuster", "nada") === "");
     } catch (e) {
       check("parsers dinámicos ejecutan sin error", false, (e && e.message || e).toString().slice(0, 200));
     }

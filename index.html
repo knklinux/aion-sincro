@@ -2841,7 +2841,11 @@ function sessionActaMd(){
     if(t&&!toolsSeen.has(t)){
       toolsSeen.add(t);
       const frag=String(m.content).replace(/\n{3,}/g,'\n\n').trim();
-      tools.push({tool:t, frag:frag.slice(0,600)});
+      /* Mini-resumen por herramienta calculado sobre el contenido COMPLETO
+         (no sobre el fragmento recortado) para que los parsers vean la salida
+         entera. toolMiniSummary devuelve '' si no parsea: entonces solo se
+         muestra el fragmento crudo. */
+      tools.push({tool:t, frag:frag.slice(0,600), sum:toolMiniSummary(t,m.content)});
     }
   }
   const inLaboral=!!store.laboral;
@@ -2862,7 +2866,9 @@ function sessionActaMd(){
     if(!tools.length) md+='_'+(en?'No tool outputs were detected in this session.':'No se detectaron salidas de herramientas en esta sesión.')+'_\n\n';
     else tools.forEach(x=>{
       const cut=x.frag.length>=600?'\n\n── ['+(en?'truncated':'truncado')+' — '+(x.frag.length-600)+' '+ (en?'chars':'caracteres')+'] ──':'';
-      md+='- **'+TOOL_NAMES[x.tool]+'**\n\n```\n'+x.frag+cut+'\n```\n\n';
+      /* Mini-resumen (p. ej. «2 host(s) · 5 puerto(s) abierto(s) · ssh, http»)
+         en cursiva junto al nombre de la herramienta, antes del fragmento. */
+      md+='- **'+TOOL_NAMES[x.tool]+'**'+(x.sum?' — *'+x.sum+'*':'')+'\n\n```\n'+x.frag+cut+'\n```\n\n';
     });
   }
   md+='\n## '+L.trans+'\n\n';
@@ -3552,6 +3558,59 @@ function detectToolOutput(text){
   if(/\bPlugin #\d+\s*\(/i.test(s)&&/(Severity|Risk Factor):/i.test(s)) return 'nessus';
   if(/^Issue:\s*.+$/im.test(s)&&/Severity:\s*(High|Medium|Low|Critical|Information)/i.test(s)) return 'burp';
   return null;
+}
+/* Mini-resumen por herramienta para el acta: extrae los datos clave de cada
+   salida usando los parsers ya existentes (nmap: hosts/puertos/servicios;
+   gobuster: rutas y estados; nessus/burp: severidades; curl: cabeceras).
+   Devuelve '' si la salida no es parseable (el fragmento crudo se sigue
+   mostrando igualmente). Respeta reportLang (es/en). */
+function toolMiniSummary(tool,frag){
+  const en=reportIsEn();
+  try{
+    if(tool==='nmap'){
+      const hosts=parseNmapOutput(frag);
+      if(!hosts) return '';
+      const total=hosts.reduce((a,h)=>a+h.ports.length,0);
+      const servs=[...new Set(hosts.flatMap(h=>h.ports.map(p=>String(p.service).split(/[\s(]/)[0]).filter(Boolean).map(x=>x.toLowerCase())))].slice(0,5).join(', ');
+      return en
+        ? hosts.length+' host(s) · '+total+' open port(s)'+(servs?' · '+servs:'')
+        : hosts.length+' host(s) · '+total+' puerto(s) abierto(s)'+(servs?' · '+servs:'');
+    }
+    if(tool==='gobuster'){
+      const rows=parseGobusterOutput(frag);
+      if(!rows) return '';
+      const s2=rows.filter(r=>r.status===200).length;
+      const s3=rows.filter(r=>r.status>=300&&r.status<400).length;
+      return en
+        ? rows.length+' path(s) · '+s2+' with 200 · '+s3+' redirect(s)'
+        : rows.length+' ruta(s) · '+s2+' con 200 · '+s3+' redirección(es)';
+    }
+    if(tool==='nessus'){
+      const f=parseNessusOutput(frag);
+      if(!f) return '';
+      const crit=f.filter(x=>/critical/i.test(x.severity)).length;
+      const high=f.filter(x=>/high/i.test(x.severity)).length;
+      return en
+        ? f.length+' finding(s) · '+crit+' critical · '+high+' high'
+        : f.length+' hallazgo(s) · '+crit+' crítico(s) · '+high+' alto(s)';
+    }
+    if(tool==='burp'){
+      const issues=parseBurpOutput(frag);
+      if(!issues) return '';
+      const hi=issues.filter(i=>/high|critical/i.test(i.severity)).length;
+      return en
+        ? issues.length+' issue(s) · '+hi+' high/critical'
+        : issues.length+' hallazgo(s) · '+hi+' alto(s)/crítico(s)';
+    }
+    if(tool==='curl'){
+      const c=parseCurlOutput(frag);
+      if(!c) return '';
+      return en
+        ? 'HTTP '+c.status+(c.server?' · '+c.server:'')+' · '+(c.missing.length?c.missing.length+' missing header(s)':'all security headers present')
+        : 'HTTP '+c.status+(c.server?' · '+c.server:'')+' · '+(c.missing.length?c.missing.length+' cabecera(s) ausente(s)':'todas las cabeceras presentes');
+    }
+  }catch(_){}
+  return '';
 }
 /* gobuster: líneas '/path (Status: NNN) [Size: NNN]' (+ redirección opcional). */
 function parseGobusterOutput(text){
