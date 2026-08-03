@@ -1263,6 +1263,10 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
         </select>
         <div class="hint">El informe de reconocimiento, la portada del PDF y las plantillas Laboral se generan en el idioma elegido.</div>
       </div>
+      <div class="field">
+        <button class="toggle" id="btnActaClean" style="width:100%;justify-content:center"><span class="tk"></span> ✂️ Acta: omitir salidas crudas de herramientas en la transcripción</button>
+        <div class="hint">Las salidas de nmap/gobuster/curl/nessus/burp pegadas en el chat se omiten de la transcripción del acta y solo se mantienen en la sección «Herramientas usadas» — el acta se lee más limpia.</div>
+      </div>
     </div>
 
     <div class="sect"><label>⚡ Sistema</label>
@@ -1663,7 +1667,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const store={
   provider:'demo', model:'hermes3', modelByProvider:{}, backupProvider:'', autoFailover:true,
   ollamaUrl:'http://localhost:11434', groqKey:'', openrouterKey:'', hfToken:'', mistralKey:'',
-  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, autoStopMic:true, breve:true, continuous:false, turnTimeout:4, chimeVol:70, chimeMute:false, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion', autoStart:false, pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:'', reportLang:'es',
+  lang:'es-ES', voice:'', voxtralEmotion:'auto', autoLang:true, piperUrl:'http://127.0.0.1:8766', piperToken:'', piperOnline:false, rate:1, pitch:1, piperLength:1.0, piperNoise:0.667, tts:true, autoStopMic:true, breve:true, continuous:false, turnTimeout:4, chimeVol:70, chimeMute:false, search:true, pentest:false, laboral:false, sincronia:false, wake:false, wakeWord:'aion', autoStart:false, pdfWatermark:false, pdfWatermarkText:'CONFIDENCIAL', pdfCover:false, pdfCompany:'', reportLang:'es', actaClean:false,
   pentestScope:'', bridgeToken:'', proxyUrl:'http://127.0.0.1:8797', proxyToken:'', proxyOn:false, autoLockMin:0, rememberUnlock:false, tools:{internet:true,weather:true,cve:true,github:true,countries:true}, history:[]
 };
 
@@ -2874,10 +2878,18 @@ function sessionActaMd(){
   /* Contexto de la Ruta Red Team: checkpoints completados con sus tiempos de
      práctica, agrupados por fase. Solo aparece si hay algún checkpoint hecho. */
   md+=rutaContextMd(en);
+  /* Filtro «acta limpia»: si store.actaClean está activo, los mensajes que
+     son salidas crudas de herramientas (nmap/gobuster/curl/nessus/burp, según
+     detectToolOutput) se omiten de la transcripción — ya viven en la sección
+     «Herramientas usadas». Se anota cuántas se omitieron. */
+  const actaClean=!!store.actaClean;
+  const hiddenTools=actaClean?h.filter(m=>m&&m.content&&detectToolOutput(m.content)).length:0;
   md+='\n## '+L.trans+'\n\n';
+  if(hiddenTools) md+='> ✂️ '+hiddenTools+' '+(en?(hiddenTools===1?'raw tool output omitted from the transcript (see Tools used above).':'raw tool outputs omitted from the transcript (see Tools used above).'):(hiddenTools===1?'salida de herramienta omitida de la transcripción (ver Herramientas usadas arriba).':'salidas de herramientas omitidas de la transcripción (ver Herramientas usadas arriba).'))+'\n\n';
   let n=0;
   for(const m of h){
     if(!m||!m.content) continue;
+    if(actaClean&&detectToolOutput(m.content)) continue;
     n++;
     const who=m.role==='user'?(en?'**You**':'**Tú**'):(en?'**Aion**':'**Aion**');
     const voice=m.via==='voice'?' 🎙️':' 📝';
@@ -5494,6 +5506,7 @@ function bind(){
   };
   $('#btnPdfWatermark').onclick=()=>{ store.pdfWatermark=!store.pdfWatermark; syncPdfUI(); saveStore(); toast(store.pdfWatermark?'💧 Marca de agua de confidencialidad activada':'Marca de agua desactivada'); };
   $('#btnPdfCover').onclick=()=>{ store.pdfCover=!store.pdfCover; syncPdfUI(); saveStore(); toast(store.pdfCover?'🏢 Portada corporativa activada':'Portada desactivada'); };
+  $('#btnActaClean').onclick=()=>{ store.actaClean=!store.actaClean; syncActaCleanUI(); saveStore(); toast(store.actaClean?'✂️ Actas limpias: salidas crudas solo en «Herramientas usadas»':'Actas completas: salidas crudas incluidas en la transcripción'); };
   $('#btnAutoStart').onclick=()=>{
     // Ejecuta crear-arranque-automatico.ps1 via el puente de terminal.
     // El puente y el HTTP comparten APP_DIR: la ruta relativa siempre funciona.
@@ -5651,7 +5664,7 @@ function openSettings(){
   $('#pdfWatermarkText').value=store.pdfWatermarkText||'CONFIDENCIAL';
   $('#pdfCompany').value=store.pdfCompany||'';
   $('#reportLangSel').value=store.reportLang||'es';
-  syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncPdfUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); syncLaboralUI(); syncAutoStartUI(); syncAutoFailoverUI(); refreshProviderUI();
+  syncSearchUI(); syncWakeUI(); syncAutoLangUI(); syncPdfUI(); syncActaCleanUI(); syncVoxtralEmotionUI(); syncPiperUI(); syncProxyUI(); syncLaboralUI(); syncAutoStartUI(); syncAutoFailoverUI(); refreshProviderUI();
   if(isPiperVoice()) piperPing(()=>syncPiperUI());
 }
 function closeSettings(){ $('#settings').classList.remove('open'); $('#backdrop').classList.remove('show'); }
@@ -5679,6 +5692,7 @@ function collectSettings(noSave){
   store.pdfCover=$('#btnPdfCover').classList.contains('on');
   store.pdfCompany=$('#pdfCompany').value.trim();
   store.reportLang=$('#reportLangSel').value||'es';
+  store.actaClean=!!($('#btnActaClean')||{}).classList?.contains('on');
   if(store.crypto&&cryptoUnlocked) reEncryptSecrets().then(()=>saveStore()); // re-cifrar claves editadas
   if(!noSave)saveStore();
 }
@@ -5691,6 +5705,7 @@ function syncBreveUI(){ const b=$('#btnBreve'); if(b)b.classList.toggle('on',sto
 function syncContinuousUI(){ const b=$('#btnContinuous'); if(b)b.classList.toggle('on',store.continuous); }
 function syncChimeUI(){ const b=$('#btnChimeMute'); if(b)b.classList.toggle('on',!!store.chimeMute); const v=$('#chimeVol'); if(v)v.value=store.chimeVol||70; const o=$('#chimeVolOut'); if(o)o.textContent=(store.chimeVol||70)+'%'; }
 function syncPdfUI(){ const a=$('#btnPdfWatermark'); if(a)a.classList.toggle('on',store.pdfWatermark); const b=$('#btnPdfCover'); if(b)b.classList.toggle('on',store.pdfCover); }
+function syncActaCleanUI(){ const b=$('#btnActaClean'); if(b)b.classList.toggle('on',!!store.actaClean); }
 function syncAutoStartUI(){ const b=$('#btnAutoStart'); if(b)b.classList.toggle('on',store.autoStart); }
 function refreshModelsViaProxy(){
   const p=store.provider, btn=$('#btnRefreshModels');

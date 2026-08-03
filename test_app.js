@@ -279,6 +279,15 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("acta: rutaContextMd usa el tiempo de práctica (fmtPrac)", /timeById\[e\.id\]=e\.ms/.test(script) && /⏱️ '\+fmtPrac\(t\)/.test(script));
   check("acta: sección Ruta invocada antes de la transcripción", script.includes("md+=rutaContextMd(en);") && script.includes("md+='\\n## '+L.trans+'\\n\\n';"));
   check("acta: rutaContextMd bilingüe (Red Team Route / Ruta Red Team)", script.includes("'Red Team Route'") && script.includes("'Ruta Red Team'"));
+  // Filtro «acta limpia»: omitir salidas crudas de herramientas de la transcripción
+  check("actaClean:false por defecto en store", /actaClean:false,/.test(script));
+  check("toggle btnActaClean presente en Ajustes (Informes PDF)", html.includes('id="btnActaClean"') && html.includes('✂️ Acta: omitir salidas crudas de herramientas en la transcripción'));
+  check("btnActaClean wirgeado con syncActaCleanUI + saveStore", script.includes("$('#btnActaClean').onclick=()=>{ store.actaClean=!store.actaClean; syncActaCleanUI(); saveStore();"));
+  check("syncActaCleanUI() definida y llamada al cargar Ajustes", /function\s+syncActaCleanUI\s*\(/.test(script) && script.includes("syncActaCleanUI();"));
+  check("collectSettings lee actaClean del toggle", script.includes("store.actaClean=!!($('#btnActaClean')||{}).classList?.contains('on');"));
+  check("filtro en el acta: hiddenTools cuenta salidas crudas detectadas", /const hiddenTools=actaClean\?h\.filter\(m=>m&&m\.content&&detectToolOutput\(m\.content\)\)\.length:0;/.test(script));
+  check("filtro en el acta: salidas crudas omitidas del bucle de transcripción", /if\(actaClean&&detectToolOutput\(m\.content\)\) continue;/.test(script));
+  check("filtro en el acta: nota bilingüe al omitir salidas", script.includes("raw tool output omitted from the transcript") && script.includes("salida de herramienta omitida de la transcripción") && script.includes("raw tool outputs omitted from the transcript") && script.includes("salidas de herramientas omitidas de la transcripción"));
   check("botones de acta en el footer de la Ruta", html.includes('id="btnActaMd"') && html.includes('id="btnActaPdf"'));
   check("btnActaMd/PDF exportan con sessionActaMd()", script.includes("$('#btnActaMd').onclick=()=>{ const md=sessionActaMd(); downloadMarkdown(md,'acta-sesion-practica'); };") && script.includes("$('#btnActaPdf').onclick=()=>{ const md=sessionActaMd(); exportPdf(md,'Acta de Sesión de Práctica'); };"));
   // Botón en el chat: exportar el acta directamente (MD/PDF) sin el overlay de Ruta
