@@ -258,6 +258,14 @@ check("learnCheck() registra el tiempo al completar", /function\s+learnCheck\s*\
   check("sessionActaMd() escapa/vacía contenido sin romper Markdown", /String\(m\.content\)\.replace\(\/\\n\{3,\}/.test(script));
   check("botones de acta en el footer de la Ruta", html.includes('id="btnActaMd"') && html.includes('id="btnActaPdf"'));
   check("btnActaMd/PDF exportan con sessionActaMd()", script.includes("$('#btnActaMd').onclick=()=>{ const md=sessionActaMd(); downloadMarkdown(md,'acta-sesion-practica'); };") && script.includes("$('#btnActaPdf').onclick=()=>{ const md=sessionActaMd(); exportPdf(md,'Acta de Sesión de Práctica'); };"));
+  // Botón en el chat: exportar el acta directamente (MD/PDF) sin el overlay de Ruta
+  check("showActaInChat() definida (acta en el chat)", /function\s+showActaInChat\s*\(/.test(script));
+  check("showActaInChat() usa sessionActaMd() + mdToHtml()", /const md=sessionActaMd\(\);\s*const body=addMsg\('ai',''\);\s*body\.innerHTML=mdToHtml\(md\)/.test(script));
+  check("acta en chat: exportBar con chips Markdown y PDF debajo del mensaje", /const bar=document\.createElement\('div'\); bar\.className='exportBar';/.test(script) && /b1\.textContent='📥 Markdown'/.test(script) && /b2\.textContent='📄 PDF'/.test(script) && /body\.appendChild\(bar\);/.test(script));
+  check("chips del acta exportan con sessionActaMd()", /b1\.onclick=\(\)=>downloadMarkdown\(sessionActaMd\(\),'acta-sesion-practica'\);/.test(script) && /b2\.onclick=\(\)=>exportPdf\(sessionActaMd\(\),'Acta de Sesión de Práctica'\);/.test(script));
+  check("el acta del chat no se persiste en history (no se incluye a sí misma)", /No persiste en store\.history para que el\s*acta nunca se incluya a sí misma en actas posteriores/.test(script) || script.includes("showActaInChat()"));
+  check("comando «acta» en el chat sin abrir la Ruta", script.includes("if(/^(acta|genera( el| la)? acta|dame( el| la)? acta|muestra( el| la)? acta|ver( el| la)? acta|acta de (la |esta )?sesi[oó]n|acta de pr[aá]ctica|minuta|transcripci[oó]n de (la|esta) sesi[oó]n)/i.test(text))") && script.includes("showActaInChat();") && script.includes("streaming=false;"));
+  check("el comando acta responde por voz y libera streaming", /speak\(reportIsEn\(\)\? 'I generated the session minutes[^']*' : 'He generado el acta de la sesión[^']*'\);[\s\S]*?streaming=false;\s*return;/.test(script));
 // Modo Laboral: informes profesionales exportables en Markdown/PDF
 check("LABORAL_SYSTEM definido con anatomía de informe", /const LABORAL_SYSTEM=`[\s\S]*?## 3\. Hallazgos[\s\S]*?REPORTE EJECUTIVO/.test(script));
 check("store persiste laboral:false", /laboral:false,/.test(script));

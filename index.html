@@ -2849,6 +2849,27 @@ function sessionActaMd(){
   md+='---\n*'+L.foot+'*\n';
   return md;
 }
+function showActaInChat(){
+  /* Muestra el acta de la sesión como mensaje del chat y añade JUSTO DEBAJO
+     los botones de exportación (📥 Markdown / 📄 PDF) — sin pasar por el
+     overlay de Ruta. Se dispara con «acta», «genera el acta», «acta de la
+     sesión»… (ver handleUserText). No persiste en store.history para que el
+     acta nunca se incluya a sí misma en actas posteriores. */
+  const md=sessionActaMd();
+  const body=addMsg('ai','');
+  body.innerHTML=mdToHtml(md);
+  const bar=document.createElement('div'); bar.className='exportBar';
+  const lab=document.createElement('span'); lab.className='expLab'; lab.textContent=reportIsEn()?'Export minutes:':'Exportar acta:'; bar.appendChild(lab);
+  const b1=document.createElement('button'); b1.className='exportChip'; b1.textContent='📥 Markdown';
+  b1.title='Exporta la transcripción de esta sesión como acta de práctica (Markdown)';
+  b1.onclick=()=>downloadMarkdown(sessionActaMd(),'acta-sesion-practica'); bar.appendChild(b1);
+  const b2=document.createElement('button'); b2.className='exportChip'; b2.textContent='📄 PDF';
+  b2.title='Exporta la transcripción de esta sesión como acta de práctica (PDF)';
+  b2.onclick=()=>exportPdf(sessionActaMd(),'Acta de Sesión de Práctica'); bar.appendChild(b2);
+  body.appendChild(bar);
+  $('#chatLog').scrollTop=$('#chatLog').scrollHeight;
+  return body;
+}
 function renderCert(){
   const body=$('#certBody'); if(!body) return;
   const en=isEnglish(); const st=certStats();
@@ -4756,6 +4777,17 @@ async function handleUserText(text){
   const typing=addTyping();
   store.history.push({role:'user',content:text,via:voiceInputFlag?'voice':'text',ts:Date.now()});
   voiceInputFlag=false;
+  /* Comando acta: «acta», «genera el acta», «acta de la sesión», «minuta»…
+     muestra la transcripción en el chat con botones de exportación
+     (MD/PDF) justo debajo, sin abrir el overlay de Ruta. */
+  if(/^(acta|genera( el| la)? acta|dame( el| la)? acta|muestra( el| la)? acta|ver( el| la)? acta|acta de (la |esta )?sesi[oó]n|acta de pr[aá]ctica|minuta|transcripci[oó]n de (la|esta) sesi[oó]n)/i.test(text)){
+    typing.closest('.msg').remove();
+    showActaInChat();
+    setState('idle'); $('#micBtn').textContent='🎙️'; $('#micBtn').title='Mantén Espacio o pulsa para hablar';
+    speak(reportIsEn()? 'I generated the session minutes. You can export it as Markdown or PDF.' : 'He generado el acta de la sesión. Puedes exportarla en Markdown o PDF.');
+    streaming=false;
+    return;
+  }
   /* Comando /read: «lee X», «analiza X», «léeme X», «abre X».
      Aion lee el archivo via el puente y lo incluye como contexto
      en el chat para poder discutirlo contigo. */
