@@ -1341,6 +1341,10 @@ await (async () => {
       const mdBody = fns.mdToDocxBody("**negrita** y normal\n\n| A | B |\n|---|---|\n| 1 | 2 |\n");
       check("mdToDocxBody: negrita a runs bold", mdBody.includes("<w:b/>") && mdBody.includes("negrita"));
       check("mdToDocxBody: tabla a w:tbl con encabezado sombreado", mdBody.includes("<w:tbl>") && mdBody.includes("EEF4FB"));
+      const tbl4 = fns.mdToDocxBody("| Host | Puerto | Estado | Servicio |\n|---|---|---|---|\n| 10.0.0.1 | 80/tcp | open | http Apache httpd |\n");
+      check("mdToDocxBody: tabla 4 col (acta) a w:tbl real", tbl4.includes("<w:tbl>") && tbl4.includes("<w:tr>") && (tbl4.match(/<w:tr>/g) || []).length === 2, (tbl4 || "").slice(0, 180));
+      check("mdToDocxBody: fila separadora ---| descartada (no se cuela como dato)", !tbl4.includes("---") && !tbl4.includes("&amp;mdash;") && !/w:tc>[\s\S]{0,10}?---<\/w:tc>/.test(tbl4), (tbl4 || "").slice(0, 180));
+      check("mdToDocxBody: cabecera de puertos sombreada EEF4FB + bold", tbl4.includes("EEF4FB") && tbl4.includes("<w:b/>") && tbl4.includes("Puerto") && tbl4.includes("10.0.0.1"));
       const xssBody = fns.mdToDocxBody("<script>&amp; \"comilla\"");
       check("mdToDocxBody: escapa TODO el texto (fix XSS/XML)", !xssBody.includes("<script>") && xssBody.includes("&lt;script&gt;") && xssBody.includes("&amp;amp;") && xssBody.includes("&quot;comilla&quot;"));
       const boldSafe = fns.mdToDocxBody("**<b>** texto & ");
@@ -1422,6 +1426,12 @@ await (async () => {
   check("barra de informe ofrece Word (.docx)", html.includes('Word (.docx)') && script.includes("b2b.onclick=()=>{ pracFinishLab(); exportDocx(text, reportTitle(text)); }"));
   check("bilingüe: portada respeta reportIsEn", script.includes("en?'Report generated with Aion Sincro · ':'Informe generado con Aion Sincro · '"));
   check("CoverOrg: spacing en pPr (OOXML válido)", /CoverOrg[\s\S]{0,500}?<w:pPr><w:spacing w:before="3000"\/>/.test(script) && !/<w:rPr>[\s\S]{0,140}?<w:spacing/.test(script));
+  // Acta DOCX: la tabla de puertos Markdown se convierte en tabla real de Word con cabecera sombreada
+  check("acta: botón btnActaDocx en el overlay de la Ruta", html.includes('id="btnActaDocx"') && html.includes('📋 Acta (Word)'));
+  check("acta: btnActaDocx cableado a exportDocx(sessionActaMd)", script.includes("$('#btnActaDocx').onclick=()=>{ const md=sessionActaMd(); exportDocx(md,'Acta de Sesión de Práctica'); };"));
+  check("acta: chip '📝 Word' en la export bar del chat", script.includes("b2w.className='exportChip'") && script.includes("b2w.textContent='📝 Word'") && script.includes("exportDocx(sessionActaMd(),'Acta de Sesión de Práctica')"));
+  check("acta: filtro fila separadora con cualquier nº de columnas (isSepRow)", script.includes("const isSepRow=r=>") && script.includes("c.every(x=>/^[\\s:!\\-]*$/.test(x))"));
+  check("acta: cabecera sombreada de tabla en DOCX (EEF4FB + bold)", script.includes("w:fill=\"EEF4FB\"") && script.includes("<w:shd w:val=\"clear\" w:color=\"auto\""));
 
   // ---------- Android (Capacitor): esqueleto del APK ----------
   console.log("\n[Android] Esqueleto Capacitor para el APK");

@@ -1433,6 +1433,7 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
         <button id="btnCert" title="Genera tu certificado de la Ruta Red Team (informe de progreso exportable)">📜 Certificado</button>
         <button id="btnActaMd" title="Exporta la transcripción de esta sesión como acta de práctica (Markdown)">📋 Acta (MD)</button>
         <button id="btnActaPdf" title="Exporta la transcripción de esta sesión como acta de práctica (PDF)">📋 Acta (PDF)</button>
+        <button id="btnActaDocx" title="Exporta la transcripción de esta sesión como acta de práctica (Word .docx, tablas convertidas a tablas reales con cabecera sombreada)">📋 Acta (Word)</button>
         <button id="btnResetLearn" title="Reiniciar todo el progreso de la ruta">↺ Reiniciar progreso</button>
       </div>
       <button id="btnCloseLearn">ENTENDER · CERRAR</button>
@@ -3151,6 +3152,9 @@ function showActaInChat(){
   const b2=document.createElement('button'); b2.className='exportChip'; b2.textContent='📄 PDF';
   b2.title='Exporta la transcripción de esta sesión como acta de práctica (PDF)';
   b2.onclick=()=>exportPdf(sessionActaMd(),'Acta de Sesión de Práctica'); bar.appendChild(b2);
+  const b2w=document.createElement('button'); b2w.className='exportChip'; b2w.textContent='📝 Word';
+  b2w.title='Exporta la transcripción de esta sesión como acta de práctica (Word .docx, tablas convertidas a tablas reales con cabecera sombreada)';
+  b2w.onclick=()=>{ exportDocx(sessionActaMd(),'Acta de Sesión de Práctica'); if(reportIsEn()) toast('📝 Acta exported in Word (.docx)'); }; bar.appendChild(b2w);
   const b3=document.createElement('button'); b3.className='exportChip'; b3.textContent='📊 Solo resumen';
   b3.title=reportIsEn()?'Exports only the Tools used section with mini-summaries (no transcript)':'Exporta solo la sección de Herramientas usadas con mini-resúmenes (sin transcripción)';
   b3.onclick=()=>{ const md=actaSummaryMd(); downloadMarkdown(md,'resumen-herramientas'); if(reportIsEn()) toast('📊 Tools summary exported (Markdown)'); else toast('📊 Resumen de herramientas exportado (Markdown)'); }; bar.appendChild(b3);
@@ -4556,7 +4560,13 @@ function mdToDocxBody(md){
       return;
     }
     if(/^\s*\|/.test(blk)){
-      const rows=blk.trim().split(/\n/).filter(r=>!/^\s*\|?[\s:\-]+\|?\s*$/.test(r));
+      /* Fila separadora: `|---|---|` (con cualquier número de columnas) se
+         descarta comparando las celdas sin caracteres alfanuméricos. El regex
+         anterior solo descartaba separadores de 2 columnas; con 4 (tabla de
+         puertos del acta) la fila de guiones se colaba como fila de datos. */
+      const isSepRow=r=>{ const c=r.replace(/^\||\|$/g,'').split('|').map(x=>x.trim());
+        return c.length>0&&c.every(x=>/^[\s:!\-]*$/.test(x)); };
+      const rows=blk.trim().split(/\n/).filter(r=>!isSepRow(r));
       out+='<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/></w:tblPr>';
       rows.forEach((r,i)=>{
         const cells=r.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
@@ -5757,6 +5767,7 @@ function bind(){
   $('#btnCloseCert').onclick=()=>{ const o=$('#certOverlay'); if(o) o.classList.remove('show'); };
   $('#btnActaMd').onclick=()=>{ const md=sessionActaMd(); downloadMarkdown(md,'acta-sesion-practica'); };
   $('#btnActaPdf').onclick=()=>{ const md=sessionActaMd(); exportPdf(md,'Acta de Sesión de Práctica'); };
+  $('#btnActaDocx').onclick=()=>{ const md=sessionActaMd(); exportDocx(md,'Acta de Sesión de Práctica'); };
   $('#certExportMd').onclick=()=>{ const md=certMarkdown(); downloadMarkdown(md,'certificado-ruta-red-team'); };
   $('#certExportPdf').onclick=()=>{ const md=certMarkdown(); exportPdf(md,'Certificado Ruta Red Team'); };
   $('#btnISO').onclick=openISO;
