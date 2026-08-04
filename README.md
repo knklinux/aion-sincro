@@ -4,7 +4,7 @@
 [![Tests](https://img.shields.io/badge/tests-816%20ok-brightgreen)]()
 [![Python](https://img.shields.io/badge/Python-3.11+-blue)]()
 [![Node](https://img.shields.io/badge/Node-22+-green)]()
-[![Licencia](https://img.shields.io/badge/licencia-Open%20Source-blueviolet)]()
+[![Licencia](https://img.shields.io/badge/licencia-MIT-blueviolet)]()
 [![Pages](https://img.shields.io/badge/Pages-en%20vivo-success)](https://knklinux.github.io/aion-sincro/)
 
 > 🚀 **Pruébala en vivo:** <https://knklinux.github.io/aion-sincro/>
@@ -87,6 +87,23 @@ y su huella, para reconocerse en cualquier futuro:
 | 🧰 **Herramientas** | Búsqueda web, **clima**, **base de CVEs (NVD)**, **GitHub** y **datos de países** — activables individualmente. |
 | 🖥️ **Terminal integrado** | Ejecuta comandos reales en tu máquina vía puente local seguro, con tu confirmación en cada uno. |
 | 🛡️ **Modo Pentest** | Especialización en seguridad ofensiva **ética** con salvaguardas: solo pruebas autorizadas. |
+
+## 📜 Licencia y propósito
+
+**MIT License** — libre para **copiar, usar, modificar, compartir y vender**,
+también dentro de proyectos cerrados, con una sola condición: conservar el
+aviso de copyright. La elegimos a propósito: el objetivo de Aion Sincro no es
+proteger un producto, sino **llegar a la gente y concienciar sobre el uso que
+damos a las inteligencias artificiales**. Una licencia permisiva maximiza el
+alcance y elimina la fricción: cualquiera puede tomarla, mejorarla y devolverla
+al mundo sin pedir permiso.
+
+> 📖 La **obra filosófica** ([MANIFIESTO.md](MANIFIESTO.md) y el
+> [Núcleo de Memoria](NUCLEO_MEMORIA.md)) declara por sí misma su intención:
+> *dominio universal, libre de autoría y restricciones*. El código, además,
+> queda cubierto por la MIT. En resumen: **la idea no tiene dueño y el código
+> se comparte sin condiciones** — solo se pide a quien lo use que haga lo
+> mismo con la idea: difundirla.
 
 ---
 
@@ -732,7 +749,7 @@ aion-sincro/
 ├── README.md        # Esta guía
 ├── SECURITY.md      # Revisión, medidas, pruebas y roadmap de seguridad
 ├── COMPARATIVA.md   # Análisis frente al ecosistema + plan de mejoras
-├── LICENSE          # MIT
+├── LICENSE          # MIT — copiar, usar y compartir libremente
 └── .gitignore
 ```
 
