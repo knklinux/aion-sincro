@@ -199,6 +199,22 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
+    # Cabeceras de seguridad en TODAS las respuestas (incluidas 4xx/5xx):
+    # se inyectan en end_headers(), que se llama siempre antes de enviar el body.
+    def end_headers(self):
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        # CSP estricta para un servicio local que solo sirve JSON/NDJSON al
+        # frontend (no carga recursos externos). no-sniff + default-src 'none'
+        # y connect-src self cubren las respuestas del puente.
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'none'; connect-src 'self'; frame-ancestors 'none'; "
+            "base-uri 'none'; form-action 'none'; object-src 'none'",
+        )
+        super().end_headers()
+
     def _cors(self, origin):
         self.send_header("Access-Control-Allow-Origin", origin or "*")
         self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")

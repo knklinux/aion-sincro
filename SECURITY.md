@@ -195,7 +195,15 @@ ejemplo, no una clave real.
 7. **Sandbox del puente**: lista blanca de comandos permitidos en modo
    "seguro" y bloqueo de rutas sensibles (`~/.ssh`, `/etc`).
 8. **CSP estricta** en `index.html` (Content-Security-Policy) y cabecera
-   `X-Frame-Options` para endurecer el navegador.
+   `X-Frame-Options` para endurecer el navegador. ✅ Implementado además en
+   **todos los servicios locales** (`bridge.py`, `bridge.mjs`, `proxy.py`):
+   cada respuesta (incluidas 4xx/5xx) lleva `Content-Security-Policy:
+   default-src 'none'; connect-src 'self'; frame-ancestors 'none'; base-uri
+   'none'; form-action 'none'; object-src 'none'`, `X-Content-Type-Options:
+   nosniff`, `Referrer-Policy: no-referrer` y `X-Frame-Options: DENY`,
+   inyectadas en `end_headers()` (un único punto, cubre todas las rutas y
+   errores). Regresión cubierta en `test_bridge.py` (checks de las 4
+   cabeceras en `/ping` de ambos puentes y del proxy).
 9. **Cifrar las claves en `localStorage`** (WebCrypto con passphrase derivada
    del usuario) en lugar de texto plano.
 

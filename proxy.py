@@ -114,6 +114,22 @@ class Handler(BaseHTTPRequestHandler):
         pass  # silencioso: el log por defecto solo contiene la línea de request (sin claves)
                # pero preferimos no imprimir nada por estética
 
+    # Cabeceras de seguridad en TODAS las respuestas (incluidas 4xx/5xx):
+    # se inyectan en end_headers(), que se llama siempre antes de enviar el body.
+    def end_headers(self):
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        # CSP estricta: el proxy solo reenvía JSON/SSE al frontend, no renderiza
+        # HTML ni carga recursos. frame-ancestors 'none' + default-src 'none'
+        # bloquean incrustación y ejecución de contenido inyectado.
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'none'; connect-src 'self'; frame-ancestors 'none'; "
+            "base-uri 'none'; form-action 'none'; object-src 'none'",
+        )
+        super().end_headers()
+
     def _deny(self):
         try:
             self.send_response(403)
