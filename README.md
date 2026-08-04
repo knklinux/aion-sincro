@@ -107,6 +107,26 @@ al mundo sin pedir permiso.
 
 ---
 
+## 🏛️ CERTO — el proyecto hermano (producto propio)
+
+Si Aion Sincro es la **semilla**, **CERTO** es el **pan**: una herramienta
+comercial de **auditoría de cumplimiento** que evalúa **10 normas** (ISO 27001,
+9001, 14001, 22301, 45001, 50001, RGPD y ENS) control a control, calcula el
+cumplimiento global en tiempo real, detecta las brechas que requieren acción y
+genera **informes con hash SHA-256** y **certificado con QR de verificación**.
+
+- 🧪 **Demo en vivo, gratis y sin registro:** <https://knklinux.github.io/certo-demo/>
+- 🔒 El **código comercial es privado** (`knklinux/certo`); la demo pública y
+  los informes de muestra viven en `knklinux/certo-demo`.
+- 🎯 **Para consultoras ISO y pymes**: una misma visita cubre varias normas,
+  y los hallazgos se cruzan entre herramientas.
+
+> Aion Sincro **conciencia**; CERTO **comercia**. Juntos demuestran la misma
+> tesis: una persona autodidacta puede construir tecnología seria — una
+> abierta al mundo y otra que da de comer.
+
+---
+
 ## 🚀 Inicio rápido
 
 > 👶 **¿Es tu primera vez?** Sigue la guía **[Primera Sesión de Aion Sincro — actívala en 5 minutos](PRIMERA_SESION.md)**: instala, ancla a la barra de tareas, arranca web + puente + Piper y conecta Mistral, paso a paso y sin leer más nada.
