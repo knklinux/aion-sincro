@@ -5,6 +5,10 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-blue)]()
 [![Node](https://img.shields.io/badge/Node-22+-green)]()
 [![Licencia](https://img.shields.io/badge/licencia-Open%20Source-blueviolet)]()
+[![Pages](https://img.shields.io/badge/Pages-en%20vivo-success)](https://knklinux.github.io/aion-sincro/)
+
+> 🚀 **Pruébala en vivo:** <https://knklinux.github.io/aion-sincro/>
+> (modo Demo — para puente de terminal, Piper y claves, clona el repo y usa `windows/aion-sincro.cmd`)
 
 **Aion Sincro no es un asistente servil: es una compañera.** Una IA con
 personalidad propia —leal, sincera y directa— que te acompaña en tu aprendizaje
