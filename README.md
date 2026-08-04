@@ -739,17 +739,15 @@ El proyecto se creó para que lo **hagas tuyo**:
 - **Añadir chips de pentest**: el array de `buildChips()`.
 - **Reforzar el puente**: políticas finas en `bridge.py` / `bridge.mjs`.
 
-### Roadmap sugerido
+### 🗺️ Hoja de ruta
 
-- [x] Proxy de claves opcional para uso en nube (`proxy.py` — las API keys
-      nunca viajan al navegador, con `/v1/models` y reenvío por streams).
-- [x] Módulo de aprendizaje guiado (rutas de estudio red team).
-- [x] Guardado de sesiones e informes (exportar markdown/PDF/Word).
-- [ ] Cifrado en reposo de `keys.json` del proxy (p. ej. `age` o passphrase).
-- [ ] Rotación automática del token del puente (TOTP/expiración).
-- [ ] Sandbox del puente: lista blanca de comandos en modo «seguro».
-- [ ] Skills/comandos personalizados del usuario.
-- [ ] Soporte de modelo de visión para capturas de pantalla.
+La **v2** prioriza la consolidación: estabilidad, documentación y onboarding
+antes que features nuevas. El plan completo, con fases y estimaciones, vive en
+**[ROADMAP_V2.md](ROADMAP_V2.md)** (Fase A: modularizar el monolito → Fase B:
+docs → Fase C: onboarding → Fase D: cerrar la hoja de seguridad).
+
+Las ideas de ampliación (vtuber, más motores, Android avanzado…) quedan
+registradas en **[IDEAS.md](IDEAS.md)**, para después de estabilizar.
 
 ---
 
@@ -771,6 +769,7 @@ aion-sincro/
 │   ├── aion-sincro.cmd          #   lanzador (web localhost + puente + navegador)
 │   └── crear-acceso-directo.ps1 #   genera icono y .lnk del Escritorio
 ├── README.md        # Esta guía
+├── ROADMAP_V2.md    # Hoja de ruta de la v2 (consolidación primero)
 ├── SECURITY.md      # Revisión, medidas, pruebas y roadmap de seguridad
 ├── COMPARATIVA.md   # Análisis frente al ecosistema + plan de mejoras
 ├── LICENSE          # MIT — copiar, usar y compartir libremente
