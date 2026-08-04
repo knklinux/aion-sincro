@@ -421,6 +421,13 @@ check("frase completa: no ejecuta con resultado provisional", /if\(!final\) retu
 check("frase completa: ejecuta handleUserText con la petición", script.includes("handleUserText(resto)"));
 check("frase completa: limpia separadores de la petición", script.includes("(m[3]||'').replace(/^[\\s,.;:!¿?]+/,'')"));
 check("frase completa: wake word solo sigue esperando petición", script.includes("Te escucho. ¿Qué necesitas?"));
+// Banner Edge: Firefox no permite micrófono → ofrecer abrir en Edge (microsoft-edge:)
+check("banner Edge: div #edgeBanner con botón y cerrar", html.includes('id="edgeBanner"') && html.includes('id="ebOpenEdge"') && html.includes('id="ebClose"'));
+check("banner Edge: CSS visible solo con .show", html.includes('#edgeBanner{') && html.includes('#edgeBanner.show{display:flex}'));
+check("banner Edge: edgeBannerCheck detecta Firefox y ausencia de SpeechRecognition", script.includes("function edgeBannerCheck(){") && script.includes("Firefox\\/") && script.includes("!(window.SpeechRecognition||window.webkitSpeechRecognition)"));
+check("banner Edge: se llama en el arranque (boot)", script.includes("initRecog();\n  edgeBannerCheck();"));
+check("banner Edge: abre con protocolo microsoft-edge:", script.includes("a.href='microsoft-edge:'+url") && script.includes("a.click(); a.remove();"));
+check("banner Edge: cierre persistente en sessionStorage", script.includes("sessionStorage.setItem('edgeBannerClosed','1')"));
 
 // --- Conversación fluida: auto-parada del micrófono + respuestas breves + interrupción mutua ---
 check("store default autoStopMic:true", script.includes("autoStopMic:true, breve:true,"));

@@ -564,6 +564,20 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
   box-shadow:0 10px 40px rgba(0,0,0,.5);transition:.35s;opacity:0;pointer-events:none}
 #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 
+/* ---------- Banner Edge (micrófono) ---------- */
+#edgeBanner{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:130;
+  background:linear-gradient(135deg,#2a2010,#3a2a10);border:1px solid rgba(245,165,36,.45);
+  color:var(--text);padding:12px 18px;border-radius:14px;font-size:13px;max-width:min(92vw,560px);
+  box-shadow:0 12px 44px rgba(0,0,0,.55);display:none;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;
+  animation:edgeIn .4s ease}
+#edgeBanner.show{display:flex}
+@keyframes edgeIn{from{opacity:0;transform:translateX(-50%) translateY(-14px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+#edgeBanner .ebText{flex:1 1 300px;line-height:1.5}
+#edgeBanner .ebBtn{background:linear-gradient(135deg,#f5a524,#e08c10);color:#14100a;border:none;padding:8px 14px;border-radius:10px;font-weight:700;cursor:pointer;font-size:12.5px;transition:.2s}
+#edgeBanner .ebBtn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+#edgeBanner .ebX{background:none;border:none;color:var(--text-dim,#9aa);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:6px;line-height:1}
+#edgeBanner .ebX:hover{color:#fff;background:rgba(255,255,255,.08)}
+
 /* ---------- Herramientas ---------- */
 .toolsHead{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--line)}
 .toolsHead h2{font-size:12px;letter-spacing:.22em;color:var(--dim);font-weight:700}
@@ -1410,6 +1424,13 @@ body[data-sincronia="1"] .orbit-3{border-color:rgba(16,185,129,.35)}
 </div>
 
 <div id="toast"></div>
+
+<div id="edgeBanner">
+  <span class="ebText">🎙️ <b>Tu navegador (Firefox) no permite el micrófono para la activación por voz.</b><br>
+  Abre Aion Sincro en Microsoft Edge para usar la hotword y la conversación por voz.</span>
+  <button class="ebBtn" id="ebOpenEdge">⚡ Abrir en Edge</button>
+  <button class="ebX" id="ebClose" title="Ocultar">✕</button>
+</div>
 
 
 <!-- Módulo de aprendizaje guiado: Ruta Red Team -->
@@ -4857,6 +4878,23 @@ function renderTermChips(bodyEl,text){
   }
 }
 
+/* ---------- Banner Edge: Firefox no permite micrófono ---------- */
+function edgeBannerCheck(){
+  const b=$('#edgeBanner'); if(!b) return;
+  const isFF=/Firefox\//i.test(navigator.userAgent);
+  const noSR=!(window.SpeechRecognition||window.webkitSpeechRecognition);
+  if((isFF||noSR)&&!sessionStorage.getItem('edgeBannerClosed')) b.classList.add('show');
+  const open=()=>{
+    // protocolo microsoft-edge: abre esta misma URL en Edge sin cambiar Firefox
+    const url=location.origin+location.pathname;
+    const a=document.createElement('a');
+    a.href='microsoft-edge:'+url; a.rel='noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  $('#ebOpenEdge').onclick=open;
+  $('#ebClose').onclick=()=>{ sessionStorage.setItem('edgeBannerClosed','1'); b.classList.remove('show'); };
+}
+
 /* ---------- Reconocimiento de voz (Chrome/Edge, gratis) ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let recog=null, listening=false, wakeScan=false, wakeTimer=null, wakeDenied=false;
@@ -5554,6 +5592,11 @@ function providerError(provider,err){
 /* ---------- UI: proveedor, ajustes, chips ---------- */
 function refreshProviderUI(){
   const p=store.provider;
+  // Sincronizar el selector con el motor guardado (al arrancar, el select
+  // HTML queda en su valor por defecto "demo" si no se asigna — el usuario
+  // veía demo aunque aion_cfg tuviera mistral guardado).
+  const selP=$('#provider'); if(selP&&selP.value!==p) selP.value=p;
+  const selB=$('#backupProvider'); if(selB&&selB.value!==(store.backupProvider||'')) selB.value=store.backupProvider||'';
   const hints={
     demo:'Modo de prueba sin conexión: respuestas limitadas para probar la interfaz y la voz.',
     ollama:'Modelo Hermes 100% local y gratuito. Requiere Ollama instalado y "ollama pull hermes3".',
@@ -6457,6 +6500,7 @@ async function autoConfigure(){
   const iv=setInterval(()=>{ w+=Math.random()*22; if(w>=100){w=100;clearInterval(iv);}
     bar.style.width=w+'%'; },120);
   clearChat(); buildChips(); renderTools(); syncSearchUI(); syncPentestUI(); syncLaboralUI(); syncSincroniaUI(); syncWakeUI(); syncAutoLangUI(); syncAutoStopMicUI(); syncBreveUI(); syncContinuousUI(); syncChimeUI(); syncTtsUI(); syncProxyUI(); syncCryptoUI(); syncAutoStartUI();
+  refreshProviderUI(); // el selector de motor debe reflejar el guardado (mistral etc.) desde el arranque
   autoConfigure();
   captureWelcomeES();
   renderWelcomeLang();
@@ -6490,6 +6534,7 @@ async function autoConfigure(){
   }
   document.body.dataset.state='idle';
   bind(); initRecog();
+  edgeBannerCheck(); // Firefox no permite micrófono → ofrecer abrir en Edge
   if(!store.model) store.model=store.modelByProvider[store.provider]||'hermes3';
   // Test de voz diferido al primer click (evita falso positivo de Chrome por autoplay)
   let _voiceTested=false;

@@ -86,9 +86,22 @@ def start_server(script, port, token=""):
     raise RuntimeError(f"{script} no arrancó en {port}")
 
 
+def find_node():
+    """Localiza node.exe real (PATH o instalación estándar de Windows)."""
+    for cand in ("node", r"C:\Program Files\nodejs\node.exe", r"C:\Program Files (x86)\nodejs\node.exe"):
+        try:
+            r = subprocess.run([cand, "--version"], capture_output=True, text=True, timeout=10)
+            if r.returncode == 0:
+                return cand
+        except Exception:
+            continue
+    return "node"
+
+
 def start_server_node(script, port, token=""):
     """Arranca un servidor Node (bridge.mjs) en un puerto libre."""
-    cmd = ["node", str(ROOT / script), "--port", str(port)]
+    node = find_node()
+    cmd = [node, str(ROOT / script), "--port", str(port)]
     if token:
         cmd += ["--token", token]
     p = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

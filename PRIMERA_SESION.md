@@ -7,6 +7,11 @@ documento.
 
 > ✅ **Requiere Windows** con **Python 3** o **Node.js** instalados (basta
 > con uno de los dos). Navegador: **Chrome o Edge**.
+>
+> 🎙️ **El micrófono (hotword y conversación por voz) solo funciona en
+> Chrome o Edge** — no en Firefox. Si abres la app en Firefox, verás un
+> aviso arriba con el botón **«⚡ Abrir en Edge»** que la abre en Edge
+> automáticamente (el lanzador ya abre Edge por ti al usar el acceso directo).
 
 ---
 

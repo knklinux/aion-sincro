@@ -75,6 +75,22 @@ CODE_FILES = [
 ]
 
 
+def find_node():
+    """Localiza node.exe real: PATH, o instalación estándar de Windows.
+    El alias de Microsoft Store no afecta a node, pero en muchas máquinas
+    node solo está en C:\Program Files\nodejs (fuera del PATH del proceso
+    lanzado por el VBS oculto) — sin este fallback los checks de sintaxis
+    JS fallan con WinError 2 (falso "App — FALLO" en la integridad)."""
+    for cand in ("node", r"C:\Program Files\nodejs\node.exe", r"C:\Program Files (x86)\nodejs\node.exe"):
+        try:
+            r = subprocess.run([cand, "--version"], capture_output=True, text=True, timeout=10)
+            if r.returncode == 0:
+                return cand
+        except Exception:
+            continue
+    return "node"  # última opción: que falle con el error real de PATH
+
+
 def run_suite(cmd, timeout=120):
     """Ejecuta un comando (p. ej. node --check) y devuelve (ok, detalle)."""
     try:
@@ -114,8 +130,9 @@ def scan_repo_secrets():
 
 def integrity_quick():
     """Verificación rápida: sintaxis JS/HTML/Python + secretos (segundos)."""
+    NODE = find_node()
     checks = {}
-    r = run_suite(["node", "--check", "test_app.js"], timeout=30)
+    r = run_suite([NODE, "--check", "test_app.js"], timeout=30)
     checks["app_js_syntax"] = {"ok": r[0], "detail": r[1]}
     tmp = os.path.join(BASE_DIR, ".integrity_tmp.js")
     try:
@@ -125,7 +142,7 @@ def integrity_quick():
             raise ValueError("no se encontró <script> en index.html")
         with open(tmp, "w", encoding="utf-8") as fh:
             fh.write(m.group(1))
-        r2 = run_suite(["node", "--check", tmp], timeout=30)
+        r2 = run_suite([NODE, "--check", tmp], timeout=30)
     except Exception as e:
         r2 = (False, str(e)[:200])
     finally:
@@ -147,8 +164,9 @@ def integrity_quick():
 
 def integrity_full():
     """Verificación completa: suites reales (test_app.js + test_bridge.py)."""
+    NODE = find_node()
     checks = {}
-    r = run_suite(["node", "test_app.js"], timeout=300)
+    r = run_suite([NODE, "test_app.js"], timeout=300)
     checks["app"] = {"ok": r[0], "detail": r[1]}
     r = run_suite([sys.executable, "test_bridge.py"], timeout=300)
     checks["bridge"] = {"ok": r[0], "detail": r[1]}

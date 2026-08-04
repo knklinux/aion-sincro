@@ -100,18 +100,41 @@ if "%STARTUP_MODE%"=="0" (
   echo.
 )
 
-rem --- 1) Servidor web (python preferido, node como respaldo) ---
-where python >nul 2>&1
-if %errorlevel%==0 (
-  start "Aion Sincro Web" /min cmd /c "cd /d ""%APP_DIR%"" && python -m http.server %PORT_APP% --bind 127.0.0.1"
-  call :log "Web: python -m http.server %PORT_APP% (127.0.0.1)"
+rem --- Localiza un intérprete de Python REAL ------------------------
+rem (el alias de Microsoft Store WindowsApps\python.exe NO es Python:
+rem  `where python` lo encuentra pero al ejecutarlo falla en silencio.
+rem  Prioridad: 1) py (launcher oficial, siempre real) 2) el python del
+rem  venv de Piper (ruta absoluta, real) 3) any python real en el PATH
+rem  descartando el alias de Store.)
+set "PY_BIN="
+where py >nul 2>&1
+if %errorlevel%==0 set "PY_BIN=py -3"
+if not defined PY_BIN if exist "%APP_DIR%\.venv-piper\Scripts\python.exe" set "PY_BIN=%APP_DIR%\.venv-piper\Scripts\python.exe"
+if not defined PY_BIN for /f "tokens=*" %%i in ('where python 2^>nul ^| findstr /v /i "WindowsApps"') do if not defined PY_BIN set "PY_BIN=%%i"
+if defined PY_BIN call :log "Python real: %PY_BIN%"
+
+rem --- Localiza Node.js real (PATH o instalación estándar de Windows) --
+set "NODE_BIN=node"
+where node >nul 2>&1
+if %errorlevel%==0 goto node_ok
+if exist "%ProgramFiles%\nodejs\node.exe" set "NODE_BIN=%ProgramFiles%\nodejs\node.exe"
+if exist "%ProgramFiles(x86)%\nodejs\node.exe" set "NODE_BIN=%ProgramFiles(x86)%\nodejs\node.exe"
+:node_ok
+
+rem --- 1) Servidor web (python real preferido, node como respaldo) ---
+rem (ya estamos en %APP_DIR% gracias al cd /d de arriba: lanzamos directo
+rem  sin cmd /c anidado — las comillas dobles con rutas con espacios
+rem  ""%APP_DIR%"" rompen el cd /d interno y el servicio nunca arranca)
+if defined PY_BIN (
+  start "Aion Sincro Web" /min %PY_BIN% -m http.server %PORT_APP% --bind 127.0.0.1
+  call :log "Web: %PY_BIN% -m http.server %PORT_APP% (127.0.0.1)"
 ) else (
-  where node >nul 2>&1
+  if "%NODE_BIN%"=="node" where node >nul 2>&1
   if %errorlevel%==0 (
-    start "Aion Sincro Web" /min cmd /c "cd /d ""%APP_DIR%"" && node ""%~dp0serve.js"" %PORT_APP%"
+    start "Aion Sincro Web" /min "%NODE_BIN%" "%~dp0serve.js" %PORT_APP%
     call :log "Web: node serve.js %PORT_APP% (127.0.0.1)"
   ) else (
-    call :log "Web: ERROR - no hay python ni node en el PATH"
+    call :log "Web: ERROR - no hay python real ni node en el PATH"
     echo   [ERROR] Se necesita python o node para servir la app.
     pause & exit /b 1
   )
@@ -119,17 +142,16 @@ if %errorlevel%==0 (
 
 rem --- 2) Puente de terminal -------------------------------------
 rem (BRIDGE_TOKEN siempre definido: persistente o generado arriba)
-where python >nul 2>&1
-if %errorlevel%==0 (
-  start "Aion Sincro Bridge" /min cmd /c "cd /d ""%APP_DIR%"" && python bridge.py --port %PORT_BRIDGE% --token ""%BRIDGE_TOKEN%"""
+if defined PY_BIN (
+  start "Aion Sincro Bridge" /min %PY_BIN% bridge.py --port %PORT_BRIDGE% --token "%BRIDGE_TOKEN%"
   call :log "Puente: python bridge.py --port %PORT_BRIDGE%"
 ) else (
-  where node >nul 2>&1
+  if "%NODE_BIN%"=="node" where node >nul 2>&1
   if %errorlevel%==0 (
-    start "Aion Sincro Bridge" /min cmd /c "cd /d ""%APP_DIR%"" && node bridge.mjs --port %PORT_BRIDGE% --token ""%BRIDGE_TOKEN%"""
+    start "Aion Sincro Bridge" /min "%NODE_BIN%" bridge.mjs --port %PORT_BRIDGE% --token "%BRIDGE_TOKEN%"
     call :log "Puente: node bridge.mjs --port %PORT_BRIDGE%"
   ) else (
-    call :log "Puente: ERROR - no hay python ni node en el PATH"
+    call :log "Puente: ERROR - no hay python real ni node en el PATH"
   )
 )
 
@@ -137,7 +159,7 @@ rem --- 3) Piper local (voz neuronal, si esta instalado) -----------
 rem (usa goto y no un bloque con () para evitar el fallo del parser de cmd
 rem  con `if ... echo ... (parens)` dentro de un bloque parentizado)
 if not exist "%APP_DIR%\.venv-piper\Scripts\python.exe" goto piper_no
-  start "Aion Sincro Piper" /min cmd /c "cd /d ""%APP_DIR%"" && .venv-piper\Scripts\python.exe piper_server.py"
+  start "Aion Sincro Piper" /min .venv-piper\Scripts\python.exe piper_server.py
   if "%STARTUP_MODE%"=="0" echo   [Piper] arrancado en  http://127.0.0.1:8766  - voz local activa
   call :log "Piper: arrancado en http://127.0.0.1:8766"
   goto piper_fin
