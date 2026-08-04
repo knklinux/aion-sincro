@@ -55,14 +55,16 @@ SECRET_PATTERNS = [
     re.compile(r"\bghp_[A-Za-z0-9]{20,}"),
     re.compile(r"\bsk-ant-[A-Za-z0-9_-]{20,}"),
 ]
-# Claves compartidas por el usuario en el chat (nunca deben aparecer en el
-# repo). Se construyen POR FRAGMENTOS para que la clave completa jamás exista
-# como literal contiguo en el código — así este propio archivo no filtra nada.
-KNOWN_LEAKS = [
-    "QdI0yX6f1Fvc8E" + "gAb2QtLtW23zvR5EJ7",  # Mistral
-    "7f6278d2cf394c5b" + "beae378eab6a8ff2",  # clave "Ollama" inválida
-    "ghp_5Wgo4pmIwcMYm" + "fNx7tJe0n08GhM9V11YDGWJ",  # GitHub
-]
+# Claves conocidas del usuario para la suite anti-fugas. Se leen del archivo
+# LOCAL .leaks.local.json (gitignored, nunca se sube al repo). Si no existe,
+# la lista queda vacía: el repo NO contiene ninguna clave, ni siquiera fragmentada.
+KNOWN_LEAKS = []
+try:
+    import json as _json
+    with open('.leaks.local.json', 'r', encoding='utf-8') as _f:
+        KNOWN_LEAKS = _json.load(_f).get('claves', [])
+except Exception:
+    pass
 # Solo archivos de CÓDIGO real (los tests referencian claves por diseño)
 CODE_FILES = [
     "index.html", "bridge.py", "bridge.mjs", "piper_server.py", "proxy.py",

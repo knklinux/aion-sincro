@@ -43,3 +43,4 @@ proxy_keys.json
 salida-voces/
 startup.log
 token
+.leaks.local.json
