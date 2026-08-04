@@ -721,9 +721,13 @@ El proyecto se creó para que lo **hagas tuyo**:
 
 ### Roadmap sugerido
 
-- [ ] Proxy de claves opcional para uso en nube.
+- [x] Proxy de claves opcional para uso en nube (`proxy.py` — las API keys
+      nunca viajan al navegador, con `/v1/models` y reenvío por streams).
 - [x] Módulo de aprendizaje guiado (rutas de estudio red team).
 - [x] Guardado de sesiones e informes (exportar markdown/PDF/Word).
+- [ ] Cifrado en reposo de `keys.json` del proxy (p. ej. `age` o passphrase).
+- [ ] Rotación automática del token del puente (TOTP/expiración).
+- [ ] Sandbox del puente: lista blanca de comandos en modo «seguro».
 - [ ] Skills/comandos personalizados del usuario.
 - [ ] Soporte de modelo de visión para capturas de pantalla.
 
