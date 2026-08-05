@@ -3653,6 +3653,19 @@ async function termPing(){
   dot.classList.toggle('ok',termConnected);
   st.textContent=termConnected?'Puente conectado (127.0.0.1:8765)':'Puente desconectado — inicia bridge.py o bridge.mjs';
   $('#btnTerminal').classList.toggle('on',termConnected);
+  if(termConnected&&bridgeWatchdog){ clearInterval(bridgeWatchdog); bridgeWatchdog=null; }
+}
+let bridgeWatchdog=null;
+// Si el puente no conectó al arrancar (p. ej. Edge se abrió antes que el puente),
+// reintenta en segundo plano cada 2 s hasta conectar (máx. ~2 min) sin bloquear nada.
+function startBridgeWatchdog(){
+  if(bridgeWatchdog) return;
+  let tries=0;
+  bridgeWatchdog=setInterval(async()=>{
+    tries++;
+    await termPing();
+    if(termConnected||tries>=60){ if(bridgeWatchdog){ clearInterval(bridgeWatchdog); bridgeWatchdog=null; } }
+  },2000);
 }
 function setTermBusy(){
   $('#termInput').disabled=termBusy; $('#termRunBtn').disabled=termBusy;
@@ -6480,8 +6493,9 @@ async function autoConfigure(){
       toast('⚡ Motor restaurado automáticamente: '+real,3200);
     }
   }
-  // 3) Puente: reintentos (hasta 5× ~0.7 s) y luego chequeo de integridad
+  // 3) Puente: reintentos rápidos y, si no conecta, reintento continuo en segundo plano
   for(let i=0;i<5;i++){ await termPing(); if(termConnected) break; await sleep(700); }
+  if(!termConnected) startBridgeWatchdog();
   runIntegrityCheck(false);
   // Piper: reintentos (hasta 4×)
   for(let i=0;i<4;i++){

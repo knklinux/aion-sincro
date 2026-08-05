@@ -766,6 +766,8 @@ check("autoConfigure() definida y llamada en boot()", /function\s+autoConfigure\
 check("adopta el token del puente servido por el lanzador (fetch 'token')", /fetch\('token',\{cache:'no-store'\}\)/.test(script) && /store\.bridgeToken=t; saveStore\(\);/.test(script));
 check("auto-proveedor: pasa de demo a un motor real si hay clave", /store\.provider==='demo'[\s\S]*find\(p=>p==='huggingface'/.test(script) && /⚡ Motor restaurado automáticamente/.test(script));
 check("reintentos del ping del puente (hasta 5×)", /for\(let i=0;i<5;i\+\+\)\{ await termPing\(\); if\(termConnected\) break; await sleep\(700\); \}/.test(script));
+check("watchdog del puente: si no conecta al boot, reintenta en segundo plano", /if\(!termConnected\) startBridgeWatchdog\(\);/.test(script) && /function startBridgeWatchdog\(\)/.test(script));
+check("watchdog: se limpia al conectar y tiene tope de reintentos", /if\(termConnected&&bridgeWatchdog\)\{ clearInterval\(bridgeWatchdog\); bridgeWatchdog=null; \}/.test(script) && /tries>=60/.test(script) && /let bridgeWatchdog=null;/.test(script));
 check("reintentos del ping de Piper (hasta 4×)", /for\(let i=0;i<4;i\+\+\)\{[\s\S]*piperPing\(res\)/.test(script));
 check("aviso si hay claves cifradas pero bloqueadas (no es demo)", /🔒 Tienes claves cifradas guardadas/.test(script) && /desbloquéalas en ⚙️ Ajustes/.test(script));
 
