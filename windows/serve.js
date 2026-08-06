@@ -3,6 +3,9 @@
    Uso:  node serve.js [puerto]        (por defecto 8080)
    Sirve SOLO en 127.0.0.1 (necesario para el micrófono / Web Speech).
    Es el respaldo sin Python del lanzador windows/aion-sincro.cmd.
+   DIFERENCIA CLAVE con un servidor plano: añade `Cache-Control: no-cache`
+   para que Edge/Chrome SIEMPRE revaliden y carguen la última versión de
+   index.html en vez de servir una copia vieja de su caché heurística.
 */
 const http = require("http");
 const fs = require("fs");
@@ -44,7 +47,12 @@ http
         res.writeHead(404);
         return res.end("404 Not Found");
       }
-      res.writeHead(200, { "Content-Type": MIME[path.extname(f).toLowerCase()] || "application/octet-stream" });
+      res.writeHead(200, {
+        "Content-Type": MIME[path.extname(f).toLowerCase()] || "application/octet-stream",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      });
       res.end(data);
     });
   })

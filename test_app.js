@@ -719,6 +719,7 @@ check("overlay #osintOverlay presente", html.includes('id="osintOverlay"'));
 check("selector de tipo OSINT con 4 modos (user/email/phone/domain)", html.includes('<option value="user">') && html.includes('<option value="email">') && html.includes('<option value="phone">') && html.includes('<option value="domain">'));
 check("input de valor y botón Buscar", html.includes('id="osintInput"') && html.includes('id="osintRunBtn"') && html.includes('id="osintLimit"'));
 check("openOsint() definida y abre el overlay", /function\s+openOsint\s*\([\s\S]*?classList\.add\('show'\)/.test(script));
+  check("openOsint() limpia el campo VALOR y el output (sin valores residuales)", /function\s+openOsint\s*\([\s\S]*?osintInput[\s\S]*?\.value=''[\s\S]*?osintOut[\s\S]*?\.innerHTML=''/.test(script));
 check("osintRun() definida", /function\s+osintRun\s*\(/.test(script));
 check("osintParseJson() definida (extrae el bloque JSON)", /function\s+osintParseJson\s*\([\s\S]*?indexOf\('\{'\).*lastIndexOf\('\}'/.test(script));
 check("osintRender() definida y escapa todo el contenido (XSS)", /function\s+osintRender\s*\([\s\S]*?esc\(/.test(script));
@@ -1536,6 +1537,25 @@ await (async () => {
   check("serve.js: barrera de path traversal", serveJs.includes("f.startsWith(ROOT + path.sep)"));
   check("serve.js: decodeURIComponent con try/catch (sin crash por URL malformada)", serveJs.includes("decodeURIComponent") && serveJs.includes("catch"));
   check("install.cmd copia serve.js a la instalación", installCmd.includes("serve.js"));
+
+  // ---------- Anti-caché: el navegador SIEMPRE recarga la última versión ----------
+  // Causa: `python -m http.server` y el serve.js antiguo no enviaban Cache-Control,
+  // así que Edge usaba caché heurística y podía servir un index.html viejo.
+  console.log("\n[Cache] Anti-caché: Edge carga siempre la última versión");
+  const servePy = fs.existsSync(path.join(ROOT, "serve.py")) ? fs.readFileSync(path.join(ROOT, "serve.py"), "utf8") : "";
+  check("serve.py existe en la raíz (servidor Python con no-cache)", servePy.length > 0);
+  check("serve.py añade Cache-Control: no-cache", servePy.includes('"Cache-Control", "no-cache"'));
+  check("serve.py añade Pragma y Expires", servePy.includes('"Pragma", "no-cache"') && servePy.includes('"Expires", "0"'));
+  check("serve.py solo escucha en 127.0.0.1 por defecto (micrófono)", /HOST = sys\.argv\[2\][^\n]*else "127\.0\.0\.1"/.test(servePy));
+  check("serve.py usa SimpleHTTPRequestHandler (bloquea path traversal por construcción)", servePy.includes("SimpleHTTPRequestHandler"));
+  check("serve.js añade Cache-Control: no-cache", serveJs.includes('"Cache-Control": "no-cache"'));
+  check("lanzador usa serve.py con Python real (no -m http.server)", /serve\.py %PORT_APP%/.test(launcherSrc) && !launcherSrc.includes("-m http.server"));
+  check("lanzador registra no-cache en el log", launcherSrc.includes("no-cache"));
+  check("install.cmd copia serve.py a la instalación", installCmd.includes("serve.py"));
+  check("index.html: meta Cache-Control no-store en el head", /<meta http-equiv=\"Cache-Control\" content=\"no-cache, no-store, must-revalidate\">/.test(html));
+  check("index.html: meta Pragma no-cache", html.includes('<meta http-equiv="Pragma" content="no-cache">'));
+  check("index.html: meta Expires 0", html.includes('<meta http-equiv="Expires" content="0">'));
+  check("README no recomienda python -m http.server para servir", !/python -m http\.server/.test(fs.readFileSync(path.join(ROOT, "README.md"), "utf8")) || fs.readFileSync(path.join(ROOT, "README.md"), "utf8").includes("serve.py"));
 
   
   // CV automático eliminado — datos personales en privado/

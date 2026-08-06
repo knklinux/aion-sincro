@@ -37,6 +37,7 @@ echo   ==^> Copiando archivos de la app...
 copy /y "%SRC%\index.html"        "%DEST%\" >nul
 copy /y "%SRC%\bridge.py"         "%DEST%\" >nul
 copy /y "%SRC%\bridge.mjs"        "%DEST%\" >nul
+copy /y "%SRC%\serve.py"          "%DEST%\" >nul
 copy /y "%SRC%\LICENSE"           "%DEST%\" >nul
 copy /y "%SRC%\README.md"         "%DEST%\" >nul
 copy /y "%SRC%\SECURITY.md"       "%DEST%\" >nul

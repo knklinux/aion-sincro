@@ -25,7 +25,7 @@ services:
     working_dir: /app
     volumes:
       - .:/app:ro
-    command: python -m http.server ${APP_PORT:-8080} --bind 0.0.0.0
+    command: python serve.py ${APP_PORT:-8080} 0.0.0.0
     ports:
       - "127.0.0.1:${APP_PORT:-8080}:${APP_PORT:-8080}"
     restart: unless-stopped

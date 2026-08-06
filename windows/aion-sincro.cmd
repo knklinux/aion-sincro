@@ -125,14 +125,17 @@ rem --- 1) Servidor web (python real preferido, node como respaldo) ---
 rem (ya estamos en %APP_DIR% gracias al cd /d de arriba: lanzamos directo
 rem  sin cmd /c anidado — las comillas dobles con rutas con espacios
 rem  ""%APP_DIR%"" rompen el cd /d interno y el servicio nunca arranca)
+rem (serve.py y serve.js añaden Cache-Control: no-cache para que Edge
+rem  SIEMPRE revalide y cargue la última versión de index.html — evita
+rem  que la ventana de la app se quede con una versión vieja en caché)
 if defined PY_BIN (
-  start "Aion Sincro Web" /min %PY_BIN% -m http.server %PORT_APP% --bind 127.0.0.1
-  call :log "Web: %PY_BIN% -m http.server %PORT_APP% (127.0.0.1)"
+  start "Aion Sincro Web" /min %PY_BIN% serve.py %PORT_APP%
+  call :log "Web: %PY_BIN% serve.py %PORT_APP% (127.0.0.1, no-cache)"
 ) else (
   if "%NODE_BIN%"=="node" where node >nul 2>&1
   if %errorlevel%==0 (
     start "Aion Sincro Web" /min "%NODE_BIN%" "%~dp0serve.js" %PORT_APP%
-    call :log "Web: node serve.js %PORT_APP% (127.0.0.1)"
+    call :log "Web: node serve.js %PORT_APP% (127.0.0.1, no-cache)"
   ) else (
     call :log "Web: ERROR - no hay python real ni node en el PATH"
     echo   [ERROR] Se necesita python o node para servir la app.

@@ -22,8 +22,8 @@ mkdir -p "$DATA_DIR" "$CONF_DIR" "$BIN_DIR" "$APPS_DIR"
 
 echo "==> Copiando archivos de la app…"
 cp "$SRC_DIR/../index.html" "$SRC_DIR/../bridge.py" "$SRC_DIR/../bridge.mjs" \
-   "$SRC_DIR/../LICENSE" "$SRC_DIR/../README.md" "$SRC_DIR/../SECURITY.md" \
-   "$SRC_DIR/../LINKEDIN.md" "$SRC_DIR/../POSTS_LINKEDIN.md" "$DATA_DIR/"
+   "$SRC_DIR/../serve.py" "$SRC_DIR/../LICENSE" "$SRC_DIR/../README.md" \
+   "$SRC_DIR/../SECURITY.md" "$SRC_DIR/../LINKEDIN.md" "$SRC_DIR/../POSTS_LINKEDIN.md" "$DATA_DIR/"
 cp "$SRC_DIR/aion-sincro.svg" "$DATA_DIR/aion-sincro.svg"
 
 echo "==> Generando token del puente (solo lectura para tu usuario)…"

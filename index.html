@@ -2,6 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpolygon points='20,2 36,11 36,29 20,38 4,29 4,11' fill='none' stroke='%23f5a524' stroke-width='2.5'/%3E%3Ctext x='20' y='26' text-anchor='middle' font-size='16' font-weight='800' fill='%23f5a524' font-family='monospace'%3EΔ%3C/text%3E%3C/svg%3E">
@@ -5799,8 +5802,11 @@ function maybeOpenSetup(){
 }
 function openOsint(){
   const o=$('#osintOverlay'); if(!o) return;
+  // Sesión limpia cada apertura: sin valores residuales de búsquedas anteriores.
+  const i=$('#osintInput'); if(i){ i.value=''; i.placeholder=($('#osintType').value==='user')?'p. ej. knklinux':($('#osintType').value==='email')?'p. ej. persona@dominio.com':($('#osintType').value==='phone')?'p. ej. +34 612 345 678':'p. ej. ejemplo.com'; }
+  const out=$('#osintOut'); if(out) out.innerHTML='';
   o.classList.add('show');
-  setTimeout(()=>{ const i=$('#osintInput'); if(i) i.focus(); },80);
+  setTimeout(()=>{ const j=$('#osintInput'); if(j) j.focus(); },80);
 }
 // Validación estricta por tipo: el puente ejecuta con shell=True, así que solo
 // admitimos caracteres seguros (igual que nmapRescan). Nada de ; | & ` $ > < etc.
@@ -5941,7 +5947,7 @@ function bind(){
   $('#btnISO').onclick=openISO;
   $('#btnCloseISO').onclick=()=>{ const o=$('#isoOverlay'); if(o) o.classList.remove('show'); };
   $('#btnOsint').onclick=openOsint;
-  $('#btnCloseOsint').onclick=()=>{ const o=$('#osintOverlay'); if(o) o.classList.remove('show'); };
+  $('#btnCloseOsint').onclick=()=>{ const o=$('#osintOverlay'); if(o) o.classList.remove('show'); const i=$('#osintInput'); if(i) i.value=''; };
   $('#btnSetup').onclick=openSetup;
   $('#setupBack').onclick=()=>setupGo(setupStep-1);
   $('#setupNext').onclick=()=>setupGo(setupStep+1);

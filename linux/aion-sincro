@@ -34,11 +34,13 @@ fi
 cd "$APP_DIR" || { echo "Aion Sincro no está instalado. Ejecuta: linux/install.sh"; exit 1; }
 
 # --- 1) Servidor web (python3 preferido, node como respaldo) ---------
+# (serve.py y serve.js añaden Cache-Control: no-cache para que el navegador
+#  SIEMPRE revalide y cargue la última versión de index.html)
 if [ ! -f "$CONF_DIR/web.pid" ] || ! kill -0 "$(cat "$CONF_DIR/web.pid" 2>/dev/null)" 2>/dev/null; then
   if command -v python3 >/dev/null 2>&1; then
-    nohup python3 -m http.server "$PORT_APP" --bind 127.0.0.1 >/dev/null 2>&1 &
+    nohup python3 serve.py "$PORT_APP" >/dev/null 2>&1 &
   elif command -v node >/dev/null 2>&1; then
-    nohup node -e "const http=require('http'),fs=require('fs'),path=require('path');const p=process.argv[1];http.createServer((q,r)=>{let f=q.url==='/'?'index.html':q.url.split('?')[0];f=path.normalize(path.join(process.cwd(),f));if(!f.startsWith(process.cwd())){r.writeHead(403);return r.end()}fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);return r.end()}r.writeHead(200);r.end(d)})}).listen(p,'127.0.0.1')" "$PORT_APP" >/dev/null 2>&1 &
+    nohup node serve.js "$PORT_APP" >/dev/null 2>&1 &
   else
     echo "Se necesita python3 o node para servir la app."; exit 1
   fi

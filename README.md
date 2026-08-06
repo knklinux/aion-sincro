@@ -160,8 +160,11 @@ de la cabecera para abrirlo cuando quieras), que te guía paso a paso:
 
 > 📌 El reconocimiento de voz funciona en `localhost` o `HTTPS`:
 > ```bash
-> python -m http.server 8000   # luego abre http://localhost:8000
+> python serve.py 8000   # luego abre http://localhost:8000
 > ```
+> `serve.py` (o `windows/serve.js` como respaldo Node) añade `Cache-Control:
+> no-cache`, para que el navegador **siempre revalide y cargue la última
+> versión de `index.html`** — nunca una copia vieja de su caché.
 
 ### 📱 PWA — instala Aion Sincro como aplicación (sin tienda, con modo offline)
 
@@ -169,8 +172,9 @@ Aion Sincro es una **PWA instalable**: una vez servida por HTTP, Chrome/Edge mue
 botón **⬇️ Instalar** en la barra superior y la app se instala como aplicación nativa
 (ventana propia, sin pestañas), con el icono en el escritorio / menú de inicio.
 
-- **Cómo instalarla:** sirve la app (`python -m http.server 8000`), ábrela en
-  Chrome/Edge y pulsa **⬇️ Instalar** (o el icono ➕/instalar del navegador).
+- **Cómo instalarla:** sirve la app (`python serve.py 8000` — o el lanzador
+  `windows/aion-sincro.cmd`), ábrela en Chrome/Edge y pulsa **⬇️ Instalar**
+  (o el icono ➕/instalar del navegador).
 - **Modo offline:** el service worker (`sw.js`) cachea el núcleo de la app
   (`index.html`, manifest, iconos) — la interfaz y los modos locales
   (Ruta, Evaluación, Laboral, ISO) siguen funcionando sin internet.
